@@ -1,0 +1,11 @@
+C:\Programacion\RitramaCloud2026\Shared\bin\Debug\net10.0\Shared.deps.json
+C:\Programacion\RitramaCloud2026\Shared\bin\Debug\net10.0\Shared.dll
+C:\Programacion\RitramaCloud2026\Shared\bin\Debug\net10.0\Shared.pdb
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.AssemblyInfoInputs.cache
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.AssemblyInfo.cs
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.csproj.CoreCompileInputs.cache
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.dll
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\refint\Shared.dll
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.pdb
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\ref\Shared.dll
