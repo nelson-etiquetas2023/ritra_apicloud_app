@@ -540,6 +540,9 @@
             "type": "string",
             "format": "date-time"
           },
+          "description_Document": {
+            "type": "string"
+          },
           "order_Hour": {
             "type": "string"
           },
@@ -550,12 +553,20 @@
             "type": "string"
           },
           "status": {
-            "type": "boolean"
+            "type": "string"
           },
           "status_Name": {
             "type": "string"
           },
           "items": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "equiposConteo": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -571,6 +582,14 @@
           },
           "sincro_Document": {
             "type": "boolean"
+          },
+          "renglon": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "ordersDetails": {
             "type": "array",

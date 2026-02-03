@@ -10,6 +10,9 @@ namespace API.Data
         public DbSet<User> Users { get; set; }
         public DbSet<OrderFisicoHeader> Order_InvFisico_Header { get; set; }
         public DbSet<OrderFisicoDetails> Order_InvFisico_Details { get; set; }
+        public DbSet<Equipo> Equipos { get; set; }
+        public DbSet<Parametro> Parametros { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

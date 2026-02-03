@@ -6,4 +6,5 @@
   </Configurations>
   <Project Path="API/API.csproj" />
   <Project Path="Shared/Shared.csproj" />
+  <Project Path="WEB/WEB.csproj" Id="65f858a9-89da-4aae-af19-5a8297f29105" />
 </Solution>

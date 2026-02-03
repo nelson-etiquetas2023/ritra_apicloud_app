@@ -22,6 +22,32 @@ namespace API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Shared.Dtos.Equipo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Device")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Persons")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Equipos");
+                });
+
             modelBuilder.Entity("Shared.Dtos.OrderFisicoDetails", b =>
                 {
                     b.Property<Guid>("Id")
@@ -31,6 +57,9 @@ namespace API.Migrations
                     b.Property<string>("Code_Unique")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("EquipoId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<double>("Length_Dif")
                         .HasColumnType("float");
@@ -86,6 +115,8 @@ namespace API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EquipoId");
+
                     b.HasIndex("OrderNumberID");
 
                     b.ToTable("Order_InvFisico_Details");
@@ -100,8 +131,18 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Description_Document")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("Document_Anulado")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("EquipoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("EquiposConteo")
+                        .HasColumnType("int");
 
                     b.Property<int>("Items")
                         .HasColumnType("int");
@@ -133,7 +174,35 @@ namespace API.Migrations
 
                     b.HasKey("OrderNumberID");
 
+                    b.HasIndex("EquipoId");
+
                     b.ToTable("Order_InvFisico_Header");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Parametro", b =>
+                {
+                    b.Property<Guid>("PropertyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PropertyName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PropertyValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("PropertyId");
+
+                    b.ToTable("Parametros");
                 });
 
             modelBuilder.Entity("Shared.Dtos.Product", b =>
@@ -192,13 +261,33 @@ namespace API.Migrations
 
             modelBuilder.Entity("Shared.Dtos.OrderFisicoDetails", b =>
                 {
-                    b.HasOne("Shared.Dtos.OrderFisicoHeader", "Orden")
+                    b.HasOne("Shared.Dtos.Equipo", null)
+                        .WithMany("products")
+                        .HasForeignKey("EquipoId");
+
+                    b.HasOne("Shared.Dtos.OrderFisicoHeader", "Order")
                         .WithMany("OrdersDetails")
                         .HasForeignKey("OrderNumberID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Orden");
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.OrderFisicoHeader", b =>
+                {
+                    b.HasOne("Shared.Dtos.Equipo", "Equipo")
+                        .WithMany()
+                        .HasForeignKey("EquipoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Equipo");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Equipo", b =>
+                {
+                    b.Navigation("products");
                 });
 
             modelBuilder.Entity("Shared.Dtos.OrderFisicoHeader", b =>

@@ -6,9 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Configurar los CORS.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("RitramaCors", policy =>
+    {
+        policy.WithOrigins("https://localhost:7052", "http://localhost:7052")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+
+    });
+});
+
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options => 
-options.UseSqlServer(builder.Configuration.GetConnectionString("Connection-Monsters")));
+options.UseSqlServer(builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA")));
 
 builder.Services.AddScoped<IProductsService, ProductsService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
@@ -31,6 +44,14 @@ var app = builder.Build();
 //}
 
 
+//migraciopnes automaticas.
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//   db.Database.EnsureDeleted();  // Borra la base de datos
+//    db.Database.EnsureCreated();  // La vuelve a crear según los modelos
+//}
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -41,5 +62,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors("RitramaCors");
 
 app.Run();
