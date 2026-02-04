@@ -1,7 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Programacion\\RitramaCloud2026\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{65F858A9-89DA-4AAE-AF19-5A8297F29105}|WEB\\WEB.csproj|c:\\programacion\\ritramacloud2026\\web\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{65F858A9-89DA-4AAE-AF19-5A8297F29105}|WEB\\WEB.csproj|solutionrelative:web\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,11 +14,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 524,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{0174dea2-fdbe-4ef1-8f99-c0beae78880f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Home.razor",
+              "DocumentMoniker": "C:\\Programacion\\RitramaCloud2026\\WEB\\Pages\\Home.razor",
+              "RelativeDocumentMoniker": "WEB\\Pages\\Home.razor",
+              "ToolTip": "C:\\Programacion\\RitramaCloud2026\\WEB\\Pages\\Home.razor",
+              "RelativeToolTip": "WEB\\Pages\\Home.razor",
+              "ViewState": "AgIAADoAAAAAAAAAAAAcwDkAAABZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-02-04T15:29:05.786Z",
+              "EditorCaption": ""
             }
           ]
         },

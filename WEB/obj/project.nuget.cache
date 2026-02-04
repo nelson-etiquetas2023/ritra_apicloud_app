@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "t3eQzjRbOm8=",
+  "dgSpecHash": "LHdVEaOsies=",
   "success": true,
   "projectFilePath": "C:\\Programacion\\RitramaCloud2026\\WEB\\WEB.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Npino\\.nuget\\packages\\blazored.modal\\7.3.1\\blazored.modal.7.3.1.nupkg.sha512",
+    "C:\\Users\\Npino\\.nuget\\packages\\blazor.bootstrap\\3.5.0\\blazor.bootstrap.3.5.0.nupkg.sha512",
     "C:\\Users\\Npino\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.2\\microsoft.aspnetcore.app.internal.assets.10.0.2.nupkg.sha512",
     "C:\\Users\\Npino\\.nuget\\packages\\microsoft.aspnetcore.authorization\\10.0.2\\microsoft.aspnetcore.authorization.10.0.2.nupkg.sha512",
     "C:\\Users\\Npino\\.nuget\\packages\\microsoft.aspnetcore.components\\10.0.2\\microsoft.aspnetcore.components.10.0.2.nupkg.sha512",

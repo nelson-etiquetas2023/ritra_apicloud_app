@@ -395,9 +395,9 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
-            "Blazored.Modal": {
+            "Blazor.Bootstrap": {
               "target": "Package",
-              "version": "[7.3.1, )"
+              "version": "[3.5.0, )"
             },
             "Microsoft.AspNetCore.App.Internal.Assets": {
               "suppressParent": "All",

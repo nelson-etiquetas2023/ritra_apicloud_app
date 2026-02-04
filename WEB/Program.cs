@@ -1,4 +1,3 @@
-using Blazored.Modal;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WEB;
@@ -19,7 +18,7 @@ builder.Services.AddHttpClient("ritrama", options => {
     options.DefaultRequestHeaders.Add("User-Agent", "BlazorApp");
 });
 
-builder.Services.AddBlazoredModal();
+builder.Services.AddBlazorBootstrap();
 
 
 //Inyectar los servcios de la aplicacion.
