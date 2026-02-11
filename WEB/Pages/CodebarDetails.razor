@@ -1,0 +1,326 @@
+﻿@page "/CodebarDetails/{OrderId}"
+@inject IInventoryServices service
+
+<Preload LoadingText="Loading data..." />
+<Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopRight" />
+<Modal @ref="ModalEdit" Title="Editar Productos">
+    <BodyTemplate>
+        <div>
+            <p>product id: @productUpdate.Codebar</p>
+            <p>product Name: @productUpdate.ProductName</p>
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalEditClick">Close</Button>
+        <Button Color="ButtonColor.Primary" >Save changes</Button>
+    </FooterTemplate>
+</Modal>
+
+<h3>CODIGOS DE BARRA</h3>
+<p>Documento de Invenatrio Fisico: <strong>@OrderId</strong></p>
+
+<div class="row"> 
+    <div class="col-4">
+        <div class="d-flex">
+            <input @ref="barcodeInput"
+                   id="barcodeInput"
+                   type="text"
+                   class="form-control"
+                   placeholder="escanea los productos..."
+                   @bind="valorCodigoBarra"
+                   @bind:event="oninput"
+                   @onkeyup="OnKeyUp"
+                   autocomplete="off" />
+            <Button Class="btn btn-primary" Style="margin-left:10px;margin-right:10px;" @onclick="loadData">Load</Button>
+            <Button Class="btn btn-primary" @onclick="SaveData">Guardar</Button>
+        </div>
+        <div style="margin-top:15px;"><strong><input type="checkbox" checked="@chechkboxValue" @onchange="OnCheckboxChanged" /> Cambiar a modo Buscar</strong> </div>
+    </div>
+    <div class="col-4">
+    </div>
+</div>
+
+@if(scanProducts == null)
+{
+    <p>Cargando...</p>
+} 
+else if (!scanProducts.Any())
+{
+    <p>No hay productos que mostrar...</p>
+}
+else 
+{
+    <QuickGrid Items="filteredscanProducts.AsQueryable()" class="table table-sm table-striped table-hover small" Pagination="@pagination" style="margin-top:15px;">
+        
+        <TemplateColumn Title="Sel.">
+            <div>
+                <input type="checkbox" class="form-check" @bind="context.Selection" />
+            </div>
+        </TemplateColumn>
+
+        <PropertyColumn Property="@(p => p.Renglon)" Title="It." Sortable="true" />
+        <PropertyColumn Property="@(p => p.Codebar)" Title="Codigo" Sortable="true" />
+        <PropertyColumn Property="@(p => p.ProductName)" Title="Descripcion del Producto" />
+        <PropertyColumn Property="@(p => p.Category)" Title="Categoria" />        
+        <TemplateColumn Title="Cantidad">
+            <div>
+                <input type="number" class="form-control form-control-sm" style="width:50px;" @bind="context.Quantity" />
+            </div>
+        </TemplateColumn>
+        <PropertyColumn Property="@(p => p.Unidad)" Title="Unidad" />
+        <PropertyColumn Property="@(p => p.DateScan)" Title="Fecha-Hora" Sortable="true" />
+        <TemplateColumn Title="Ubicacion">
+            <div>
+                <input type="text" class="form-control form-control-sm" @bind="context.Ubicacion" />
+            </div>
+        </TemplateColumn>
+        <PropertyColumn Property="@(p => p.Estado)" Title="Estado" Sortable="true" />
+        <TemplateColumn Title="Actions" Context="item">
+            <Tooltip Title="Editar Documento" Placement="TooltipPlacement.Top">
+                <a @onclick="()=>OnShowModalEditClick(item)"><Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" 
+                     /></a>
+            </Tooltip>
+            <Tooltip Title="Imprimir Etiqueta" Placement="TooltipPlacement.Top">
+                <a @onclick="() => OnPrintLabelCodeBar(item)"><Icon Name="IconName.UpcScan" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+            <Tooltip Title="Eliminar fila" Placement="TooltipPlacement.Top">
+                <a @onclick="() => OnDeleteProductsScan(item.guid)"><Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+        </TemplateColumn>
+    </QuickGrid>
+    <Paginator State="@pagination" />
+}
+
+@code {
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    [Inject] protected ToastService toastService { get; set; } = default!;
+    List<ToastMessage> messages = new List<ToastMessage>();
+    private ScanProducts productUpdate = new ScanProducts();
+    private Modal ModalEdit { get; set; } = default!;
+    private int itemsPage { get; set; } = 15;
+    List<ScanProducts>? scanProducts = [];
+    List<Products>? products = [];
+    IEnumerable<ScanProducts> filteredscanProducts = new List<ScanProducts>();
+    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    private ElementReference barcodeInput;
+    private bool _focused;
+    private bool chechkboxValue;
+    private string valorCodigoBarra { get; set; } = "";
+    [Parameter]
+    public string OrderId { get; set; } = null!;
+
+
+    protected override async Task OnInitializedAsync()
+    {   
+        await LoadscanProducts();
+        LoadProducts();
+    }
+
+    private async Task LoadscanProducts()
+    {
+        scanProducts = await service.GetscanProducts(OrderId);
+        filteredscanProducts = scanProducts.ToList();
+    }
+
+
+    private async Task Showloading()
+    {
+        PreloadService.Show(SpinnerColor.Dark, "Cargando datos...");
+        await Task.Delay(3000); // Simula una carga de datos de 2 segundos
+        PreloadService.Hide();
+    }
+
+    private async Task SaveData()
+    {
+        if (scanProducts == null) return;
+        PreloadService.Show(SpinnerColor.Dark, "Guardando datos...");
+        var filteredProds = scanProducts.Where(p => p.StateData == "new").ToList();
+        await service.SaveDataProductScanAsync(filteredProds);
+        PreloadService.Hide();
+        var mensaje = new ToastMessage
+        {
+            Type = ToastType.Success,
+            Title = "Datos Guardados Correctamente",
+            Content = @<div>Los datos se han guardado correctamente.</div>
+        };
+        messages.Add(mensaje);
+    }
+
+    private async Task OnDeleteProductsScan(Guid id)
+    {
+        var productDelete = scanProducts!.FirstOrDefault(p => p.guid == id);
+        if (productDelete != null)
+        {
+            //borrar fila de la ui.
+            if (scanProducts == null) return;
+            scanProducts.Remove(productDelete);
+            filteredscanProducts = scanProducts;
+            StateHasChanged();
+            //borrar de la base de datos.
+            await service.DeletescanProducts(productDelete.guid);
+            //recosntruir los renglones.
+            foreach (var item in scanProducts)
+            {
+                item.Renglon = scanProducts.IndexOf(item) + 1;
+            
+            }
+
+
+
+            //lanzo mensaje.
+            var mensaje = new ToastMessage
+            {
+                Type = ToastType.Dark,
+                Title = "Producto Eliminado",
+                Content = @<div>El producto ha sido eliminado.</div>
+            };
+            messages.Add(mensaje);
+        }   
+    }
+
+    private async Task OnPrintLabelCodeBar(ScanProducts product)
+    {
+        // Lógica para imprimir la etiqueta del código de barras.
+        var mensaje = new ToastMessage
+        {
+            Type = ToastType.Info,
+            Title = "Consola de Impresión.",
+            HelpText = "Simulación de impresión de etiqueta.",
+            Content = @<div>Impresion de Etiquetas de Codigo de Barra</div>,
+            AutoHide = false,
+            
+        };
+        messages.Add(mensaje); 
+    }
+
+    private async Task OnShowModalEditClick(ScanProducts product)
+    {
+        productUpdate.Codebar = product.Codebar;
+        productUpdate.ProductName = product.ProductName;
+        await ModalEdit.ShowAsync();
+    }
+
+    private async Task OnHideModalEditClick()
+    {
+        await ModalEdit.HideAsync();
+    }
+
+   
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_focused)
+        {
+            await barcodeInput.FocusAsync();
+            _focused = true;
+        }
+    }
+
+    private async Task loadData()
+    {
+        if (scanProducts == null) return;
+        filteredscanProducts = scanProducts.ToList();
+        valorCodigoBarra = "";
+        chechkboxValue = false;
+        await barcodeInput.FocusAsync();
+        StateHasChanged();   
+    }
+
+    private async Task OnCheckboxChanged(ChangeEventArgs e)
+    {
+        chechkboxValue = e.Value is bool b ? b : (e.Value?.ToString() == "true");
+        // Pequeño retraso para evitar competencia entre el click y el foco
+        await Task.Delay(1);
+        await barcodeInput.FocusAsync();
+    }
+
+    //se dispara cuando se escanean los productos.
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            if (chechkboxValue)
+            {
+                var code = valorCodigoBarra?.Trim();
+                if (code == null) return;
+                if (scanProducts == null) return;
+
+                //Modo Busqueda.
+                filteredscanProducts = scanProducts.Where(x => x.Codebar.Contains(code, 
+                    StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                //Modo Escaneo
+                if (scanProducts == null) return;
+                var codigo = valorCodigoBarra?.Trim();
+
+                var searchProduct = products!.FirstOrDefault(p => p.ProuctId == codigo);
+
+                if (searchProduct != null)
+                {
+                    //creo el producto para sumar la fila.
+                    if (!string.IsNullOrEmpty(codigo))
+                    {
+                        //productos nuevos
+                        var Product = new ScanProducts()
+                            {
+                                Codebar = codigo,
+                                ProductName = searchProduct.ProuctName,
+                                Quantity = 1,
+                                Renglon = scanProducts.Count + 1,
+                                DateScan = DateTime.Now,
+                                Ubicacion = "ubic. default",
+                                Estado = "Buen Estado",
+                                Category = searchProduct.Category,
+                                Unidad = "pieza",
+                                guid = new Guid(),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 OrdenId = OrderId,
+                                StateData = "new"
+                            };
+                        scanProducts.Insert(0, Product);
+                        filteredscanProducts = scanProducts;
+                        //scanProducts = scanProducts.OrderByDescending(p => p.DateScan).ToList();
+                        //itemsPage = scanProducts.Count;
+
+                        valorCodigoBarra = "";
+                        await barcodeInput.FocusAsync();
+                        StateHasChanged();
+                    }
+                }
+                else
+                {
+                    if (messages.ToList().Count() == 5) return;
+                    //producto no encontrado
+                    var mensaje = new ToastMessage
+                    {
+                        Type = ToastType.Danger,
+                        Title = "Mensaje de Error.",
+                        Content = @<div>Producto no encontrado: <strong>@codigo</strong></div>
+                    };
+                    messages.Add(mensaje);
+                    
+                    valorCodigoBarra = "";
+                    StateHasChanged();
+                }
+            }   
+        }
+    }
+    private void LoadProducts()
+    {
+        products = new List<Products>
+        {
+            new Products { ProuctId = "7460823668536", ProuctName = "Telephone Outlet 8P8C", Category = "Suministros Electricos" },
+            new Products { ProuctId = "7460823056432", ProuctName = "Clavitos de Pared", Category = "Ferreteria" },
+            new Products { ProuctId = "8806010245736", ProuctName = "Disco duro Samsung 870 Evo SSD", Category = "Componentes de Computadora" },
+            new Products { ProuctId = "4713621995896", ProuctName = "Usb printer cable A/B Marca Agiler", Category = "componentes varios" },
+            new Products { ProuctId = "059544", ProuctName = "Led Driver", Category = "Partes Electricas"}
+        };
+    }
+
+    public class Products
+    {
+        public string ProuctId { get; set; } = null!;
+        public string ProuctName { get; set; } = null!;
+        public string Category { get; set; } = null!;
+    }
+}

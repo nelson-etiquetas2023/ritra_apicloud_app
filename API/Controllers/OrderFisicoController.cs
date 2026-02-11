@@ -1,5 +1,4 @@
 ﻿using API.Services.Inventory;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 
@@ -14,6 +13,32 @@ namespace API.Controllers
         public OrderFisicoController(IInventoryService service)
         {
             this.service = service;
+        }
+
+        [HttpDelete]
+        [Route("deletescanproducts/{id}")]
+        public async Task<bool> DeleteScanProductsAsync(Guid id) 
+        {
+            var deleted = await service.DeleteScanProductsAsync(id);
+            if(!deleted) return false;
+            return true;
+        }
+
+
+        [HttpGet]
+        [Route("getscanproducts/{OrderId}")]
+        public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
+        {
+            var productsScan = await service.GetScanProductsAsync(OrderId);
+            return productsScan;
+        }
+
+        [HttpPost]
+        [Route("savedatascanproducts")]
+        public async Task<IActionResult> SaveDataProductScanAsync([FromBody] List<ScanProducts> productscan) 
+        {
+            var saved = await service.SaveDataProductScanAsync(productscan);
+            return Ok(saved);
         }
 
 

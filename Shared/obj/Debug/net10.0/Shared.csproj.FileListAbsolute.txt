@@ -5,8 +5,8 @@ C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.GeneratedMSBuil
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.AssemblyInfoInputs.cache
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.AssemblyInfo.cs
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.csproj.CoreCompileInputs.cache
+C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.sourcelink.json
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.dll
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\refint\Shared.dll
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.pdb
 C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\ref\Shared.dll
-C:\Programacion\RitramaCloud2026\Shared\obj\Debug\net10.0\Shared.sourcelink.json

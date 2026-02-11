@@ -1,0 +1,116 @@
+﻿@inject NavigationManager Navigation
+
+
+<div>
+    <Callout Heading="Importante" Color="CalloutColor.Danger">
+        <strong>Crear documento de inventario fisico</strong>. Esta pantalla le permite crear un nuevo documento de inventario fisico 
+        en su almacen para ajustarlo a su sistema posteriormente.
+    </Callout>
+</div>
+<div class="row g-3">
+    <div class="col-3">
+        <div class="mb-3">
+            <label for="txt_ordenNumber"><strong>Numero Documento:</strong></label>
+            <input type="text" class="form-control" id="txt_ordenNumber" placeholder="documento de inventario" 
+            @bind="orden.OrderNumberID" />
+            <label for="txt_fechaOrden"><strong>Fecha:</strong></label>
+            <input type="date" class="form-control" id="txt_fechaOrden" placeholder="fecha de creación" />
+            <label for="txt_personRegister"><strong>Persona Administrador:</strong> </label>
+            <input type="text" class="form-control" id="txt_personRegister" placeholder="administrador del inventario" />
+            <label for="txt_description"><strong>Descripcion:</strong></label>
+            <input type="text" class="form-control" id="txt_description" placeholder="descripcion del inventario" />
+        </div>
+        
+
+    </div>
+    <div class="col-3">
+        <div class="mb-3">
+            <label for="txt_equipos"><strong>Equipos de Conteo :</strong></label>
+            <input type="number" class="form-control" id="txt_equipos" placeholder="definir el numero de equipos de conteo" />
+            <label for="txt_category" class="form-label"><strong>Categoria:</strong></label>
+            
+            <select id="txt_category" name="txt_categhory" class="form-control">
+                <option value="">Seleccione una categoria...</option>
+                <option value="es">Todos</option>
+                <option value="do">Master</option>
+                <option value="us">Rollo Cortado</option>
+                <option value="es">Graphics</option>
+                <option value="es">Hojas</option>
+                <option value="es">Seleccion</option>
+
+
+            </select>
+
+
+
+
+            <label for="txt_location"><strong>Nombre Almacen:</strong></label>
+            <input type="text" class="form-control" id="txt_location" placeholder="definir los almacenes" />
+            <label for="txt_personDetails"><strong>Integrantes:</strong></label>
+            <input type="text" class="form-control" id="txt_personDetails" placeholder="integrantes de los grupos de conteo" />
+        </div>
+    </div>
+    <div class="d-flex justify-content-center align-items-center col-6">
+        <img src="images\escanner-inventario.webp" width="250" height="250" />
+       
+    </div>
+</div>
+<div>
+    <div><input type="checkbox" name="name" value="" /> Manejo de Sucursales.</div>
+    <div> <input type="checkbox" name="name" value=""/> Inventario Materia Prima.</div>
+    <div><input type="checkbox" name="name" value="" /> Inventario Rollo Cortado.</div>
+    <div><input type="checkbox" name="name" value="" /> Inventario Graphics.</div>
+    <div><input type="checkbox" name="name" value="" /> Inventario Hojas.</div>
+
+
+</div>
+<div style="margin-bottom:20px; margin-top:20px;">
+    <Button Color="ButtonColor.Primary" @onclick="CreateDocument"><Icon Name="IconName.Floppy" /> Guardar</Button>
+    <Button Color="ButtonColor.Secondary" @onclick="Cancel"><Icon Name="IconName.XCircle" /> Close</Button>
+</div>
+
+
+
+@code {
+    [Inject] protected ToastService ToastService { get; set; } = default!;
+    private Modal innerModal = default!;
+    private OrderFisicoHeader orden = new OrderFisicoHeader();
+
+    public Task ShowAsync()
+    {
+        // Si la versión de la librería expone ShowAsync
+        if (innerModal != null)
+            return innerModal.ShowAsync();
+
+        return Task.CompletedTask;
+    }
+
+    
+    public Task HideAsync()
+    {
+        if (innerModal != null)
+            return innerModal.HideAsync();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task Cancel()
+    {
+        ToastService.Notify(new(ToastType.Success, $"Employee details saved successfully."));
+        // lógica local
+        await HideAsync();
+        // notificar al padre si usas EventCallback
+    }
+
+    private async Task Save()
+    {
+        // lógica de guardado
+        await HideAsync();
+        // notificar al padre si usas EventCallback
+    }
+
+    private async Task CreateDocument()
+    {
+    }
+
+}

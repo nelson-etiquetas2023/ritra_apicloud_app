@@ -33,6 +33,32 @@
   },
   {
     "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "DeleteScanProductsAsync",
+    "RelativePath": "api/OrderFisico/deletescanproducts/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Boolean",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
     "Method": "GetOrderByIdAsync",
     "RelativePath": "api/OrderFisico/getorderbyid/{OrderNumber}",
     "HttpMethod": "GET",
@@ -55,6 +81,48 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "GetScanProductsAsync",
+    "RelativePath": "api/OrderFisico/getscanproducts/{OrderId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "OrderId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[Shared.Dtos.ScanProducts, Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "SaveDataProductScanAsync",
+    "RelativePath": "api/OrderFisico/savedatascanproducts",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productscan",
+        "Type": "System.Collections.Generic.List\u00601[[Shared.Dtos.ScanProducts, Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

@@ -12,6 +12,41 @@ namespace API.Services.Inventory
             this.context = context;
         }
 
+        public async Task<bool> DeleteScanProductsAsync(Guid id)
+        {
+            var scanProducts = await context.scanProducts.FindAsync(id);
+
+            if (scanProducts == null) return false;
+            context.scanProducts.Remove(scanProducts);
+            await context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
+        {
+            var productsScan = await context.scanProducts
+                .Where(p => p.OrdenId == OrderId).ToListAsync();
+
+            return productsScan;
+        }
+
+        public async Task<bool> SaveDataProductScanAsync(List<ScanProducts> products)
+        {
+            if (products == null) return false;
+
+            foreach (var product in products) 
+            {
+                product.StateData = "Saved";
+                context.scanProducts.Add(product);
+            }
+
+            context.SaveChanges();
+
+            return true;
+        }
+
+
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {
             var orders = await context.Order_InvFisico_Header
@@ -104,5 +139,7 @@ namespace API.Services.Inventory
             return true;
 
         }
+
+       
     }
 }

@@ -2,3 +2,4 @@ C:\Programacion\RitramaCloud2026\WEB\wwwroot\css\app.css
 wwwroot\css\app.css
 wwwroot\favicon.png
 wwwroot\icon-192.png
+wwwroot\images\escanner-inventario.webp

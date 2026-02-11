@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject IInventoryServices service
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 <h1><Icon Name="IconName.Alarm" Size="IconSize.x1" /> Documentos de Conteo Fisico</h1>
@@ -20,6 +21,7 @@
                     <div class="col-3">
                         <div><strong>Crear Conteo Fisico:</strong></div>
                         <button class="btn btn-primary" @onclick="CreateDocument"><Icon Name="IconName.Activity" /> Crear Documento</button>
+                        <TestComponentModal @ref="createModal" />
                     </div>
                     <!--combo de item poir pagina del quickgrid-->
                     <div class="col-3">
@@ -50,8 +52,9 @@
                 </div>
                     <QuickGrid Items="filteredOrders.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-bordered" Pagination="@pagination">
                         <PropertyColumn Property="@(p => p.renglon)" Title="Rg." />
+
                         <TemplateColumn Title="Documento" Align="Align.Center">
-                            <a href="#" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
+                            <a href="CodebarDetails/@context.OrderNumberID" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
                         </TemplateColumn>
 
 
@@ -107,7 +110,6 @@
     </div>
 </div>  
 
-
 @code
 {
     private string searchText = string.Empty;
@@ -115,6 +117,8 @@
     private static List<OrderFisicoHeader>? orders;
     private IEnumerable<OrderFisicoHeader> filteredOrders = new List<OrderFisicoHeader>();
     PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+
+    private TestComponentModal? createModal;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,6 +140,7 @@
         {
         }
     }
+
 
     private void EditOrder(string orderId)
     {
@@ -167,8 +172,10 @@
         if (searchText == string.Empty) pagination.ItemsPerPage = 15;
     }
 
-    private void CreateDocument()
+    private async Task  CreateDocument()
     {
-        // Lógica para crear un nuevo documento.
+        if (createModal == null) return;
+
+        await createModal.ShowAsync();
     }
 }

@@ -12,7 +12,7 @@ namespace API.Data
         public DbSet<OrderFisicoDetails> Order_InvFisico_Details { get; set; }
         public DbSet<Equipo> Equipos { get; set; }
         public DbSet<Parametro> Parametros { get; set; }
-
+        public DbSet<ScanProducts> scanProducts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

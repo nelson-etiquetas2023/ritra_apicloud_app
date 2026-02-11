@@ -138,7 +138,7 @@ namespace API.Migrations
                     b.Property<bool>("Document_Anulado")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("EquipoId")
+                    b.Property<Guid?>("EquipoId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("EquiposConteo")
@@ -165,12 +165,16 @@ namespace API.Migrations
                     b.Property<bool>("Sincro_Document")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status_Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("renglon")
+                        .HasColumnType("int");
 
                     b.HasKey("OrderNumberID");
 
@@ -226,6 +230,61 @@ namespace API.Migrations
                     b.ToTable("Productos");
                 });
 
+            modelBuilder.Entity("Shared.Dtos.ScanProducts", b =>
+                {
+                    b.Property<Guid>("guid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Codebar")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DateScan")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrdenId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Renglon")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Selection")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("StateData")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Ubicacion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Unidad")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("guid");
+
+                    b.ToTable("scanProducts");
+                });
+
             modelBuilder.Entity("Shared.Dtos.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -278,9 +337,7 @@ namespace API.Migrations
                 {
                     b.HasOne("Shared.Dtos.Equipo", "Equipo")
                         .WithMany()
-                        .HasForeignKey("EquipoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("EquipoId");
 
                     b.Navigation("Equipo");
                 });

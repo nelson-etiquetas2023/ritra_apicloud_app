@@ -32,8 +32,16 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/CodebarDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29kZWJhckRldGFpbHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Counter.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291bnRlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/CreateDocumentModal.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ3JlYXRlRG9jdW1lbnRNb2RhbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Home.razor]
@@ -42,6 +50,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTm90Rm91bmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/TestComponentModal.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVzdENvbXBvbmVudE1vZGFsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Weather.razor]
