@@ -12,5 +12,7 @@ namespace API.Services.Inventory
         Task<bool> SaveDataProductScanAsync(List<ScanProducts> products);
         public Task<List<ScanProducts>> GetScanProductsAsync(string OrderId);
         public Task<bool> DeleteScanProductsAsync(Guid OrderId);
+        public Task<bool> UpdateScanProductsAsync(ScanProducts scanproducts);
+
     }
 }

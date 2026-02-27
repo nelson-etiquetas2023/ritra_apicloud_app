@@ -10,6 +10,77 @@
     }
   ],
   "paths": {
+    "/api/OrderFisico/updatedatascanproducts": {
+      "post": {
+        "tags": [
+          "OrderFisico"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanProducts"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanProducts"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanProducts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/OrderFisico/generatereportscanproducts/{id}": {
+      "get": {
+        "tags": [
+          "OrderFisico"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/OrderFisico/deletescanproducts/{id}": {
       "delete": {
         "tags": [
@@ -660,6 +731,10 @@
         }
       },
       "OrderFisicoHeader": {
+        "required": [
+          "orderNumberID",
+          "description_Document"
+        ],
         "type": "object",
         "properties": {
           "orderNumberID": {
@@ -729,6 +804,10 @@
         }
       },
       "Product": {
+        "required": [
+          "product_id",
+          "product_Name"
+        ],
         "type": "object",
         "properties": {
           "product_id": {
@@ -744,10 +823,28 @@
           },
           "product_Type": {
             "type": "string"
+          },
+          "price": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "codebar": {
+            "type": "string"
           }
         }
       },
       "ScanProducts": {
+        "required": [
+          "productName",
+          "ubicacion",
+          "unidad",
+          "category",
+          "ordenId"
+        ],
         "type": "object",
         "properties": {
           "guid": {
@@ -772,6 +869,8 @@
             "type": "string"
           },
           "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

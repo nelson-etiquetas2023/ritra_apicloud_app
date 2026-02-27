@@ -1,24 +1,84 @@
 ﻿@page "/CodebarDetails/{OrderId}"
+@using WEB.Pages.Componentes
 @inject IInventoryServices service
+@inject NavigationManager navigation
 
+
+<ConfirmDialog @ref="dialog"/>
 <Preload LoadingText="Loading data..." />
 <Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopRight" />
-<Modal @ref="ModalEdit" Title="Editar Productos">
+<Modal @ref="ModalEdit" Title="Editar Productos" >
     <BodyTemplate>
         <div>
-            <p>product id: @productUpdate.Codebar</p>
-            <p>product Name: @productUpdate.ProductName</p>
+            <EditForm Model="productUpdate" OnValidSubmit="UpdateScanProducts">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="mb-3">
+                    <label for="txt_productid"><strong>Product Id.:</strong></label>
+                    <InputText class="form-control" id="txt_productid" @bind-Value="productUpdate.Codebar" readonly  />
+                    <ValidationMessage For="@(() => productUpdate.Codebar)" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_productname"><strong>Product Name:</strong> </label>
+                    <InputText class="form-control" id="txt_productname" @bind-Value="productUpdate.ProductName" readonly />
+                    <ValidationMessage For="@(() => productUpdate.ProductName)" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_productCategory"><strong>Product Category:</strong> </label>
+                    <InputSelect class="form-select" @bind-value="productUpdate.Category">
+                        <option value="repuestos">Repuestos</option>
+                        <option value="computer">Partes de Computadoras</option>
+                        <option value="ferreteria">Ferreteria</option>
+                        <option value="alimentos">Alimentos y bebidas</option>
+                        <option value="electronica">electronica</option>
+                        <option value="varios">Varios</option>
+                        <option value="linea Blanca">Linea Balnca</option>
+                        <option value="Oficina">Equipos de Oficina</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => productUpdate.Category)" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_quantity"><strong>Cantidad:</strong></label>
+                    <InputNumber class="form-control" id="txt_quantity" @bind-Value="productUpdate.Quantity" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_productUnit"><strong>Unidad :</strong> </label>
+                    <InputSelect class="form-select" @bind-Value="productUpdate.Unidad">
+                        <option value="pieza">Pieza</option>
+                        <option value="cajas">Cajas</option>
+                        <option value="paquetes">Paquetes</option>
+                        <option value="Libra">Libras</option>
+                        <option value="unidad">Unidades</option>
+                    </InputSelect>
+                </div>
+                <div class="mb-3">
+                    <label for="txt_Ubicacion"><strong>Ubicación:</strong></label>
+                    <InputText class="form-control" id="txt_Ubicacion" @bind-Value="productUpdate.Ubicacion" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_productEstado"><strong>Estado producto :</strong></label>
+                    <InputSelect class="form-select" @bind-Value="productUpdate.Estado">
+                        <option value="Ok">OK.</option>
+                        <option value="dañado">Dañado</option>
+                        <option value="desincorporado">Desincorporado</option>
+                        <option value="incompleto">Incompleto</option>
+                        <option value="manchado">Manchado</option>
+                        <option value="vencido">Vencido</option>
+                        <option value="fuera de stock">Fuera de Stock</option>
+
+                    </InputSelect>
+                </div>
+                <Button Color="ButtonColor.Secondary" @onclick="OnHideModalEditClick">Close</Button>
+                <button class="btn btn-primary" Type="Submit">Save changes</button>
+            </EditForm>
         </div>
     </BodyTemplate>
     <FooterTemplate>
-        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalEditClick">Close</Button>
-        <Button Color="ButtonColor.Primary" >Save changes</Button>
     </FooterTemplate>
 </Modal>
 
 <h3>CODIGOS DE BARRA</h3>
 <p>Documento de Invenatrio Fisico: <strong>@OrderId</strong></p>
-
 <div class="row"> 
     <div class="col-4">
         <div class="d-flex">
@@ -34,7 +94,12 @@
             <Button Class="btn btn-primary" Style="margin-left:10px;margin-right:10px;" @onclick="loadData">Load</Button>
             <Button Class="btn btn-primary" @onclick="SaveData">Guardar</Button>
         </div>
-        <div style="margin-top:15px;"><strong><input type="checkbox" checked="@chechkboxValue" @onchange="OnCheckboxChanged" /> Cambiar a modo Buscar</strong> </div>
+        <div style="margin-top:15px;">
+            <Button Class="btn btn-info" @onclick="GenerateReports" >Reporte</Button>
+            <Button Class="btn btn-info" @onclick="ExportExcel">Export Excel</Button>
+            <Button Class="btn btn-info" @onclick="ExportTXT">Export Txt</Button>
+            <strong><input type="checkbox" checked="@chechkboxValue" @onchange="OnCheckboxChanged" /> Cambiar a modo Buscar</strong> 
+        </div>
     </div>
     <div class="col-4">
     </div>
@@ -50,43 +115,48 @@ else if (!scanProducts.Any())
 }
 else 
 {
-    <QuickGrid Items="filteredscanProducts.AsQueryable()" class="table table-sm table-striped table-hover small" Pagination="@pagination" style="margin-top:15px;">
-        
+    <QuickGrid Items="filteredscanProducts" class="table table-sm table-striped table-hover small" Pagination="@pagination" style="margin-top:15px;">
         <TemplateColumn Title="Sel.">
             <div>
                 <input type="checkbox" class="form-check" @bind="context.Selection" />
             </div>
-        </TemplateColumn>
-
-        <PropertyColumn Property="@(p => p.Renglon)" Title="It." Sortable="true" />
+        </TemplateColumn>   
         <PropertyColumn Property="@(p => p.Codebar)" Title="Codigo" Sortable="true" />
-        <PropertyColumn Property="@(p => p.ProductName)" Title="Descripcion del Producto" />
-        <PropertyColumn Property="@(p => p.Category)" Title="Categoria" />        
-        <TemplateColumn Title="Cantidad">
-            <div>
-                <input type="number" class="form-control form-control-sm" style="width:50px;" @bind="context.Quantity" />
-            </div>
-        </TemplateColumn>
+        <PropertyColumn Property="pagination => pagination.ProductName" Title="Nombre del Producto">
+            <ColumnOptions>
+                <input type="search" autofocus @bind="productsFilter" @bind:event="oninput" placeholder="buscar por producto..." class="form-control" />
+            </ColumnOptions>
+        </PropertyColumn>
+        <PropertyColumn Property="@(p => p.Category)" Title="Categoria">
+            <ColumnOptions>
+                <input type="search" @bind="categoryFilter" @bind:event="oninput" placeholder="categoria..." class="form-control" autofocus />
+            </ColumnOptions>
+        </PropertyColumn>         
+        <!--Cantidad-->
+        <PropertyColumn Property="@(p => p.Quantity)" Title="Cantidad" />
         <PropertyColumn Property="@(p => p.Unidad)" Title="Unidad" />
         <PropertyColumn Property="@(p => p.DateScan)" Title="Fecha-Hora" Sortable="true" />
-        <TemplateColumn Title="Ubicacion">
-            <div>
-                <input type="text" class="form-control form-control-sm" @bind="context.Ubicacion" />
-            </div>
-        </TemplateColumn>
+        <!--Columna de Ubicacion-->
+        <PropertyColumn Property="@(p => p.Ubicacion)" Title="Ubicacion"> 
+            <ColumnOptions>
+                <input type="search" @bind="ubicFilter" @bind:event="oninput" placeholder="busqueda por Ubicacion..." autofocus class="form-control" />
+            </ColumnOptions>
+        </PropertyColumn>
         <PropertyColumn Property="@(p => p.Estado)" Title="Estado" Sortable="true" />
+        <!--Columna de Herramientas o Action-->
         <TemplateColumn Title="Actions" Context="item">
             <Tooltip Title="Editar Documento" Placement="TooltipPlacement.Top">
-                <a @onclick="()=>OnShowModalEditClick(item)"><Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" 
+                <a @onclick="()=>OnShowModalEditClick(item)" style="cursor: pointer;"><Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" 
                      /></a>
             </Tooltip>
             <Tooltip Title="Imprimir Etiqueta" Placement="TooltipPlacement.Top">
-                <a @onclick="() => OnPrintLabelCodeBar(item)"><Icon Name="IconName.UpcScan" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+                <a @onclick="() => OnPrintLabelCodeBar(item)" style="cursor: pointer"><Icon Name="IconName.UpcScan" Size="IconSize.x5" Color="IconColor.Dark" /></a>
             </Tooltip>
             <Tooltip Title="Eliminar fila" Placement="TooltipPlacement.Top">
-                <a @onclick="() => OnDeleteProductsScan(item.guid)"><Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+                <a @onclick="() => OnDeleteProductsScan(item.guid)" style="cursor: pointer"><Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Dark" /></a>
             </Tooltip>
         </TemplateColumn>
+        <!--<PropertyColumn Property="@(p => p.guid)" Title="id guid" />-->
     </QuickGrid>
     <Paginator State="@pagination" />
 }
@@ -94,14 +164,43 @@ else
 @code {
     [Inject] protected PreloadService PreloadService { get; set; } = default!;
     [Inject] protected ToastService toastService { get; set; } = default!;
+    private ConfirmDialog dialog = default!;
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    private Modal ModalEdit { get; set; } = default!;
     List<ToastMessage> messages = new List<ToastMessage>();
     private ScanProducts productUpdate = new ScanProducts();
-    private Modal ModalEdit { get; set; } = default!;
     private int itemsPage { get; set; } = 15;
     List<ScanProducts>? scanProducts = [];
     List<Products>? products = [];
-    IEnumerable<ScanProducts> filteredscanProducts = new List<ScanProducts>();
-    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    string productsFilter = "";
+    string ubicFilter = "";
+    string categoryFilter = "";
+    IQueryable<ScanProducts> filteredscanProducts
+    {
+        get
+        {
+            var result = scanProducts?.AsQueryable() ?? new List<ScanProducts>().AsQueryable();
+            if (!string.IsNullOrEmpty(productsFilter))
+            {
+                result = result.Where(p => p.ProductName.Contains
+                    (productsFilter, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrEmpty(ubicFilter))
+            {
+                result = result.Where(p => p.Ubicacion.Contains
+                     (ubicFilter, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrEmpty(categoryFilter))
+            {
+                result = result.Where(p => p.Category.Contains
+                     (categoryFilter, StringComparison.OrdinalIgnoreCase));
+            }
+            return result;
+        }
+        set { }
+
+    }
     private ElementReference barcodeInput;
     private bool _focused;
     private bool chechkboxValue;
@@ -109,6 +208,44 @@ else
     [Parameter]
     public string OrderId { get; set; } = null!;
 
+
+
+
+    private async Task UpdateScanProducts()
+    {
+        //oculto el modal.
+        await ModalEdit.HideAsync();
+        PreloadService.Show(SpinnerColor.Dark, "Guardando los cambios...");
+        await Task.Delay(1000); // Simula una carga de datos de 3 segundos
+        //actualizo la bd desde la api
+        await service.UpdateScanProductsAsync(productUpdate);
+        //actualizo la ui de blazor.
+        var index = scanProducts!.FindIndex(p => p.guid == productUpdate.guid);
+        if (index != -1)
+        {
+            scanProducts[index] = productUpdate;
+            filteredscanProducts = scanProducts.AsQueryable();
+            StateHasChanged();
+        }
+        PreloadService.Hide();
+    }
+
+    private void ExportExcel()
+    {
+        if (scanProducts == null) return;
+        service.ExportExcel(scanProducts);
+    }
+
+    private void ExportTXT()
+    {
+        if (scanProducts == null) return;
+        service.ExportTxt(scanProducts);
+    }
+
+    private async Task GenerateReports()
+    {
+        await service.GenerateReportsScanProducts(OrderId);
+    }
 
     protected override async Task OnInitializedAsync()
     {   
@@ -119,7 +256,7 @@ else
     private async Task LoadscanProducts()
     {
         scanProducts = await service.GetscanProducts(OrderId);
-        filteredscanProducts = scanProducts.ToList();
+        filteredscanProducts = scanProducts.AsQueryable();
     }
 
 
@@ -149,12 +286,22 @@ else
     private async Task OnDeleteProductsScan(Guid id)
     {
         var productDelete = scanProducts!.FirstOrDefault(p => p.guid == id);
-        if (productDelete != null)
+        if (productDelete == null) return;
+
+        var parameters = new Dictionary<string, object>();
+
+        parameters.Add("codebar", productDelete.Codebar);
+        parameters.Add("productName", productDelete.ProductName);
+        parameters.Add("cantidad", productDelete.Quantity);
+
+        var confirmation = await dialog.ShowAsync<DialogYesNo>("Advertencia...", parameters); 
+
+        if (confirmation)
         {
             //borrar fila de la ui.
             if (scanProducts == null) return;
             scanProducts.Remove(productDelete);
-            filteredscanProducts = scanProducts;
+            filteredscanProducts = scanProducts.AsQueryable();
             StateHasChanged();
             //borrar de la base de datos.
             await service.DeletescanProducts(productDelete.guid);
@@ -162,20 +309,12 @@ else
             foreach (var item in scanProducts)
             {
                 item.Renglon = scanProducts.IndexOf(item) + 1;
-            
+
             }
-
-
-
-            //lanzo mensaje.
-            var mensaje = new ToastMessage
-            {
-                Type = ToastType.Dark,
-                Title = "Producto Eliminado",
-                Content = @<div>El producto ha sido eliminado.</div>
-            };
-            messages.Add(mensaje);
-        }   
+            toastService.Notify(new ToastMessage(ToastType.Success, $"producto eliminado correctamente."));
+        }
+        else
+            toastService.Notify(new ToastMessage(ToastType.Secondary, $"Delete action canceled."));
     }
 
     private async Task OnPrintLabelCodeBar(ScanProducts product)
@@ -195,8 +334,17 @@ else
 
     private async Task OnShowModalEditClick(ScanProducts product)
     {
+        productUpdate.guid = product.guid;
+        productUpdate.OrdenId = product.OrdenId;
         productUpdate.Codebar = product.Codebar;
         productUpdate.ProductName = product.ProductName;
+        productUpdate.Quantity = product.Quantity;
+        productUpdate.Ubicacion = product.Ubicacion;
+        productUpdate.Estado = product.Estado;
+        productUpdate.Unidad = product.Unidad;
+        productUpdate.Category = product.Category;
+        productUpdate.DateScan = DateTime.Now;
+
         await ModalEdit.ShowAsync();
     }
 
@@ -219,7 +367,7 @@ else
     private async Task loadData()
     {
         if (scanProducts == null) return;
-        filteredscanProducts = scanProducts.ToList();
+        filteredscanProducts = scanProducts.AsQueryable();
         valorCodigoBarra = "";
         chechkboxValue = false;
         await barcodeInput.FocusAsync();
@@ -247,7 +395,7 @@ else
 
                 //Modo Busqueda.
                 filteredscanProducts = scanProducts.Where(x => x.Codebar.Contains(code, 
-                    StringComparison.OrdinalIgnoreCase));
+                    StringComparison.OrdinalIgnoreCase)).AsQueryable();
             }
             else
             {
@@ -278,7 +426,7 @@ else
                                 StateData = "new"
                             };
                         scanProducts.Insert(0, Product);
-                        filteredscanProducts = scanProducts;
+                        filteredscanProducts = scanProducts.AsQueryable();
                         //scanProducts = scanProducts.OrderByDescending(p => p.DateScan).ToList();
                         //itemsPage = scanProducts.Count;
 
@@ -313,7 +461,14 @@ else
             new Products { ProuctId = "7460823056432", ProuctName = "Clavitos de Pared", Category = "Ferreteria" },
             new Products { ProuctId = "8806010245736", ProuctName = "Disco duro Samsung 870 Evo SSD", Category = "Componentes de Computadora" },
             new Products { ProuctId = "4713621995896", ProuctName = "Usb printer cable A/B Marca Agiler", Category = "componentes varios" },
-            new Products { ProuctId = "059544", ProuctName = "Led Driver", Category = "Partes Electricas"}
+            new Products { ProuctId = "059544", ProuctName = "Led Driver", Category = "Partes Electricas"},
+            new Products { ProuctId = "300000504", ProuctName = "Gabinete GRande 2 puertas", Category = "Mobiliario" },
+            new Products { ProuctId = "300000505", ProuctName = "Escritorio Blanco", Category = "Mobiliario" },
+            new Products { ProuctId = "300000507", ProuctName = "Impresora Epson negra", Category = "Mobiliario" },
+            new Products { ProuctId = "300000508", ProuctName = "Monitor Dell 24 inch", Category = "Compon. PC" },
+            new Products { ProuctId = "300000506", ProuctName = "Monitor ViewSonic 24 inch", Category = "Compon. PC" },
+            new Products { ProuctId = "300000503", ProuctName = "Tasa de Cafe", Category = "Varios."},
+            new Products { ProuctId = "4902580131296", ProuctName = "Bateria Maxwell CR2032 DEe lithium", Category = "Electronica."}
         };
     }
 

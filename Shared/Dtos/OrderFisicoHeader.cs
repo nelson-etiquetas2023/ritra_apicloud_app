@@ -6,8 +6,10 @@ namespace Shared.Dtos
     public class OrderFisicoHeader
     {
         [Key]
+        [Required(ErrorMessage ="el numero del documento debe tener un valor...") ]
         public string OrderNumberID { get; set; } = null!;
         public DateTime Order_Date { get; set; }
+        [Required(ErrorMessage = "el documento debe tener una descripcion deldocumento")]
         public string Description_Document { get; set; } = null!;
         public string Order_Hour { get; set; } = null!;
         public string Notes { get; set; } = null!;

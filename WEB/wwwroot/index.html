@@ -43,3 +43,22 @@
 </body>
 
 </html>
+<script>
+
+    function downloadFileExcel(filename, base64)
+    {
+        const link = document.createElement('a');
+        link.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + base64
+        link.download = filename;
+        link.click();
+    }
+
+    function downloadFileTxt(filename, base64)
+    {
+        const link = document.createElement('a');
+        link.href = "data:text/plain;base64," + base64;
+        link.download = filename;
+        link.click();
+    }
+
+</script>

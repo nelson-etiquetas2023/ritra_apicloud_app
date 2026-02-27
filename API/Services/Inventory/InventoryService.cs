@@ -12,6 +12,27 @@ namespace API.Services.Inventory
             this.context = context;
         }
 
+        public async Task<bool> UpdateScanProductsAsync(ScanProducts scanprducts)
+        {
+            if (scanprducts == null) return false;  
+
+            var existing = await context.scanProducts.FindAsync(scanprducts.guid);
+            if (existing == null) return false;
+
+            existing.Quantity = scanprducts.Quantity;
+            existing.Ubicacion = scanprducts.Ubicacion; 
+            existing.Estado = scanprducts.Estado;
+            existing.Unidad = scanprducts.Unidad;
+            existing.Category = scanprducts.Category;
+            existing.StateData = "Updated";
+            existing.DateScan = scanprducts.DateScan;
+
+            context.SaveChanges();
+            return true; 
+
+        }
+
+
         public async Task<bool> DeleteScanProductsAsync(Guid id)
         {
             var scanProducts = await context.scanProducts.FindAsync(id);

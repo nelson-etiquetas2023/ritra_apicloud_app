@@ -1,4 +1,5 @@
 ﻿using API.Services.Inventory;
+using API.Services.Reports;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 
@@ -10,10 +11,30 @@ namespace API.Controllers
     public class OrderFisicoController : ControllerBase
     {
         public IInventoryService service { get; set; }
-        public OrderFisicoController(IInventoryService service)
+        public IReportsService reports { get; set; }
+        public OrderFisicoController(IInventoryService service, IReportsService reports)
         {
             this.service = service;
+            this.reports = reports;
         }
+
+        [HttpPost]
+        [Route("updatedatascanproducts")]
+        public async Task<bool> UpdateScanProductsAsync([FromBody] ScanProducts scanproduct) 
+        {
+            var updated = await service.UpdateScanProductsAsync(scanproduct);
+            return true;
+        }
+
+
+
+        [HttpGet]
+        [Route("generatereportscanproducts/{id}")]
+        public async Task GenerateReportsScanProductsAsync(string id) 
+        {
+            await reports.GetReportScaProducts(id);
+        }
+
 
         [HttpDelete]
         [Route("deletescanproducts/{id}")]

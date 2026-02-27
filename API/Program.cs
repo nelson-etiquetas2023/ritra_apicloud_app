@@ -1,10 +1,14 @@
 using API.Data;
 using API.Services.Inventory;
 using API.Services.Products;
+using API.Services.Reports;
 using API.Services.Users;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 //Configurar los CORS.
 builder.Services.AddCors(options =>
@@ -26,8 +30,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("SERVIDOR-ETIQUET
 builder.Services.AddScoped<IProductsService, ProductsService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
-
-
+builder.Services.AddScoped<IReportsService, ReportsService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

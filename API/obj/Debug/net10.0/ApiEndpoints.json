@@ -59,6 +59,28 @@
   },
   {
     "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "GenerateReportsScanProductsAsync",
+    "RelativePath": "api/OrderFisico/generatereportscanproducts/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Void",
+        "MediaTypes": [],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
     "Method": "GetOrderByIdAsync",
     "RelativePath": "api/OrderFisico/getorderbyid/{OrderNumber}",
     "HttpMethod": "GET",
@@ -124,6 +146,32 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "UpdateScanProductsAsync",
+    "RelativePath": "api/OrderFisico/updatedatascanproducts",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "scanproduct",
+        "Type": "Shared.Dtos.ScanProducts",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Boolean",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "API.Controllers.OrderFisicoController",

@@ -1,0 +1,25 @@
+﻿<p>Esta seguro en borrar este producto...?</p>
+<br />
+<div class="row">
+    <div class="col-5 col-md-3 text-end"><strong>Codigo:</strong></div>
+    <div class="col-7 col-md-9">@codebar</div>
+</div>
+<div class="row">
+    <div class="col-5 col-md-3 text-end"><strong>Producto:</strong></div>
+    <div class="col-7 col-md-9">@productName</div>
+</div>
+<div class="row">
+    <div class="col-5 col-md-3 text-end"><strong>Cantidad:</strong></div>
+    <div class="col-7 col-md-9">@cantidad</div>
+</div>
+
+@code {
+    [Parameter]
+    public string codebar { get; set; } = "";
+     
+    [Parameter]
+    public string productName { get; set; } = "";
+
+    [Parameter]
+    public int cantidad { get; set; } = 0;
+}
