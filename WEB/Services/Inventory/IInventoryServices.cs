@@ -16,7 +16,7 @@ namespace WEB.Services.Inventory
         public Task<bool> UpdateScanProductsAsync(ScanProducts scanproduct);
         public Task ExportExcel(List<ScanProducts> lista);
         public Task ExportTxt(List<ScanProducts> data);
-
-
+        public Task<DocumentSettings> LoadDataDocumentSetting(string filter);
+        public Task<bool> SaveNumberConsecInventory(string number, string filter); 
     }
 }

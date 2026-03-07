@@ -1,5 +1,36 @@
 [
   {
+    "ContainingType": "API.Controllers.ConfigController",
+    "Method": "GetLoadDataConfigAsync",
+    "RelativePath": "api/Config/getloaddataconfig",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ConfigController",
+    "Method": "UpdateConfigDocumentSettingAsync",
+    "RelativePath": "api/Config/updateconfigdocumentsettings/{filter}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "filter",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "setting",
+        "Type": "Shared.Dtos.DocumentSettings",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "API.Controllers.OrderFisicoController",
     "Method": "CreateOrdersAsync",
     "RelativePath": "api/OrderFisico/createorder",
@@ -81,6 +112,32 @@
   },
   {
     "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "GetConfigById",
+    "RelativePath": "api/OrderFisico/getconfigbyid/{filter}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "filter",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "Shared.Dtos.DocumentSettings",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
     "Method": "GetOrderByIdAsync",
     "RelativePath": "api/OrderFisico/getorderbyid/{OrderNumber}",
     "HttpMethod": "GET",
@@ -146,6 +203,32 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.OrderFisicoController",
+    "Method": "SaveNumeberConsecInventoryAsync",
+    "RelativePath": "api/OrderFisico/savenumberconsecinventory",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Parametros",
+        "Type": "Shared.Dtos.NumeroFiltro",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Boolean",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "API.Controllers.OrderFisicoController",

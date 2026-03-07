@@ -8,12 +8,16 @@ main[b-dyxcep1v5s] {
     flex: 1;
 }
 
+.content[b-dyxcep1v5s] {
+    background-color: #f7f8f9;
+}
+
 .sidebar[b-dyxcep1v5s] {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    border-right: 1px solid #d6d5d5;
 }
 
 .top-row[b-dyxcep1v5s] {
-    background-color: #f7f7f7;
+    background-color: #ffffff;
     border-bottom: 1px solid #d6d5d5;
     justify-content: flex-end;
     height: 3.5rem;

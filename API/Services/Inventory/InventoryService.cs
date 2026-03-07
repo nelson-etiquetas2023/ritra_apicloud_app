@@ -11,7 +11,29 @@ namespace API.Services.Inventory
         {
             this.context = context;
         }
-
+        public async Task<bool> SaveNumberConsecInventoryAsync(string numero,string filter)
+        {
+            var setting = context.Parametros.Where(x => x.Module == filter);
+            if (setting == null) return  false;
+            setting.FirstOrDefault()!.Value1 = numero;
+            context.SaveChanges();
+            return true;
+        }
+        public async Task<DocumentSettings> GetConfigById(string filter)
+        {
+            var setting =  context.Parametros.Where(x => x.Module == filter);
+            
+            if (setting == null) return new DocumentSettings();
+            DocumentSettings ds = new DocumentSettings
+            {
+                Consec = Convert.ToInt32(setting.FirstOrDefault()!.Value1),
+                Prefijo = setting.FirstOrDefault()!.Value2,
+                useSeparator = Convert.ToBoolean(setting.FirstOrDefault()!.Value3),
+                usePref = Convert.ToBoolean(setting.FirstOrDefault()!.Value4),
+                CharacterSeparator = setting.FirstOrDefault()!.Value5
+            };
+            return ds;
+        }
         public async Task<bool> UpdateScanProductsAsync(ScanProducts scanprducts)
         {
             if (scanprducts == null) return false;  
@@ -31,8 +53,6 @@ namespace API.Services.Inventory
             return true; 
 
         }
-
-
         public async Task<bool> DeleteScanProductsAsync(Guid id)
         {
             var scanProducts = await context.scanProducts.FindAsync(id);
@@ -43,7 +63,6 @@ namespace API.Services.Inventory
 
             return true;
         }
-
         public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
         {
             var productsScan = await context.scanProducts
@@ -51,7 +70,6 @@ namespace API.Services.Inventory
 
             return productsScan;
         }
-
         public async Task<bool> SaveDataProductScanAsync(List<ScanProducts> products)
         {
             if (products == null) return false;
@@ -66,8 +84,6 @@ namespace API.Services.Inventory
 
             return true;
         }
-
-
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {
             var orders = await context.Order_InvFisico_Header
@@ -76,20 +92,17 @@ namespace API.Services.Inventory
 
             return orders;
         }
-
         public async Task<OrderFisicoHeader?> GetOrderByIdAsync(string OrderNumber)
         {
             return await context.Order_InvFisico_Header.Include(o => o.OrdersDetails)
                 .FirstOrDefaultAsync(o => o.OrderNumberID == OrderNumber);
         }
-
         public async Task<OrderFisicoHeader> CreateOrderAsync(OrderFisicoHeader order)
         {
             context.Order_InvFisico_Header.Add(order);
             await context.SaveChangesAsync();
             return order;
         }
-
         public async Task<OrderFisicoHeader?> UpdateOrderAsync(string OrderNumber, OrderFisicoHeader order)
         {
             //busco la orden a modificar en la base de datos.
@@ -148,7 +161,6 @@ namespace API.Services.Inventory
             await context.SaveChangesAsync();
             return existing;
         }
-
         public async Task<bool> DeleteOrderAsync(string id)
         {
             var order = await context.Order_InvFisico_Header.FindAsync(id);
@@ -160,7 +172,5 @@ namespace API.Services.Inventory
             return true;
 
         }
-
-       
     }
 }

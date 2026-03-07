@@ -2,9 +2,9 @@
 @inject IInventoryServices service
 @inject NavigationManager Navigation
 
+<TestComponentModal @ref="createModal" OnOrderCreated="LoadOrders" />
 <PageTitle>Home</PageTitle>
-<h1><Icon Name="IconName.Alarm" Size="IconSize.x1" /> Documentos de Conteo Fisico</h1>
-
+<h1><Icon Name="IconName.Alarm" Size="IconSize.x1" /> Documentos de Inventario.</h1>
 <div class="container-fluid">
     <div class="row">
             @if(orders == null) 
@@ -51,21 +51,15 @@
                 </div>
                     <QuickGrid Items="filteredOrders.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-bordered" Pagination="@pagination">
                         <PropertyColumn Property="@(p => p.renglon)" Title="Rg." />
-
-                        <TemplateColumn Title="Documento" Align="Align.Center">
-                            <a href="CodebarDetails/@context.OrderNumberID" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
+                        <TemplateColumn Title="Documento" Align="Align.Center" Sortable="true">
+                            <a href="CodebarDetails/@Escapar(context.OrderNumberID)" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
                         </TemplateColumn>
-
-
                         <TemplateColumn Title="Fecha" Sortable="true" Align="Align.Center">
                             <div>
                                 <Icon Name="IconName.CalendarDate" />
-                                @context.Order_Date.ToShortDateString()
+                                @context.Order_Date
                             </div>
                         </TemplateColumn>
-
-
-                        
                         <PropertyColumn Property="@(p => p.Description_Document)" Title="Descripción" Sortable="true" />
                         
                         <TemplateColumn Title="Persona Registro">
@@ -74,8 +68,6 @@
                                 @context.Person_Create
                             </div>
                         </TemplateColumn>
-                            
-                        
                         <TemplateColumn Title="Estado">
                             <Badge Color="@(context.Status == "OPEN" ? BadgeColor.Success : BadgeColor.Danger)"
                                    VisuallyHiddenText="Estado de la orden">
@@ -116,12 +108,13 @@
     private static List<OrderFisicoHeader>? orders;
     private IEnumerable<OrderFisicoHeader> filteredOrders = new List<OrderFisicoHeader>();
     PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
-
     private TestComponentModal? createModal;
+    private string Escapar(string valor) => Uri.EscapeDataString(valor);
 
     protected override async Task OnInitializedAsync()
     {
         await LoadOrders();
+
     }
 
     private async Task LoadOrders()
@@ -165,6 +158,8 @@
             o.Description_Document.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             o.Person_Create.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
+        if (filteredOrders.Count() == 0) return;
+
         pageSize = filteredOrders.Count();
         pagination.ItemsPerPage = pageSize;
 
@@ -174,7 +169,18 @@
     private async Task  CreateDocument()
     {
         if (createModal == null) return;
-
+        createModal.settingDoc = await service.LoadDataDocumentSetting("DocumentSetting");
+        //document setting configuracion del consecutivo
+        if (createModal.settingDoc.usePref && createModal.settingDoc.useSeparator)
+        {
+            createModal.orden.OrderNumberID = createModal.settingDoc.Prefijo + 
+            createModal.settingDoc.CharacterSeparator + createModal.settingDoc.Consec;
+        }
+        createModal.orden.Order_Date = DateTime.Now;
+        createModal.orden.Person_Create = "";
+        createModal.orden.Description_Document = "";
+        createModal.orden.Area_Almacen = "";
+        createModal.orden.Equipo = new();
         await createModal.ShowAsync();
     }
 }

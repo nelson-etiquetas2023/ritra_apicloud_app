@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WEB;
+using WEB.Services.Config;
 using WEB.Services.Inventory;
 
 var ritrama_local = "http://localhost:5220/";
@@ -23,5 +24,6 @@ builder.Services.AddBlazorBootstrap();
 
 //Inyectar los servcios de la aplicacion.
 builder.Services.AddScoped<IInventoryServices, InventoryServices>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
 
 await builder.Build().RunAsync();

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
-using System.Runtime.InteropServices;
 
 namespace API.Services.Products
 {

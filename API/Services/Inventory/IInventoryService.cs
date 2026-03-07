@@ -13,6 +13,8 @@ namespace API.Services.Inventory
         public Task<List<ScanProducts>> GetScanProductsAsync(string OrderId);
         public Task<bool> DeleteScanProductsAsync(Guid OrderId);
         public Task<bool> UpdateScanProductsAsync(ScanProducts scanproducts);
+        public Task<DocumentSettings> GetConfigById(string filter);
+        public Task<bool> SaveNumberConsecInventoryAsync(string numero, string filter);
 
     }
 }

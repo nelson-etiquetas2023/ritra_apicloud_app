@@ -19,6 +19,18 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [Route("savenumberconsecinventory")]
+        public async Task<bool> SaveNumeberConsecInventoryAsync([FromBody] NumeroFiltro Parametros) 
+        {
+            var number = Parametros.Numero;
+            var filter = Parametros.Filtro;
+            if (number == null || filter == null) return false; 
+            await service.SaveNumberConsecInventoryAsync(number!, filter);
+            return true;
+        }
+
+
+        [HttpPost]
         [Route("updatedatascanproducts")]
         public async Task<bool> UpdateScanProductsAsync([FromBody] ScanProducts scanproduct) 
         {
@@ -26,7 +38,12 @@ namespace API.Controllers
             return true;
         }
 
-
+        [HttpGet]
+        [Route("getconfigbyid/{filter}")]
+        public async Task<DocumentSettings> GetConfigById(string filter) 
+        {
+            return await service.GetConfigById(filter);
+        }
 
         [HttpGet]
         [Route("generatereportscanproducts/{id}")]
@@ -34,7 +51,6 @@ namespace API.Controllers
         {
             await reports.GetReportScaProducts(id);
         }
-
 
         [HttpDelete]
         [Route("deletescanproducts/{id}")]

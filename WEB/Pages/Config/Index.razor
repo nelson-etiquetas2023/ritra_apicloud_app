@@ -1,0 +1,141 @@
+﻿@page "/config"
+@inject IConfigService service 
+
+<Preload LoadingText="Loading data..." />
+<Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopRight" />
+
+<h3><Icon Name="IconName.Gear" Style="margin-right:10px;" />Configuración</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <Accordion AlwaysOpen="true" @ref="acordion" Class="mx-5" >
+                <AccordionItem>
+                    <TitleTemplate>
+                        <Icon Name="IconName.FileTypeDoc" Class="me-1" /> Documents Settigs
+                    </TitleTemplate>
+                    <Content>
+                        <form>
+                            <div class="mb-3">
+                                <label>Numero Consecutivo:</label>
+                                <input type="text" @bind="documentSettings.Consec" name="txt_numconsec"  class="form-control fw-bold" />
+                            </div>
+                            <div class="mb-3">
+                                <label>Prefijo:</label>
+                                <input type="text" @bind="documentSettings.Prefijo"  name="txt_prefijo" 
+                                class="form-control fw-bold" />
+                            </div>
+                            <div class="mb-3">
+                                <label>Caracter:</label>
+                                <input type="text" @bind="documentSettings.CharacterSeparator" name="txt_charseparator"
+                                       class="form-control fw-bold" />
+                            </div>
+                            <div class="mb-3">
+                                <Switch Value = "documentSettings.useSeparator" Label="Usar Separador" 
+                                        ValueExpression="() => documentSettings.useSeparator" ValueChanged="SwitchChanged1" />
+                                <Switch value="documentSettings.usePref" Label="Usar Prefijo"
+                                        ValueExpression="() => documentSettings.usePref" ValueChanged="SwitchChanged2" />
+                            </div>
+                            <p class="fw-bold">Ejemplo: @exampleFormat</p>
+                            <Tooltip Class="d-inline-block" Title="Guardar los datos..." role="button">
+                                <div class="mb-3">
+                                    <a @onclick="SaveDocumentSettings"><Icon Name="IconName.Floppy" Size="IconSize.x3" /></a>
+                                </div>
+                            </Tooltip>
+                        </form>
+                    </Content>
+                </AccordionItem>
+                <!--setting codebar-->
+                <AccordionItem Title="Codigo de Barras">
+                    <Content>
+                        <b>This is the first item's accordion body.</b> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem Title="Setting Data">
+                    <Content>
+                        <b>This is the first item's accordion body.</b> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem Title="Configuración de Categorias">
+                    <Content>
+                        <b>This is the first item's accordion body.</b> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem Title="Unidades de productos">
+                    <Content>
+                        <b>This is the first item's accordion body.</b> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+            </Accordion>
+            <div class="col-2"></div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    [Inject] protected ToastService toastService { get; set; } = default!;
+    List<ToastMessage> messages = new List<ToastMessage>();
+    private Accordion acordion = default!;
+    List<Parameter> settings = [];
+    DocumentSettings documentSettings = new();
+    string exampleFormat = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataConfig();
+    }
+
+    private async Task LoadDataConfig()
+    {
+        settings = await service.LoadDataConfig();
+        var document = settings.Where(x => x.Module == "DocumentSetting").FirstOrDefault();
+        if (document == null) return;
+        //Load DocumentSettings
+        documentSettings.Consec = Convert.ToInt32(document.Value1);
+        documentSettings.Prefijo = document.Value2;
+        documentSettings.useSeparator = Convert.ToBoolean(document.Value3);
+        documentSettings.usePref = Convert.ToBoolean(document.Value4);
+        documentSettings.CharacterSeparator = document.Value5;
+    }
+
+    private async Task SaveDocumentSettings()
+    {
+        PreloadService.Show(SpinnerColor.Dark, "Guardando los cambios...");
+        await Task.Delay(1000); // Simula una carga de datos de 3 segundos
+        documentSettings.NumberDocComplete = exampleFormat;
+        await service.UpdateDocumentSettings("DocumentSetting", documentSettings);
+        PreloadService.Hide();
+    }
+
+    private void SwitchChanged1(bool value)
+    {
+        documentSettings.useSeparator = value;
+        FormatChanged();
+    }
+
+    private void SwitchChanged2(bool value)
+    {
+        documentSettings.usePref = value;
+        FormatChanged();
+    }
+
+    private void FormatChanged()
+    {
+        if (documentSettings.useSeparator && documentSettings.usePref)
+        {
+            exampleFormat = documentSettings.Prefijo + documentSettings.CharacterSeparator +
+             documentSettings.Consec;
+        }
+        if (!documentSettings.useSeparator && documentSettings.usePref)
+        {
+            exampleFormat = documentSettings.Prefijo +
+             documentSettings.Consec;
+        }
+        if (!documentSettings.useSeparator && !documentSettings.usePref)
+        {
+            exampleFormat = documentSettings.Consec.ToString();
+        }
+    }
+}

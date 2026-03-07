@@ -10,6 +10,109 @@
     }
   ],
   "paths": {
+    "/api/Config/getloaddataconfig": {
+      "get": {
+        "tags": [
+          "Config"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Config/updateconfigdocumentsettings/{filter}": {
+      "post": {
+        "tags": [
+          "Config"
+        ],
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentSettings"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentSettings"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/OrderFisico/savenumberconsecinventory": {
+      "post": {
+        "tags": [
+          "OrderFisico"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NumeroFiltro"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NumeroFiltro"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/NumeroFiltro"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/OrderFisico/updatedatascanproducts": {
       "post": {
         "tags": [
@@ -52,6 +155,45 @@
               "text/json": {
                 "schema": {
                   "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/OrderFisico/getconfigbyid/{filter}": {
+      "get": {
+        "tags": [
+          "OrderFisico"
+        ],
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSettings"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSettings"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSettings"
                 }
               }
             }
@@ -633,6 +775,49 @@
   },
   "components": {
     "schemas": {
+      "DocumentSettings": {
+        "type": "object",
+        "properties": {
+          "consec": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prefijo": {
+            "type": "string"
+          },
+          "useSeparator": {
+            "type": "boolean"
+          },
+          "usePref": {
+            "type": "boolean"
+          },
+          "numberDocComplete": {
+            "type": "string"
+          },
+          "characterSeparator": {
+            "type": "string"
+          }
+        }
+      },
+      "NumeroFiltro": {
+        "required": [
+          "numero",
+          "filtro"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "filtro": {
+            "type": "string"
+          }
+        }
+      },
       "OrderFisicoDetails": {
         "type": "object",
         "properties": {
@@ -933,6 +1118,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Config"
+    },
     {
       "name": "OrderFisico"
     },

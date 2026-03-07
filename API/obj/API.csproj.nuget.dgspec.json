@@ -57,7 +57,7 @@
           "dependencies": {
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.3, )"
             },
             "Microsoft.Data.SqlClient": {
               "target": "Package",
@@ -65,21 +65,21 @@
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.3, )"
             },
             "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.3, )"
             },
             "Microsoft.EntityFrameworkCore.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.2, )"
+              "version": "[10.0.3, )"
             },
             "QuestPDF": {
               "target": "Package",
-              "version": "[2025.12.4, )"
+              "version": "[2026.2.3, )"
             }
           },
           "imports": [

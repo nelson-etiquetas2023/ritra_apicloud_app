@@ -1,23 +1,21 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.ExtendedProperties;
 using Microsoft.JSInterop;
 using Shared.Dtos;
 using System.Text;
 using System.Text.Json;
-using System.IO;
 
 namespace WEB.Services.Inventory
 {
     public class InventoryServices : IInventoryServices
     {
         IHttpClientFactory httpFactory { get; set; }
-
         private readonly IJSRuntime JS;
+        
 
         private static readonly JsonSerializerOptions jsonOptions = 
             new JsonSerializerOptions() { 
                 PropertyNameCaseInsensitive = true, 
-                WriteIndented = true };
+                WriteIndented = true};
         
         public InventoryServices(IHttpClientFactory httpFactory, IJSRuntime JS)
         {
@@ -25,6 +23,41 @@ namespace WEB.Services.Inventory
             this.JS = JS;
         }
 
+        public async Task<bool> SaveNumberConsecInventory(string number, string filter)
+        {
+            //uso de tuplas para mandar dos parametros
+
+            var parametros = new NumeroFiltro(number, filter);
+            var url = $"api/orderfisico/savenumberconsecinventory";
+            var json = JsonSerializer.Serialize(parametros, jsonOptions);
+            var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
+            var clientHttp = httpFactory.CreateClient("ritrama");
+            var response = await clientHttp.PostAsync(url, jsonContent);
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public async Task<DocumentSettings> LoadDataDocumentSetting(string filter)
+        {
+            var url = $"api/orderfisico/getconfigbyid/{filter}";
+            var clientHttp = httpFactory.CreateClient("ritrama");
+            var response = await clientHttp.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json))
+                return new DocumentSettings();
+            var setting = await JsonSerializer.DeserializeAsync<DocumentSettings>(
+               new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)), jsonOptions);
+
+            return setting ?? new DocumentSettings();
+        }
         public async Task ExportTxt(List<ScanProducts> data)
         {
             try
@@ -55,7 +88,6 @@ namespace WEB.Services.Inventory
                 
             }
         }
-
         public async Task ExportExcel(List<ScanProducts> data)
         {
             using var workbook = new XLWorkbook();
@@ -121,8 +153,6 @@ namespace WEB.Services.Inventory
             //llamada JavaScript para descargar el excel.
             await JS.InvokeVoidAsync("downloadFileExcel", "datos.xlsx", Convert.ToBase64String(bytes));
         }
-
-
         public async Task<bool> UpdateScanProductsAsync(ScanProducts scanproduct)
         {
             var json = JsonSerializer.Serialize(scanproduct, jsonOptions);
@@ -154,7 +184,6 @@ namespace WEB.Services.Inventory
 
             //await JS.InvokeVoidAsync("open", urlJS);
         }
-
         public async Task<bool> DeletescanProducts(Guid id)
         {
             var url = $"api/orderfisico/deletescanProducts/{id}";
@@ -170,7 +199,6 @@ namespace WEB.Services.Inventory
                 return false;
             }
         }
-
         public async Task<List<ScanProducts>> GetscanProducts(string OrderId) 
         {
             var url = $"api/orderfisico/getscanproducts/{OrderId}";
@@ -201,7 +229,6 @@ namespace WEB.Services.Inventory
                 return false;
             }
         }
-
         public async Task<List<OrderFisicoHeader>> GetOrders()
         {
             var url = $"api/orderfisico/getorders";
@@ -215,7 +242,6 @@ namespace WEB.Services.Inventory
                 new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)), jsonOptions);
             return (orders ?? new List<OrderFisicoHeader>());
         }
-
         public async Task<bool> CreateOrders(OrderFisicoHeader order)
         {
             //algunos valores por defecto de la orden.
@@ -241,22 +267,19 @@ namespace WEB.Services.Inventory
                 return false;
             }
         }
-
         public Task<bool> DeleteOrders(string OrderNumber)
         {
             throw new NotImplementedException();
         }
-
         public Task<OrderFisicoHeader> GetOrderById(string OrderNumber)
         {
             throw new NotImplementedException();
         }
-
         public Task<bool> UpdateOrders(string OrderNumber, OrderFisicoHeader order)
         {
             throw new NotImplementedException();
         }
 
-        
+      
     }
 }

@@ -1,6 +1,7 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Ritrama Cloud</a>
+        <a class="navbar-brand" href=""><Icon Name="IconName.UpcScan"  
+            Style="margin-right:10px;" /> ScanStock Pro.</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -11,22 +12,22 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inventario
+                <Icon Name="IconName.CloudRain" Size="IconSize.x4" Style="margin-right:10px;" /> Inventario
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Productos
+            <NavLink class="nav-link" href="/products">
+                <Icon Name="IconName.Box" Size="IconSize.x4" Style="margin-right:10px;" /> Productos
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Usuarios 
+            <NavLink class="nav-link" href="/users">
+                <Icon Name="IconName.Person" Size="IconSize.x4" Style="margin-right:10px;" /> Usuarios
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Parametros
+            <NavLink class="nav-link" href="/config">
+                <Icon Name="IconName.Gear" Size="IconSize.x4" Style="margin-right:10px;" /> Configuración
             </NavLink>
         </div>
     </nav>

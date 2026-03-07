@@ -1,4 +1,5 @@
 using API.Data;
+using API.Services.Config;
 using API.Services.Inventory;
 using API.Services.Products;
 using API.Services.Reports;
@@ -31,6 +32,8 @@ builder.Services.AddScoped<IProductsService, ProductsService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IReportsService, ReportsService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
+
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

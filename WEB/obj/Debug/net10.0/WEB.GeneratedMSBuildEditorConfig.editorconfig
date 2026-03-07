@@ -40,6 +40,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcRGlhbG9nWWVzTm8ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Config/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29uZmlnXEluZGV4LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Counter.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291bnRlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -56,12 +60,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTm90Rm91bmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/TestComponentModal.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVzdENvbXBvbmVudE1vZGFsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Programacion/RitramaCloud2026/WEB/Pages/Weather.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV2VhdGhlci5yYXpvcg==
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Users/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlcnNcSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Programacion/RitramaCloud2026/WEB/_Imports.razor]
