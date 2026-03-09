@@ -3,6 +3,7 @@
 @inject NavigationManager Navigation
 
 <TestComponentModal @ref="createModal" OnOrderCreated="LoadOrders" />
+
 <PageTitle>Home</PageTitle>
 <h1><Icon Name="IconName.Alarm" Size="IconSize.x1" /> Documentos de Inventario.</h1>
 <div class="container-fluid">
@@ -16,87 +17,39 @@
             else 
             {
                 <!--menu del grid-->
-                <div class="row">
+            <div class="navbar navbar-expand-lg navbar-light bg-light px-3">
+                <div class="container-fluid d-flex justify-content-between align-items-center">
                     <!--Boton de crear documentos-->
-                    <div class="col-3">
-                        <div><strong>Crear Conteo Fisico:</strong></div>
+                    <div class="d-flex gap-2">
                         <button class="btn btn-primary" @onclick="CreateDocument"><Icon Name="IconName.Activity" /> Crear Documento</button>
                     </div>
-                    <!--combo de item poir pagina del quickgrid-->
-                    <div class="col-3">
-                        <div>
-                            <strong>Items per page:</strong>
-                            <select @bind="@pagination.ItemsPerPage" class="form-select">
-                                <option>5</option>
-                                <option>10</option>
-                                <option>15</option>
-                                <option>20</option>
-                                <option>25</option>
-                                <option>50</option>
-                            </select>
-                        </div>
-                    </div>
                     <!--Buscador-->
-                    <div class="col-3">
+                    <div class="d-flex align-items-center gap-2" style="max-width: 400px;">
                         <strong>buscar por filtro:</strong>
                         <div class="d-flex">
                             <input type="text" class="form-control me-2" placeholder="Buscar..." @bind="searchText" />
                             <Button class="btn btn-primary" @onclick="buscar"><Icon Name="IconName.Search" /></Button>
                         </div>
                     </div>
-                    <!--ultima columna del layout-->
-                    <div class="col-3">
-                   
-                    </div>
+                 </div>
+            </div>
+                <!--Aqui va el QuickGridMain-->
+                <QuickGridMain filteredOrders="filteredOrders" pagination="pagination" />
+            <!--combo de item poir pagina del quickgrid-->
+            <div class="col-3" style="margin-bottom:15px">
+                <div>
+                    <strong>Items por Page:</strong>
+                    <select @bind="@pagination.ItemsPerPage" class="form-select">
+                        <option>5</option>
+                        <option>10</option>
+                        <option>15</option>
+                        <option>18</option>
+                        <option>20</option>
+                        <option>25</option>
+                        <option>50</option>
+                    </select>
                 </div>
-                    <QuickGrid Items="filteredOrders.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-bordered" Pagination="@pagination">
-                        <PropertyColumn Property="@(p => p.renglon)" Title="Rg." />
-                        <TemplateColumn Title="Documento" Align="Align.Center" Sortable="true">
-                            <a href="CodebarDetails/@Escapar(context.OrderNumberID)" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
-                        </TemplateColumn>
-                        <TemplateColumn Title="Fecha" Sortable="true" Align="Align.Center">
-                            <div>
-                                <Icon Name="IconName.CalendarDate" />
-                                @context.Order_Date
-                            </div>
-                        </TemplateColumn>
-                        <PropertyColumn Property="@(p => p.Description_Document)" Title="Descripción" Sortable="true" />
-                        
-                        <TemplateColumn Title="Persona Registro">
-                            <div>
-                                <Icon Name="IconName.PersonBadge" />
-                                @context.Person_Create
-                            </div>
-                        </TemplateColumn>
-                        <TemplateColumn Title="Estado">
-                            <Badge Color="@(context.Status == "OPEN" ? BadgeColor.Success : BadgeColor.Danger)"
-                                   VisuallyHiddenText="Estado de la orden">
-                                @context.Status
-                            </Badge>
-                        </TemplateColumn>
-                        <PropertyColumn Property="@(p => p.Items)" Title="Items" />
-                        <PropertyColumn Property="@(p => p.EquiposConteo)" Title="Equipos" />
-                        <PropertyColumn Property="@(p => p.Sincro_Document)" Title="Sincro" />
-                        <!--Columna personalizada de acciones-->
-                        <TemplateColumn Title="Actions">
-                            <Tooltip Title="Editar Documento" Placement="TooltipPlacement.Top">
-                                <a href="#"><Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
-                            </Tooltip>
-                            <Tooltip Title="Cerrar Documento" Placement="TooltipPlacement.Top">
-                                <a href="#"><Icon Name="IconName.FileEarmarkLockFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
-                            </Tooltip>
-                            <Tooltip Title="Imprimir Reporte" Placement="TooltipPlacement.Top">
-                                <a href="#"><Icon Name="IconName.PrinterFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
-                            </Tooltip>
-                            <Tooltip Title="Anular Documento" Placement="TooltipPlacement.Top">
-                                <a href="#"><Icon Name="IconName.XCircleFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
-                            </Tooltip>
-                            <Tooltip Title="Sincronizar data con Server" Placement="TooltipPlacement.Top">
-                                <a href="#"><Icon Name="IconName.DatabaseFillDown" Size="IconSize.x5" Color="IconColor.Dark" /></a>
-                            </Tooltip>
-                        </TemplateColumn>
-                    </QuickGrid>
-                    <Paginator State="@pagination" />
+            </div>
             }          
     </div>
 </div>  
@@ -104,12 +57,11 @@
 @code
 {
     private string searchText = string.Empty;
-    private int pageSize = 15;
     private static List<OrderFisicoHeader>? orders;
     private IEnumerable<OrderFisicoHeader> filteredOrders = new List<OrderFisicoHeader>();
-    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    PaginationState pagination = new PaginationState { ItemsPerPage = 18 };
     private TestComponentModal? createModal;
-    private string Escapar(string valor) => Uri.EscapeDataString(valor);
+   
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,10 +112,10 @@
 
         if (filteredOrders.Count() == 0) return;
 
-        pageSize = filteredOrders.Count();
-        pagination.ItemsPerPage = pageSize;
+        //pageSize = filteredOrders.Count();
+        //pagination.ItemsPerPage = pageSize;
 
-        if (searchText == string.Empty) pagination.ItemsPerPage = 15;
+        //if (searchText == string.Empty) pagination.ItemsPerPage = 15;
     }
 
     private async Task  CreateDocument()

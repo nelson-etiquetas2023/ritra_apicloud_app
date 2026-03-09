@@ -991,7 +991,9 @@
       "Product": {
         "required": [
           "product_id",
-          "product_Name"
+          "product_Name",
+          "product_Type",
+          "unidad"
         ],
         "type": "object",
         "properties": {
@@ -1019,6 +1021,12 @@
           },
           "codebar": {
             "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "desactivado": {
+            "type": "boolean"
           }
         }
       },

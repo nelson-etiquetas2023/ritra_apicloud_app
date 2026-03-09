@@ -1,0 +1,67 @@
+﻿<div>
+    <QuickGrid Items="filteredOrders!.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-hover table-bordered table-striped" Pagination="@pagination">
+        <PropertyColumn Property="@(p => p.renglon)" Title="Rg." />
+        <TemplateColumn Title="Documento" Align="Align.Center" Sortable="true">
+            <a href="CodebarDetails/@Escapar(context.OrderNumberID)" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
+        </TemplateColumn>
+        <TemplateColumn Title="Fecha" Sortable="true" Align="Align.Center">
+            <div>
+                <Icon Name="IconName.CalendarDate" />
+                @context.Order_Date
+            </div>
+        </TemplateColumn>
+        <PropertyColumn Property="@(p => p.Description_Document)" Title="Descripción" Sortable="true" />
+
+        <TemplateColumn Title="Persona Registro">
+            <div>
+                <Icon Name="IconName.PersonBadge" />
+                @context.Person_Create
+            </div>
+        </TemplateColumn>
+        <TemplateColumn Title="Estado">
+            <Badge Color="@(context.Status == "OPEN" ? BadgeColor.Success : BadgeColor.Danger)"
+                   VisuallyHiddenText="Estado de la orden">
+                @context.Status
+            </Badge>
+        </TemplateColumn>
+        <PropertyColumn Property="@(p => p.Items)" Title="Items" />
+        <PropertyColumn Property="@(p => p.EquiposConteo)" Title="Equipos" />
+        <PropertyColumn Property="@(p => p.Sincro_Document)" Title="Sincro" />
+        <!--Columna personalizada de acciones-->
+        <TemplateColumn Title="Actions">
+            <Tooltip Title="Editar Documento" Placement="TooltipPlacement.Top">
+                <a href="#"><Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+            <Tooltip Title="Cerrar Documento" Placement="TooltipPlacement.Top">
+                <a href="#"><Icon Name="IconName.FileEarmarkLockFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+            <Tooltip Title="Imprimir Reporte" Placement="TooltipPlacement.Top">
+                <a href="#"><Icon Name="IconName.PrinterFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+            <Tooltip Title="Anular Documento" Placement="TooltipPlacement.Top">
+                <a href="#"><Icon Name="IconName.XCircleFill" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+            <Tooltip Title="Sincronizar data con Server" Placement="TooltipPlacement.Top">
+                <a href="#"><Icon Name="IconName.DatabaseFillDown" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+        </TemplateColumn>
+    </QuickGrid>
+
+</div>
+<div class="mt-2">
+    <Paginator State="@pagination" />
+</div>
+
+@code {
+
+    [Parameter]
+    public IEnumerable<OrderFisicoHeader>? filteredOrders { get; set; }
+
+    [Parameter]
+    public PaginationState? pagination { get; set; }
+
+    
+    public int pageSize { get; set; }
+
+    private string Escapar(string valor) => Uri.EscapeDataString(valor);
+}

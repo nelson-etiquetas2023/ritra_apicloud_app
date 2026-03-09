@@ -1,7 +1,102 @@
 ﻿@page "/products"
+@inject IProductsService service
+@using WEB.Pages.Products
 
-<h3>Modulo de Productos</h3>
+<ModalCreateProducts @ref="ModalCreate" OnProductCreated="LoadProducts" />
+
+
+<h1><Icon Name="IconName.Box" Size="IconSize.x1" /> Productos</h1>
+
+
+
+<!--Menu principal-->
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-3">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="button" @onclick="CreateProducts"><Icon Name="IconName.Archive" Size="IconSize.x5" /> Crear Producto</button>
+            <button class="btn btn-primary" type="button"><Icon Name="IconName.FileExcel" Size="IconSize.x5" /> Importar Excel</button>
+        </div>
+
+        <form class="d-flex align-items-center gap-2" style="max-width: 400px;">
+            <strong>buscar por filtro:</strong>
+            <div class="d-flex">
+                <input type="text" class="form-control me-2" placeholder="Buscar..." @bind="searchText" />
+                <Button class="btn btn-primary" @onclick="buscar"><Icon Name="IconName.Search" /></Button>
+            </div>
+        </form>
+
+    </div>
+</nav>
+@if(products == null)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100 position-fixed top-0 start-0 w-100">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else
+{
+    <!--QuickGrid de Productos-->
+    <QuickGridProducts productsFiltered="productsFiltered!.AsQueryable()" pagination="pagination" />
+}
+
+
 
 @code {
 
+    private List<Product>? products;
+    IEnumerable<Product>? productsFiltered { get; set; }
+    PaginationState pagination = new PaginationState { ItemsPerPage = 18 };
+    private string searchText = "";
+    ModalCreateProducts ModalCreate { get; set; } = default!;
+    int pageSize = 15;
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+
+    }
+
+    private void buscar()
+    {
+        // Lógica para buscar documentos
+        if (products == null) return;
+
+        productsFiltered = products.Where(o =>
+            o.Product_Type.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Product_Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Unidad.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+        if (productsFiltered.Count() == 0) return;
+
+        pageSize = products.Count();
+        pagination.ItemsPerPage = pageSize;
+
+        if (searchText == string.Empty) pagination.ItemsPerPage = 15;
+    }
+    private async Task LoadProducts()
+    {
+        products = await service.GetProductAsync();
+        productsFiltered = products.AsQueryable();
+    }
+
+    private async Task CreateProducts()
+    {
+        await ModalCreate.ShowAsync();
+    }
+
+    private void EditProducts(Product item)
+    {    
+    }
+
+    private void DeleteProducts(int id)
+    {
+    }
+
+    private void PrintLabels(Product item)
+    {
+
+
+    }
+
+    
 }

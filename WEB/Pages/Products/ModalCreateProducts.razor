@@ -1,0 +1,65 @@
+﻿@inject IProductsService service
+
+<Modal @ref="modal" >
+    <HeaderTemplate><Icon Name="IconName.Plus" Size="IconSize.x3" /> Crear producto</HeaderTemplate>
+    <BodyTemplate>
+        <div>
+            <EditForm Model="product" OnValidSubmit="CreateProducts">
+                <div class="mb-3">
+                    <label for="txt_productname"><strong>Nombre del Producto:</strong> </label>
+                    <InputText class="form-control" id="txt_productname" @bind-Value="product.Product_Name" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_category"><strong>Categoria :</strong></label>
+                    <InputText class="form-control" id="txt_category" @bind-Value="product.Product_Type" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_unidad"><strong>Unidad :</strong></label>
+                    <InputText class="form-control" id="txt_unidad" @bind-Value="product.Unidad" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_price"><strong>Precio :</strong></label>
+                    <InputNumber class="form-control" id="txt_price" @bind-Value="product.Price" />
+                </div>
+                <div class="mb-3">
+                    <label for="txt_codebar"><strong>Codigo de barra :</strong></label>
+                    <InputText class="form-control" id="txt_codebar" @bind-Value="product.Codebar" />
+                </div>
+            </EditForm>
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <div class="mb-3">
+            <Button Type="ButtonType.Submit" style="background-color:limegreen" @onclick="CreateProducts"><Icon Name="IconName.Floppy2Fill" @onclick="CreateProducts" /> Guardar</Button>
+            <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+        </div>
+
+    </FooterTemplate>
+</Modal>
+
+
+@code {
+
+    [Parameter]
+    public EventCallback OnProductCreated { get; set; }
+
+    private Modal modal = default!;
+    private Product product = new();
+
+    private async Task CreateProducts()
+    {
+        await service.CreateproductAsync(product);
+        await modal.HideAsync();
+        await OnProductCreated.InvokeAsync();
+    }
+
+    public async Task ShowAsync()
+    {
+        await modal.ShowAsync();
+    }
+
+    private async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

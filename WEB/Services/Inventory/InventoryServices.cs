@@ -278,8 +278,6 @@ namespace WEB.Services.Inventory
         public Task<bool> UpdateOrders(string OrderNumber, OrderFisicoHeader order)
         {
             throw new NotImplementedException();
-        }
-
-      
+        }   
     }
 }
