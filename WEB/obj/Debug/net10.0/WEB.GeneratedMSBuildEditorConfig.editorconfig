@@ -40,6 +40,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcRGlhbG9nWWVzTm8ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Componentes/Logout.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcTG9nb3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Config/Index.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29uZmlnXEluZGV4LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -76,6 +80,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlcnNcSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Users/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlcnNcTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Users/UserRegistration.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlcnNcVXNlclJlZ2lzdHJhdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -95,3 +107,7 @@ build_metadata.AdditionalFiles.CssScope = b-9g43u1h7ve
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Componentes/QuickGridProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcUXVpY2tHcmlkUHJvZHVjdHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-enea5apfkx
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Upload/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXBsb2FkXEluZGV4LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-rvkdtcss9e

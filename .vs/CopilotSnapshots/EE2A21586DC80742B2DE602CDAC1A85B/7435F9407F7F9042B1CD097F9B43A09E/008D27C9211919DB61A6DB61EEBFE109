@@ -1,0 +1,71 @@
+﻿@page "/Upload" 
+@using System.Net.Http.Headers
+@inject UploadService Uploadservice
+
+<h3>Upload Images</h3>
+
+<InputFile OnChange="@UploadImagen" multiple/>
+
+@if (fileNames.Count > 0) 
+{
+    foreach (var fileName in fileNames)
+    {
+        <ul>
+            <li>File: @fileName
+                <br>
+                <span>
+                    Stotred File Name: @GetStoredFileName(fileName)
+                </span>
+            </li>
+        </ul>
+    }
+}
+
+@code {
+    public int maxAllowedFiles = int.MaxValue;
+    public long maxFileSize = long.MaxValue;
+    private List<string> fileNames = [];
+    private List<UploadResult> uploadResults = [];
+
+    private async Task UploadImagen(InputFileChangeEventArgs e)
+    {
+        using var content = new MultipartFormDataContent();
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+
+            fileNames.Add(file.Name);
+
+            content.Add(
+                content: fileContent,
+                name: "\"files\"",
+                fileName: file.Name
+            );
+        }
+
+        //conexion con la api.
+
+        var newUploadResults = await Uploadservice.UploadFile(content);
+
+        //var response = await http.PostAsync("/api/upload", content);
+        //var newUploadResults = await response.Content.ReadFromJsonAsync<List<UploadResult>>();
+
+        if (newUploadResults is not null)
+        {
+            var uploadResult = uploadResults.Concat(newUploadResults).ToList();
+        }
+    }
+    private string? GetStoredFileName(string filaName)
+    {
+        var uploadResult = uploadResults.SingleOrDefault(f => f.FileName == filaName);
+        if (uploadResult is not null)
+            return uploadResult.StoredFileName;
+
+        return "file not found"; 
+    }
+
+
+
+}

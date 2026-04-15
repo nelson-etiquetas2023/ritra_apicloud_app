@@ -1,6 +1,6 @@
 ﻿using API.Services.Users;
 using Microsoft.AspNetCore.Mvc;
-using Shared.Dtos;
+using Shared.Security;
 
 namespace API.Controllers
 {
@@ -38,7 +38,7 @@ namespace API.Controllers
         public async Task<IActionResult> CreateUsersAsync([FromBody] User usuario)
         {
             var created = await service.CreateUserAsync(usuario);
-            return CreatedAtAction(nameof(GetUserById), new { id = created.UserId }, created);
+            return CreatedAtAction(nameof(GetUserById), new { id = created.Id }, created);
         }
 
         [HttpPut]

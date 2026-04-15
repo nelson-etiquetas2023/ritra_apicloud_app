@@ -36,10 +36,11 @@ namespace API.Services.Products
             if (existing == null) return null;
             existing.Product_Name = producto.Product_Name;
             existing.Product_Type = producto.Product_Type;
-            
+            existing.Unidad = producto.Unidad;
+            existing.Codebar = producto.Codebar;
+            existing.Price = producto.Price;
             await context.SaveChangesAsync();
             return existing;
-
         }
 
         public async Task<bool> DeleteProductAsync(int productId)

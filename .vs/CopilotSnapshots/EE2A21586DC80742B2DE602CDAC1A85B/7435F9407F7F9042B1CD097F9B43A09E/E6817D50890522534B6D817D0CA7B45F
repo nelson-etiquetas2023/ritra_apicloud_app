@@ -1,0 +1,70 @@
+﻿using API.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Shared.Dtos;
+using System.Net;
+
+namespace API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    
+    public class UploadController(IWebHostEnvironment Environment, ApplicationDbContext context) : ControllerBase
+    {
+        readonly IWebHostEnvironment Environment = Environment;
+        public ApplicationDbContext context = context;
+
+        [HttpGet]
+        [Route("getimages")]
+        public async Task<ActionResult<List<UploadResult>>> GetAllImagesAsync() 
+        {
+            var downloadImages = await context.Uploads
+                .Select(u => new UploadResult
+                {
+                    Id = u.Id,
+                    FileName = u.FileName,
+                    StoredFileName = u.StoredFileName,
+                    ContentType = u.ContentType
+                }).ToListAsync();
+
+            return Ok(downloadImages);
+        }
+        
+        [HttpGet]
+        [Route("getimagenbyid")]
+        public async Task<IActionResult> GetImagen(int id) 
+        {
+            var upload = await context.Uploads.FindAsync(id);
+            if(upload == null) return NotFound();
+            var path = Path.Combine("uploads", upload.StoredFileName!);
+            var bytes = await System.IO.File.ReadAllBytesAsync(path);
+            return File(bytes, upload.ContentType!, upload.FileName);
+        }
+
+        [HttpPost]
+        [Route("uploadfile")]
+        public async Task<ActionResult<List<UploadResult>>> UploadFile([FromForm] List<IFormFile> files) 
+        {
+            List<UploadResult> uploadResults = [];
+
+            foreach (var file in files) 
+            {
+                var uploadResult = new UploadResult();
+                string trustedFileNameForFileStorage;
+                var untrustedFileName = file.FileName;
+                uploadResult.FileName = untrustedFileName;
+                var trustedFileNameForDisplay = WebUtility.HtmlEncode(untrustedFileName);
+                trustedFileNameForFileStorage = Path.GetRandomFileName();
+                var path = Path.Combine(Environment.ContentRootPath, "uploads", trustedFileNameForFileStorage);
+                await using FileStream fs = new(path, FileMode.Create);
+                await file.CopyToAsync(fs);
+                uploadResult.StoredFileName = trustedFileNameForFileStorage;
+                uploadResult.ContentType = file.ContentType;
+                uploadResults.Add(uploadResult);
+                context.Uploads.Add(uploadResult);
+            }
+            await context.SaveChangesAsync();
+            return Ok(uploadResults);
+        }
+    }
+}

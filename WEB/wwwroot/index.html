@@ -45,6 +45,21 @@
 </html>
 <script>
 
+    function setItem(key, value) 
+    {
+        localStorage.setItem(key, value);
+    }
+
+    function getItem(key) 
+    {
+        return localStorage.getItem(key);
+    }
+
+    function deleteItem(key) 
+    {
+        localStorage.removeItem(key);
+    }
+
     function downloadFileExcel(filename, base64)
     {
         const link = document.createElement('a');
@@ -60,5 +75,18 @@
         link.download = filename;
         link.click();
     }
+    function PreventEnterKey(id)
+    {
+        var formObj = document.getElementById(id);
+        formObj.addEventListener('keydown', function(event) {
+            if (event.key == "Enter")
+            {
+                event.preventDefault();
+                return false;
+            }
+        });
+    }
+
+
 
 </script>

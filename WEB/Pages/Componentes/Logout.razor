@@ -1,0 +1,15 @@
+﻿@inject ILocalStorage LocalStorage
+@inject NavigationManager NavigationManage
+@inject AuthenticationStateProvider AuthStateProvider
+
+<Button @onclick="HandledLogout" Class="btn btn-danger">
+    <Icon Name="IconName.PersonDown"/> Cerrar Sesión</Button>
+
+@code {
+    private async Task HandledLogout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        await AuthStateProvider.GetAuthenticationStateAsync();
+        NavigationManage.NavigateTo("/");
+    }
+}

@@ -1,4 +1,4 @@
-﻿using Shared.Dtos;
+﻿using Shared.Security;
 
 namespace API.Services.Users
 {

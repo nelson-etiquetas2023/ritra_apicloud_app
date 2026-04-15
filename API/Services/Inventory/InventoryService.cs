@@ -4,27 +4,25 @@ using Shared.Dtos;
 
 namespace API.Services.Inventory
 {
-    public class InventoryService : IInventoryService
+    public class InventoryService(ApplicationDbContext context) : IInventoryService
     {
-        public ApplicationDbContext context { get; set; }
-        public InventoryService(ApplicationDbContext context)
-        {
-            this.context = context;
-        }
+        public ApplicationDbContext Context { get; set; } = context;
+
         public async Task<bool> SaveNumberConsecInventoryAsync(string numero,string filter)
         {
-            var setting = context.Parametros.Where(x => x.Module == filter);
+            var setting = Context.Parametros.Where(x => x.Module == filter);
             if (setting == null) return  false;
             setting.FirstOrDefault()!.Value1 = numero;
-            context.SaveChanges();
+            Context.SaveChanges();
             return true;
         }
         public async Task<DocumentSettings> GetConfigById(string filter)
         {
-            var setting =  context.Parametros.Where(x => x.Module == filter);
+            var setting =  Context.Parametros.Where(x => x.Module == filter);
             
             if (setting == null) return new DocumentSettings();
-            DocumentSettings ds = new DocumentSettings
+
+            DocumentSettings ds = new()
             {
                 Consec = Convert.ToInt32(setting.FirstOrDefault()!.Value1),
                 Prefijo = setting.FirstOrDefault()!.Value2,
@@ -38,7 +36,7 @@ namespace API.Services.Inventory
         {
             if (scanprducts == null) return false;  
 
-            var existing = await context.scanProducts.FindAsync(scanprducts.guid);
+            var existing = await Context.scanProducts.FindAsync(scanprducts.guid);
             if (existing == null) return false;
 
             existing.Quantity = scanprducts.Quantity;
@@ -49,23 +47,23 @@ namespace API.Services.Inventory
             existing.StateData = "Updated";
             existing.DateScan = scanprducts.DateScan;
 
-            context.SaveChanges();
+            Context.SaveChanges();
             return true; 
 
         }
         public async Task<bool> DeleteScanProductsAsync(Guid id)
         {
-            var scanProducts = await context.scanProducts.FindAsync(id);
+            var scanProducts = await Context.scanProducts.FindAsync(id);
 
             if (scanProducts == null) return false;
-            context.scanProducts.Remove(scanProducts);
-            await context.SaveChangesAsync();
+            Context.scanProducts.Remove(scanProducts);
+            await Context.SaveChangesAsync();
 
             return true;
         }
         public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
         {
-            var productsScan = await context.scanProducts
+            var productsScan = await Context.scanProducts
                 .Where(p => p.OrdenId == OrderId).ToListAsync();
 
             return productsScan;
@@ -77,16 +75,16 @@ namespace API.Services.Inventory
             foreach (var product in products) 
             {
                 product.StateData = "Saved";
-                context.scanProducts.Add(product);
+                Context.scanProducts.Add(product);
             }
 
-            context.SaveChanges();
+            Context.SaveChanges();
 
             return true;
         }
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {
-            var orders = await context.Order_InvFisico_Header
+            var orders = await Context.Order_InvFisico_Header
                 .Include(o => o.OrdersDetails).ToListAsync();            
 
 
@@ -94,19 +92,19 @@ namespace API.Services.Inventory
         }
         public async Task<OrderFisicoHeader?> GetOrderByIdAsync(string OrderNumber)
         {
-            return await context.Order_InvFisico_Header.Include(o => o.OrdersDetails)
+            return await Context.Order_InvFisico_Header.Include(o => o.OrdersDetails)
                 .FirstOrDefaultAsync(o => o.OrderNumberID == OrderNumber);
         }
         public async Task<OrderFisicoHeader> CreateOrderAsync(OrderFisicoHeader order)
         {
-            context.Order_InvFisico_Header.Add(order);
-            await context.SaveChangesAsync();
+            Context.Order_InvFisico_Header.Add(order);
+            await Context.SaveChangesAsync();
             return order;
         }
         public async Task<OrderFisicoHeader?> UpdateOrderAsync(string OrderNumber, OrderFisicoHeader order)
         {
             //busco la orden a modificar en la base de datos.
-            var existing = await context.Order_InvFisico_Header.Include(o => o.OrdersDetails)
+            var existing = await Context.Order_InvFisico_Header.Include(o => o.OrdersDetails)
                 .FirstOrDefaultAsync(o => o.OrderNumberID == OrderNumber);
 
             //valido.
@@ -124,7 +122,7 @@ namespace API.Services.Inventory
             existing.Status_Name = order.Status_Name;
 
             //borra todos los items del detalle para agregar los editados.
-            context.Order_InvFisico_Details.RemoveRange(existing.OrdersDetails);
+            Context.Order_InvFisico_Details.RemoveRange(existing.OrdersDetails);
 
 
             //insertar los nuevos items a actualizar.
@@ -157,17 +155,17 @@ namespace API.Services.Inventory
                 newItems.Add(newItem);
                 fila += 1;
             }
-            await context.Order_InvFisico_Details.AddRangeAsync(newItems);
-            await context.SaveChangesAsync();
+            await Context.Order_InvFisico_Details.AddRangeAsync(newItems);
+            await Context.SaveChangesAsync();
             return existing;
         }
         public async Task<bool> DeleteOrderAsync(string id)
         {
-            var order = await context.Order_InvFisico_Header.FindAsync(id);
+            var order = await Context.Order_InvFisico_Header.FindAsync(id);
 
             if (order == null) return false;
-            context.Order_InvFisico_Header.Remove(order);
-            await context.SaveChangesAsync();
+            Context.Order_InvFisico_Header.Remove(order);
+            await Context.SaveChangesAsync();
 
             return true;
 

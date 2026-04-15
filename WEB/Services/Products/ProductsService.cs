@@ -1,5 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using Shared.Dtos;
+using System.Text;
 using System.Text.Json;
 
 namespace WEB.Services.Products
@@ -14,7 +15,7 @@ namespace WEB.Services.Products
             {
                 PropertyNameCaseInsensitive = true,
                 WriteIndented = true,
-            };  
+            };
 
         public ProductsService(IHttpClientFactory httpFactory, IJSRuntime JS)
         {
@@ -55,18 +56,44 @@ namespace WEB.Services.Products
             }
         }
 
-        public Task<bool> DeleteProductAsync(int id)
+        public async Task<bool> DeleteProductAsync(int id)
         {
-            throw new NotImplementedException();
+            var url = $"api/products/deleteproducts/{id}";
+            var clientHttp = httpFactory.CreateClient("ritrama");
+            var response = await clientHttp.DeleteAsync(url);
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else 
+            {
+                return false;
+            }
         }
         public Task<Product> GetProductByIdAsync(int id)
         {
             throw new NotImplementedException();
         }
 
-        public Task<Product> UpdateProductAsync(int id, Product product)
+        public async Task<bool> UpdateProductAsync(int id, Product product)
         {
-            throw new NotImplementedException();
+            //utilizo la tupla para pasar 2 parametros.
+            var parametros = new ParametrosUpdateProducts(id, product);
+            var url = $"api/products/updateproducts";
+            var json = JsonSerializer.Serialize(parametros, jsonOptions);
+            var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
+            var clientHttp = httpFactory.CreateClient("ritrama");
+            var response = await clientHttp.PutAsync(url, jsonContent);
+            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+            else 
+            {
+                return false;
+            }
         }
     }
 }

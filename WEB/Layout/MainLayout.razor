@@ -1,6 +1,6 @@
 ﻿@using BlazorBootstrap
-
 @inherits LayoutComponentBase
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -8,8 +8,20 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="#">Iniciar Sesion</a>
-            <a href="#">Registrarse</a>
+          <AuthorizeView>
+              <Authorized>
+                  <div class="d-flex justify-content-between">
+                        <div class="me-auto p-2">
+                            <span><strong>@context.User.Identity?.Name</strong></span>
+                        </div>
+                        <Logout />
+                  </div>
+              </Authorized>
+              <NotAuthorized>
+                    <a href="\user\login"><Icon Name="IconName.KeyFill" Size="IconSize.x5" /> Iniciar Sesion</a>
+                    <a href="\users\userregistration"><Icon Name="IconName.PersonAdd" Size="IconSize.x5" /> Registrarse</a>
+              </NotAuthorized>
+          </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -18,3 +30,10 @@
     </main>
 </div>
 
+@code
+{
+    public async Task Logout()
+    {
+        
+    }
+}

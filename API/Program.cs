@@ -1,8 +1,10 @@
 using API.Data;
+using API.Services.Auth;
 using API.Services.Config;
 using API.Services.Inventory;
 using API.Services.Products;
 using API.Services.Reports;
+using API.Services.Upload;
 using API.Services.Users;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
@@ -33,7 +35,8 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IReportsService, ReportsService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
-
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUploadService, UploadService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -41,13 +44,20 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Crear carpeta de uploads si no existe
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
 //seeder
-//using (var scope = app.Services.CreateScope())
-//{
-//    var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//    dbcontext.Database.EnsureCreated();
-//    DataSeeder.Seed(dbcontext);
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbcontext.Database.EnsureCreated();
+    DataSeeder.Seed(dbcontext);
+}
 
 
 //migraciopnes automaticas.
@@ -61,9 +71,17 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
-    {
-        app.MapOpenApi();
-    }
+{
+    app.MapOpenApi();
+}
+
+// Servir archivos estáticos desde la carpeta uploads
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(app.Environment.ContentRootPath, "uploads")),
+    RequestPath = "/uploads"
+});
 
 app.UseAuthorization();
 

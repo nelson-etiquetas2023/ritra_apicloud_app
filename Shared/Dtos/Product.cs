@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Shared.Dtos
 {
@@ -8,14 +7,21 @@ namespace Shared.Dtos
         [Key]
         [Required(ErrorMessage = "el producto debe tener un id...")]
         public int Product_id { get; set; }
+
         [Required(ErrorMessage = "el producto debe tener nombre descriptivo...")]
         public string Product_Name { get; set; } = null!;
+        
         [Required(ErrorMessage ="el producto debe tener una categoria asignada...")]
         public string Product_Type { get; set; } = null!;
+        
         public double Price { get; set; } = 0;
+        
         public string Codebar { get; set; } = null!;
+        
         [Required(ErrorMessage ="el producto debe tener una unidad")]
         public string Unidad { get; set; } = null!;
+        
         public bool Desactivado { get; set; }
+        List<ProductImage> Images { get; set; } = new List<ProductImage>();
     }
 }

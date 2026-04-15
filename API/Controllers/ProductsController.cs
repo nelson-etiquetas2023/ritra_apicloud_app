@@ -40,10 +40,11 @@ namespace API.Controllers
         }
 
         [HttpPut]
-        [Route("updateproducts/{id}")]
-        public async Task<IActionResult> UpdateProductsAsync(int id, Product producto)
+        [Route("updateproducts")]
+        public async Task<IActionResult> UpdateProductsAsync([FromBody] ParametrosUpdateProducts parametros)
         {
-            var updated = await service.UpdateProductAsync(id, producto);
+
+            var updated = await service.UpdateProductAsync(parametros.id, parametros.producto);
             if (updated == null) NotFound();
             return Ok(updated);
         }

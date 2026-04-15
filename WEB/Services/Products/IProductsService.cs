@@ -7,7 +7,7 @@ namespace WEB.Services.Products
         Task<List<Product>> GetProductAsync();
         Task<Product> GetProductByIdAsync(int id);
         Task<bool> CreateproductAsync(Product product);
-        Task<Product> UpdateProductAsync(int id, Product product);
+        Task<bool> UpdateProductAsync(int id, Product product);
         Task<bool> DeleteProductAsync(int id);
     }
 }

@@ -1,6 +1,6 @@
 ﻿using API.Data;
 using Microsoft.EntityFrameworkCore;
-using Shared.Dtos;
+using Shared.Security;
 
 namespace API.Services.Users
 {
@@ -33,14 +33,14 @@ namespace API.Services.Users
 
         public async Task<User?> UpdateUserAsync(int UserId, User usuario)
         {
-            var existing = await context.Users.FindAsync(UserId);
-            if (existing == null) return null;
-            existing.User_Name = usuario.User_Name;
-            existing.Login  = usuario.Login;
-            existing.Password = usuario.Password;
+            //var existing = await context.Users.FindAsync(UserId);
+            //if (existing == null) return null;
+            //existing.User_Name = usuario.User_Name;
+            //existing.Login  = usuario.Login;
+            //existing.Password = usuario.Password;
 
-            await context.SaveChangesAsync();
-            return existing;
+            //await context.SaveChangesAsync();
+            return new User();
         }
 
         public async Task<bool> DeleteUserAsync(int UserId)

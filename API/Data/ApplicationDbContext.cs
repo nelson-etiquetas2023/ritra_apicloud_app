@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
+using Shared.Security;
 
 namespace API.Data
 {
@@ -13,7 +14,9 @@ namespace API.Data
         public DbSet<Equipo> Equipos { get; set; }
         public DbSet<Parameter> Parametros { get; set; }
         public DbSet<ScanProducts> scanProducts { get; set; }
-        public DbSet<Parameter> Parameters { get; set; }
+        public DbSet<ProductImage> Images { get; set; }
+        public DbSet<UploadResult> Uploads { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

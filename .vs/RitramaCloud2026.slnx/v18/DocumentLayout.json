@@ -1,24 +1,43 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Programacion\\RitramaCloud2026\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{65F858A9-89DA-4AAE-AF19-5A8297F29105}|WEB\\WEB.csproj|c:\\programacion\\ritramacloud2026\\web\\pages\\products\\modalcreateproducts.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{65F858A9-89DA-4AAE-AF19-5A8297F29105}|WEB\\WEB.csproj|solutionrelative:web\\pages\\products\\modalcreateproducts.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 1,
       "VerticalTabListWidth": 256,
       "DocumentGroups": [
         {
-          "DockedHeight": 200,
+          "DockedHeight": 287,
           "SelectedChildIndex": -1,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{0174dea2-fdbe-4ef1-8f99-c0beae78880f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 113,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 113,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             }
           ]
         },
@@ -52,59 +71,11 @@
           "Children": [
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
-            }
-          ]
-        },
-        {
-          "DockedHeight": 200,
-          "SelectedChildIndex": -1,
-          "Children": [
-            {
-              "$type": "Bookmark",
               "Name": "ST:5:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
             },
             {
               "$type": "Bookmark",
               "Name": "ST:1:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "Orientation": 0,
-      "VerticalTabListWidth": 256,
-      "FloatingWindowState": {
-        "Id": "e81a424e-af0c-44bf-acef-aa689d7ef16f",
-        "Display": 1,
-        "X": 78,
-        "Y": 160,
-        "Width": 1560,
-        "Height": 770,
-        "WindowState": 2
-      },
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "ModalCreateProducts.razor",
-              "DocumentMoniker": "C:\\Programacion\\RitramaCloud2026\\WEB\\Pages\\Products\\ModalCreateProducts.razor",
-              "RelativeDocumentMoniker": "WEB\\Pages\\Products\\ModalCreateProducts.razor",
-              "ToolTip": "C:\\Programacion\\RitramaCloud2026\\WEB\\Pages\\Products\\ModalCreateProducts.razor",
-              "RelativeToolTip": "WEB\\Pages\\Products\\ModalCreateProducts.razor",
-              "ViewState": "AgIAACkAAAAAAAAAAAAzwCIAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-09T07:50:43.86Z",
-              "EditorCaption": ""
             }
           ]
         }

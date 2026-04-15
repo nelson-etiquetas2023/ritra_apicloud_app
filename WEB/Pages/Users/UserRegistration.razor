@@ -1,0 +1,82 @@
+﻿@page "/Users/userregistration"
+@inject IAuthService AuthService
+@inject NavigationManager navigator
+
+<Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopRight" />
+
+<h3 style="margin-bottom:20px;"><Icon Name="IconName.PersonLock" /> Registrar Usuario</h3>
+<div class="row">
+    <div class="col-4">
+        <EditForm Model="user" OnValidSubmit="RegisterUsers">
+            <DataAnnotationsValidator/>
+            <div class="mb-3">
+                <label for="name" class="label-control"><strong>Nombre completo :</strong></label>
+                <InputText @bind-Value="user.UserName" id="name" class="form-control" placeholder="introduzca el nombre del usuario" />
+                <ValidationMessage For="@(() => user.UserName)" />
+            </div>
+            <div class="mb-3">
+                <label for="email" class="label-control"><strong>Email:</strong></label>
+                <InputText @bind-Value="user.Email" id="email" class="form-control" placeholder="introduzca el email del usuario"  />
+                <ValidationMessage For="@(() => user.Email)" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="label-control"><strong>Password:</strong></label>
+                <PasswordInput @bind-Value="user.Password" id="password"  class="form-control" placeholder="introduza su contraseña" />
+                <ValidationMessage For="@(() => user.Password)" />
+            </div>
+            <div class="mb-3">
+                <label for="confirm" class="label-control"><strong>Confirmar Contraseña:</strong></label>
+                <PasswordInput @bind-Value="user.ConfirmPassword" class="form-control" placeholder="confirme, por favor" />
+                <ValidationMessage For="@(() => user.ConfirmPassword)" />
+            </div>
+            <div class="mb-3">
+                <label for="roles" class="label-control"><strong>Role de Usuario: </strong></label>
+                <InputSelect @bind-Value="user.Role" class="form-select" id="roles">
+                    <option value="">seleccione una opcion</option>"
+                    <option value="Admin">Admin</option>"
+                    <option value="User">User</option>"
+                    <option value="Invitado">Invitado</option>"
+                </InputSelect>
+                <ValidationMessage For="@(() => user.Role)" />
+            </div>
+            <div style="margin-bottom:20px;margin-top:20px;">
+                <Button Type="ButtonType.Submit" Color="ButtonColor.Primary"><Icon Name="IconName.FloppyFill" /> Registrar</Button>
+                <Button Color="ButtonColor.Dark"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+            </div>
+            <div class="@messageCssClass">
+                <span>@message</span>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    protected ToastService toastsService { get; set; } = default!;
+    List<ToastMessage> messages = new();
+
+    private UserRegister user = new();
+    string message = string.Empty;
+    string messageCssClass = string.Empty;
+
+
+    private async Task RegisterUsers()
+    {
+        var result = await AuthService.Register(user);
+        message = result.Message!;
+
+        if (result.Success)
+        {
+            messageCssClass = "text-success";
+            toastsService.Notify(new ToastMessage(ToastType.Success, $"Usuario creado correctamente..."));
+            await Task.Delay(2000);
+            navigator.NavigateTo(@"\user\login");
+        }
+        else
+            messageCssClass = "text-danger";
+            toastsService.Notify(new ToastMessage(ToastType.Danger, $"email, ya existe...")); 
+    }
+}
+
+
+
