@@ -12,20 +12,14 @@ using Shared.Dtos;
 namespace API.Services.Reports
 {
 
-    public class ReportsService : IReportsService
+    public class ReportsService(ApplicationDbContext context) : IReportsService
     {
-        public ApplicationDbContext context { get; set; }
-
-        public ReportsService(ApplicationDbContext context)
-        {
-            this.context = context;
-           
-        }
+        public ApplicationDbContext Context { get; set; } = context;
 
         public async Task GetReportScaProducts(string Order)
         {
 
-            var datos = context.scanProducts.Where(p => p.OrdenId == Order)
+            var datos = Context.ScanProducts.Where(p => p.OrdenId == Order)
                 .OrderBy(p => p.ProductName).ToList();
 
 
@@ -100,7 +94,7 @@ namespace API.Services.Reports
         }
 
 
-        private void CreateBody(IContainer container, List<ScanProducts> scanproducts) 
+        private static void CreateBody(IContainer container, List<ScanProducts> scanproducts) 
         {
             
             container.Table(table =>
@@ -154,7 +148,7 @@ namespace API.Services.Reports
                     table.Cell().Text(item.Ubicacion).FontSize(8).AlignCenter();
                     table.Cell().Text(item.Estado).FontSize(8);
                     table.Cell().Text(item.DateScan.ToString()).FontSize(8);
-                    fila = fila + 1;
+                    fila ++;
                 }
             });
         }

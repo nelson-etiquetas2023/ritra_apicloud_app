@@ -36,7 +36,7 @@ namespace API.Services.Inventory
         {
             if (scanprducts == null) return false;  
 
-            var existing = await Context.scanProducts.FindAsync(scanprducts.guid);
+            var existing = await Context.ScanProducts.FindAsync(scanprducts.guid);
             if (existing == null) return false;
 
             existing.Quantity = scanprducts.Quantity;
@@ -53,17 +53,17 @@ namespace API.Services.Inventory
         }
         public async Task<bool> DeleteScanProductsAsync(Guid id)
         {
-            var scanProducts = await Context.scanProducts.FindAsync(id);
+            var scanProducts = await Context.ScanProducts.FindAsync(id);
 
             if (scanProducts == null) return false;
-            Context.scanProducts.Remove(scanProducts);
+            Context.ScanProducts.Remove(scanProducts);
             await Context.SaveChangesAsync();
 
             return true;
         }
         public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
         {
-            var productsScan = await Context.scanProducts
+            var productsScan = await Context.ScanProducts
                 .Where(p => p.OrdenId == OrderId).ToListAsync();
 
             return productsScan;
@@ -75,7 +75,7 @@ namespace API.Services.Inventory
             foreach (var product in products) 
             {
                 product.StateData = "Saved";
-                Context.scanProducts.Add(product);
+                Context.ScanProducts.Add(product);
             }
 
             Context.SaveChanges();

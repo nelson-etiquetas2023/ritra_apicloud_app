@@ -331,6 +331,32 @@
   },
   {
     "ContainingType": "API.Controllers.ProductsController",
+    "Method": "AddProductImage",
+    "RelativePath": "api/Products/addproductimage/{productId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "file",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      },
+      {
+        "Name": "imageIndex",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
     "Method": "CreateProductsAsync",
     "RelativePath": "api/Products/createproducts",
     "HttpMethod": "POST",
@@ -347,9 +373,57 @@
   },
   {
     "ContainingType": "API.Controllers.ProductsController",
+    "Method": "CreateProductWithImagesAsync",
+    "RelativePath": "api/Products/createproductwithimages",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Shared.Dtos.CreateProductWithImagesRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
+    "Method": "DeleteProductImage",
+    "RelativePath": "api/Products/deleteproductimage/{imageId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "imageId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
     "Method": "DeleteProductsAsync",
     "RelativePath": "api/Products/deleteproducts/{id}",
     "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
+    "Method": "GetProductByIdDebug",
+    "RelativePath": "api/Products/getproductbyid-debug/{id}",
+    "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -379,12 +453,49 @@
   },
   {
     "ContainingType": "API.Controllers.ProductsController",
+    "Method": "GetProductImage",
+    "RelativePath": "api/Products/getproductimage/{imageId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "imageId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
     "Method": "GetProductsAsync",
     "RelativePath": "api/Products/getproducts",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
+    "Method": "UpdateProductImageAsync",
+    "RelativePath": "api/Products/updateproductimage/{productId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "imageData",
+        "Type": "Shared.Dtos.Base64ImageData",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

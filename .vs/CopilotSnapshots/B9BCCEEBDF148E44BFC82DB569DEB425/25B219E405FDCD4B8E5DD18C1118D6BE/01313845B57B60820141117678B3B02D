@@ -1,0 +1,84 @@
+﻿@inject IProductsService service;
+@inject NavigationManager navigator;
+
+<Preload LoadingText="Guardando..."/>
+
+<Modal @ref="modalUpdate">
+    <HeaderTemplate><Icon Name="IconName.DatabaseSlash" Size="IconSize.x3" />
+        <strong>Modificar Proucto.</strong></HeaderTemplate>
+    <BodyTemplate>
+        <EditForm Model="producto" OnValidSubmit="UpdateProducts">
+            <DataAnnotationsValidator/>
+            <div class="mb-3">
+                <label for="txt_product_name"><strong>Nombre del Producto :</strong></label>
+                <InputText class="form-control" id="txt_product_name" @bind-Value="producto.Product_Name" />
+                <ValidationMessage For="@(() => producto.Product_Name)"/>
+            </div>
+            <div class="mb-3">
+                <label for="txt_category"><strong>Categoria :</strong></label>
+                <InputText class="form-control" id="txt_category" @bind-Value="producto.Product_Type" />
+                <ValidationMessage For="@(() => producto.Product_Type)" />
+            </div>
+            <div class="mb-3">
+                <label for="txt_unidad"><strong>Unidad :</strong></label>
+                <InputText class="form-control" id="txt_unidad" @bind-Value="producto.Unidad" />
+                <ValidationMessage For="@(() => producto.Unidad)" />
+            </div>
+            <div class="mb-3">
+                <label for="txt_price"><strong>Precio :</strong></label>
+                <InputNumber class="form-control" id="txt_price" @bind-Value="producto.Price" />
+            </div>
+            <div class="mb-3">
+                <label for="txt_codebar"><strong>Codigo de Barra :</strong></label>
+                <InputText class="form-control" id="txt_codebar" @bind-Value="producto.Codebar" />
+            </div>
+            <div class="form-check mb-5 mt-5">
+                <InputCheckbox @bind-Value="producto.Desactivado" class="form-check-input" id="checkActivate" />
+                <label class="form-check-label" for="checkActivate">
+                    Desactivar producto
+                </label>
+            </div>
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modalUpdate = default!;
+
+    [Parameter]
+    public Product producto { get; set; } = new Product();
+
+    [Parameter]
+    public EventCallback<Product> OnProductUpdate { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private async void UpdateProducts()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        int productid = producto.Product_id;
+        await service.UpdateProductAsync(productid, producto);
+        await OnProductUpdate.InvokeAsync(producto);
+        await modalUpdate.HideAsync();
+        await Task.Delay(1000);
+        PreloadService.Hide();
+        navigator.NavigateTo("/products");
+    }
+
+    public async Task ShowAsync()
+    {
+        await modalUpdate.ShowAsync();        
+    }
+
+    private async Task HideAsync()
+    {
+        await modalUpdate.HideAsync();
+
+    }   
+}

@@ -1,0 +1,143 @@
+﻿using API.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Shared.Dtos;
+
+namespace API.Services.Products
+{
+    public class ProductsService : IProductsService
+    {
+        private readonly ApplicationDbContext context;
+        private readonly IWebHostEnvironment _environment;
+
+        public ProductsService(ApplicationDbContext context, IWebHostEnvironment environment)
+        {
+            this.context = context;
+            _environment = environment;
+        }
+
+        public async Task<List<Product>> GetProductAsync()
+        {
+            return await context.Productos
+                .Include(p => p.Images)
+                .ToListAsync();
+        }
+
+        public async Task<Product?> GetProductByIdAsync(int productId)
+        {
+            return await context.Productos
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Product_id == productId);
+        }
+
+        public async Task<Product> CreateproductAsync([FromBody] Product producto)
+        {
+            context.Productos.Add(producto);
+            await context.SaveChangesAsync();
+            return producto;
+        }
+
+        public async Task<Product?> UpdateProductAsync(int productId, Product producto)
+        {
+            var existing = await context.Productos
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Product_id == productId);
+            if (existing == null) return null;
+
+            existing.Product_Name = producto.Product_Name;
+            existing.Product_Type = producto.Product_Type;
+            existing.Unidad = producto.Unidad;
+            existing.Codebar = producto.Codebar;
+            existing.Price = producto.Price;
+            existing.Images = producto.Images;
+
+            await context.SaveChangesAsync();
+            return existing;
+        }
+
+        public async Task<bool> DeleteProductAsync(int productId)
+        {
+            var producto = await context.Productos
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Product_id == productId);
+            if(producto == null) return false;
+
+            // Eliminar archivos asociados
+            foreach (var image in producto.Images)
+            {
+                try
+                {
+                    var filePath = Path.Combine(_environment.ContentRootPath, "uploads", image.StoredFileName!);
+                    if (File.Exists(filePath))
+                        File.Delete(filePath);
+                }
+                catch
+                {
+                    // Log error si es necesario
+                }
+            }
+
+            context.Productos.Remove(producto);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AddProductImageAsync(int productId, IFormFile file, int imageIndex)
+        {
+            var producto = await context.Productos.FindAsync(productId);
+            if (producto == null) return false;
+
+            if (file.Length > 0)
+            {
+                var productImage = new ProductImage
+                {
+                    ProductId = productId,
+                    FileName = file.FileName,
+                    StoredFileName = Path.GetRandomFileName(),
+                    ContentType = file.ContentType,
+                    ImageIndex = imageIndex
+                };
+
+                var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsPath))
+                {
+                    Directory.CreateDirectory(uploadsPath);
+                }
+
+                var filePath = Path.Combine(uploadsPath, productImage.StoredFileName);
+
+                await using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+
+                context.Images.Add(productImage);
+                await context.SaveChangesAsync();
+                return true;
+            }
+
+            return false;
+        }
+
+        public async Task<bool> DeleteProductImageAsync(int imageId)
+        {
+            var image = await context.Images.FindAsync(imageId);
+            if (image == null) return false;
+
+            try
+            {
+                var filePath = Path.Combine(_environment.ContentRootPath, "uploads", image.StoredFileName!);
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+            catch
+            {
+                // Log error si es necesario
+            }
+
+            context.Images.Remove(image);
+            await context.SaveChangesAsync();
+            return true;
+        }
+    }
+}

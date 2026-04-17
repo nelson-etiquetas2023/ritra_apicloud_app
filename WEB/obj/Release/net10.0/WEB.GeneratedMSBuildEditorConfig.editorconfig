@@ -64,20 +64,8 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/ModalCreateProducts.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTW9kYWxDcmVhdGVQcm9kdWN0cy5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/ModalUpdateProducts.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTW9kYWxVcGRhdGVQcm9kdWN0cy5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Programacion/RitramaCloud2026/WEB/Pages/TestComponentModal.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVzdENvbXBvbmVudE1vZGFsLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Programacion/RitramaCloud2026/WEB/Pages/Upload/Index.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXBsb2FkXEluZGV4LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Users/Index.razor]
@@ -111,3 +99,15 @@ build_metadata.AdditionalFiles.CssScope = b-9g43u1h7ve
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Componentes/QuickGridProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcUXVpY2tHcmlkUHJvZHVjdHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-enea5apfkx
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/ModalCreateProducts.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTW9kYWxDcmVhdGVQcm9kdWN0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-dwivyl0kvg
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/ModalUpdateProducts.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTW9kYWxVcGRhdGVQcm9kdWN0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-qu0wq8fn2q
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Upload/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXBsb2FkXEluZGV4LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-rvkdtcss9e

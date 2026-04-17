@@ -1,0 +1,95 @@
+﻿using API.Data;
+using Microsoft.EntityFrameworkCore;
+using Shared.Dtos;
+using System.Net;
+
+namespace API.Services.Upload
+{
+    public class UploadService(IWebHostEnvironment environment, ApplicationDbContext context) : IUploadService
+    {
+        private readonly IWebHostEnvironment _environment = environment;
+        private readonly ApplicationDbContext _context = context;
+
+        public async Task<List<UploadResult>> UploadFilesAsync(List<IFormFile> files)
+        {
+            var uploadResults = new List<UploadResult>();
+
+            foreach (var file in files)
+            {
+                if (file.Length > 0)
+                {
+                    var uploadResult = new UploadResult
+                    {
+                        FileName = file.FileName,
+                        StoredFileName = Path.GetRandomFileName(),
+                        ContentType = file.ContentType
+                    };
+
+                    var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
+                    if (!Directory.Exists(uploadsPath))
+                    {
+                        Directory.CreateDirectory(uploadsPath);
+                    }
+
+                    var filePath = Path.Combine(uploadsPath, uploadResult.StoredFileName);
+
+                    await using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
+                    }
+
+                    _context.Uploads.Add(uploadResult);
+                    uploadResults.Add(uploadResult);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return uploadResults;
+        }
+
+        public async Task<List<UploadResult>> GetAllImagesAsync()
+        {
+            return await _context.Uploads
+                .Select(u => new UploadResult
+                {
+                    Id = u.Id,
+                    FileName = u.FileName,
+                    StoredFileName = u.StoredFileName,
+                    ContentType = u.ContentType
+                })
+                .ToListAsync();
+        }
+
+        public async Task<UploadResult?> GetImageByIdAsync(int id)
+        {
+            return await _context.Uploads.FindAsync(id);
+        }
+
+        public async Task<bool> DeleteImageAsync(int id)
+        {
+            try
+            {
+                var upload = await _context.Uploads.FindAsync(id);
+                if (upload == null)
+                    return false;
+
+                // Eliminar archivo del disco
+                var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads", upload.StoredFileName!);
+                if (File.Exists(uploadsPath))
+                {
+                    File.Delete(uploadsPath);
+                }
+
+                // Eliminar registro de la BD
+                _context.Uploads.Remove(upload);
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}

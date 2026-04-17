@@ -69,20 +69,20 @@
             },
             "Microsoft.AspNetCore.Components.Authorization": {
               "target": "Package",
-              "version": "[10.0.6, )"
+              "version": "[10.0.0, )"
             },
             "Microsoft.AspNetCore.Components.QuickGrid": {
               "target": "Package",
-              "version": "[10.0.6, )"
+              "version": "[10.0.0, )"
             },
             "Microsoft.AspNetCore.Components.WebAssembly": {
               "target": "Package",
-              "version": "[10.0.6, )"
+              "version": "[10.0.0, )"
             },
             "Microsoft.AspNetCore.Components.WebAssembly.DevServer": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.6, )"
+              "version": "[10.0.0, )"
             },
             "Microsoft.DotNet.HotReload.WebAssembly.Browser": {
               "target": "Package",
@@ -91,7 +91,7 @@
             },
             "Microsoft.Extensions.Http": {
               "target": "Package",
-              "version": "[10.0.6, )"
+              "version": "[10.0.0, )"
             },
             "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",

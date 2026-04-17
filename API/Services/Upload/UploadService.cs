@@ -91,5 +91,51 @@ namespace API.Services.Upload
                 return false;
             }
         }
+
+        public async Task<UploadResult?> SaveBase64ImageAsync(string base64Data, string originalFileName, string contentType)
+        {
+            try
+            {
+                // Decodificar base64
+                var base64Index = base64Data.IndexOf(',');
+                if (base64Index >= 0)
+                {
+                    base64Data = base64Data.Substring(base64Index + 1);
+                }
+
+                var imageBytes = Convert.FromBase64String(base64Data);
+
+                // Generar nombre seguro con Guid
+                var fileExtension = Path.GetExtension(originalFileName);
+                var storedFileName = $"{Guid.NewGuid()}{fileExtension}";
+
+                var uploadResult = new UploadResult
+                {
+                    FileName = originalFileName,
+                    StoredFileName = storedFileName,
+                    ContentType = contentType
+                };
+
+                var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsPath))
+                {
+                    Directory.CreateDirectory(uploadsPath);
+                }
+
+                var filePath = Path.Combine(uploadsPath, storedFileName);
+
+                await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+
+                _context.Uploads.Add(uploadResult);
+                await _context.SaveChangesAsync();
+
+                return uploadResult;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving base64 image: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

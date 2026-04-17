@@ -8,5 +8,6 @@ namespace API.Services.Upload
         Task<List<UploadResult>> GetAllImagesAsync();
         Task<UploadResult?> GetImageByIdAsync(int id);
         Task<bool> DeleteImageAsync(int id);
+        Task<UploadResult?> SaveBase64ImageAsync(string base64Data, string originalFileName, string contentType);
     }
 }
