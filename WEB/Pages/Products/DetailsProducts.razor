@@ -1,0 +1,240 @@
+@page "/Products/DetailsProducts/{Product_id:int}"
+@inject IProductsService servicio
+
+<div class="row" style="margin-bottom:50px;padding-bottom:50px;">
+    <div class="col-6">
+        <div style="display:flex;justify-content:space-between;margin-top:10px;margin-bottom:10px;">
+            <h3>
+                <img src="/images/unpacking.png" width="35" height="35" /> Detalle de Productos:
+            </h3>
+            <Button Color="ButtonColor.Danger"><Icon Name="IconName.CameraFill" /></Button>
+        </div>
+        @if (LoadProductComplete)
+        {
+            <!--Galeria de Imagenes-->
+            <div style="display:flex;gap:10px;">
+                <!--Imagen Miniaturas-->
+                <div style="display:flex;flex-direction:column;justify-content:flex-start">
+                    @foreach (var url in Urls)
+                    {
+                        <img src="@url" width="100" height="100" style="cursor:pointer" class="img-thumbnail mb-2" />
+                    }
+                </div>
+                <!--Imagen grande-->
+                <div style="display:flex; flex-grow:1;justify-content:center;justify-items:center;">
+                    <div id="carouselExample" class="carousel slide">
+                        <div class="carousel-inner">
+                            @foreach (var url in Urls)
+                            {
+                                <div class="carousel-item active">
+                                    <img src="@url" width="500" height="500" style="cursor:pointer" class="img-thumbnail mb-2" />
+                                </div>
+                                
+                            }
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+        <p>cargando imagenes...</p>    
+        
+        }
+
+
+        
+        <div>
+            <br />
+            <hr style="border-top:1px solid rgba(0,0,0,1)" />
+
+            <!--Especificaciones del producto-->
+            <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center">
+                    <Icon Name="IconName.UiChecksGrid" Size="IconSize.x6" />
+                    <p class="mb-0 ms-2"><strong>Especificaciones del producto:</strong></p>
+                </div>
+                
+                <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+            </div>
+            <ul>
+                <li><h6>Suela anti-resbalante y ultra-resistente</h6></li>
+                <li><h6>Material en carbono</h6></li>
+                <li><h6>Livianas y comodas</h6></li>
+                <li><h6>Multiples Colores</h6></li>
+                <li><h6>Materiales de Alta Calidad</h6></li>
+            </ul>
+            <!--Configuración-->
+            <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center">
+                    <Icon Name="IconName.GearFill" Size="IconSize.x6" />
+                    <p class="mb-0 ms-2"><strong>Configuración:</strong></p>
+                </div>
+                <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+            </div>
+            <Accordion>
+                <AccordionItem>
+                    <TitleTemplate>
+                        <Icon Name="IconName.SortNumericDownAlt" Class="me-1" /> Manejo de Seriales
+                    </TitleTemplate>
+                    <Content>
+                        <b>This is the first item's accordion body.</b> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem>
+                    <TitleTemplate>
+                        <Icon Name="IconName.Calendar2DateFill" Class="me-1" /> Fecha de Vencimiento
+                    </TitleTemplate>
+                    <Content>
+                        <b>This is the second item's accordion body.</b> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem>
+                    <TitleTemplate>
+                        <Icon Name="IconName.TagsFill" Class="me-1" /> Manejo de Tallas y Colores
+                    </TitleTemplate>
+                    <Content>
+                        <b>This is the third item's accordion body.</b> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+                <AccordionItem>
+                    <TitleTemplate>
+                        <Icon Name="IconName.WrenchAdjustable" Class="me-1" /> Parametros
+                    </TitleTemplate>
+                    <Content>
+                        <b>This is the third item's accordion body.</b> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the .accordion-body, though the transition does limit overflow.
+                    </Content>
+                </AccordionItem>
+            </Accordion>
+        </div>
+    </div>
+    <div class=" col-6">      
+        <h3>@producto.Product_Name</h3>
+        <!--Descripcion del producto -->
+        <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center">
+                <Icon Name="IconName.Unity" Size="IconSize.x6" />
+                <p class="mb-0 ms-2"><strong>Descripción:</strong></p>
+            </div>
+                
+            <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+        </div>
+        <p>@producto.Description</p>
+        <hr style="border-top:1px solid rgba(0,0,0,1)" />
+        <!--Detalle del producto-->
+        <div class="property" style="margin-top:15px;">
+            <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center">
+                    <Icon Name="IconName.TagFill" Size="IconSize.x6" />
+                    <p class="mb-0 ms-2" ><strong>Detalle del producto:</strong></p>
+                </div>
+                <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+            </div>
+            <h6>Stock Disponible : <strong>@producto.Stock</strong></h6>
+            <h6>Costo: <strong>@producto.Costo</strong></h6>
+            <h6>Precio: <strong>@producto.Price</strong></h6>
+            <h6>Categoria: <strong>@producto.Product_Type</strong></h6>
+            <h6>Unidad: <strong>@producto.Unidad</strong></h6>
+            <h6>Numero SKU: <strong>@producto.SkuNumber</strong></h6>
+            <h6>Modelo: <strong>@producto.Model</strong></h6>
+            <h6>Marca: <strong>@producto.Marca</strong></h6>
+            <h6>Codigo de Barras: <strong>@producto.Codebar</strong></h6>
+            <h6>Part Number: <strong>@producto.PartNumber</strong></h6>
+            <hr style="border-top:1px solid rgba(0,0,0,1)" />
+            <!--Manejo de Stock-->
+            <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center">
+                    <Icon Name="IconName.Box2Fill" Size="IconSize.x6" />
+                    <p class="mb-0 ms-2"><strong>Manejo de Stock:</strong></p>
+                </div>
+                
+                <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+            </div>
+            <h6>Stock Minimo  : 5</h6>
+            <h6>Stock Maximo : 500</h6>
+            <h6>Stock de Reposición : 10</h6>
+            <h6>Stock Reservado : 3</h6>
+            <h6>Stock en Transito : 6</h6>
+            <h6>Stock Bloqueado: 2</h6>
+            <h6>Estado del Stock:  <Badge Color="BadgeColor.Warning" IndicatorType="BadgeIndicatorType.RoundedPill">Warning</Badge></h6>
+            <hr style="border-top:1px solid rgba(0,0,0,1)" />
+            <!--Ubicaciones-->
+            <div style="display:flex; justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center">
+                    <Icon Name="IconName.GeoAltFill" Size="IconSize.x6" />
+                    <p class="mb-0 ms-2"><strong>Ubicaciones:</strong></p>
+                </div>
+                <Icon Name="IconName.PencilFill" Size="IconSize.x6" Style="cursor:pointer" />
+            </div>
+            <div style="display:flex;justify-content:space-around">
+                <Card Color="CardColor.Light" Class="mb-4">
+                    <CardHeader Style="background-color:grey;font-size:12px;"><strong>Ubicacion 1</strong> </CardHeader>
+                    <CardHeader Style="font-size:12px;"><strong>10-21-27-43-10</strong></CardHeader>
+                    <CardBody>
+                        <CardTitle>Cant: 10</CardTitle>
+                    
+                    </CardBody>
+                </Card>
+                <Card Color="CardColor.Light" Class="mb-4">
+                    <CardHeader Style="background-color:grey;font-size:12px;"><strong>Ubicacion 2</strong> </CardHeader>
+                    <CardHeader Style="font-size:12px;"><strong>10-21-27-43-10</strong></CardHeader>
+                    <CardBody>
+                        <CardTitle>Cant: 14</CardTitle>
+                    
+                    </CardBody>
+                </Card>
+                <Card Color="CardColor.Light" Class="mb-4">
+                    <CardHeader Style="background-color:grey;font-size:12px;"><strong>Ubicacion 3</strong> </CardHeader>
+                    <CardHeader Style="font-size:12px;"><strong>10-21-27-43-10</strong></CardHeader>
+                    <CardBody>
+                        <CardTitle>Cant: 23</CardTitle>
+                    
+                    </CardBody>
+                </Card>
+                <Card Color="CardColor.Light" Class="mb-4">
+                    <CardHeader Style="background-color:grey;font-size:12px;"><strong>Ubicacion 4</strong> </CardHeader>
+                    <CardHeader Style="font-size:12px;"><strong>10-21-27-43-10</strong></CardHeader>
+                    <CardBody>
+                        <CardTitle>Cant : 17</CardTitle>
+                    </CardBody>
+                </Card>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Product_id { get; set; }
+
+    Product producto = new();
+    List<string> Urls = [];
+
+    public bool LoadProductComplete = false;
+
+
+        protected override async Task OnInitializedAsync()
+    {
+        await LoadProductDetails();
+    }
+
+    private async Task LoadProductDetails()
+    {
+        producto = await servicio.GetProductByIdAsync(Product_id);
+
+        foreach (var image in producto.Images)
+        {
+            var url = servicio.GetImageUrl(image.Id, Product_id);
+            Urls.Add(url);
+        }
+        LoadProductComplete = true;
+    }
+}

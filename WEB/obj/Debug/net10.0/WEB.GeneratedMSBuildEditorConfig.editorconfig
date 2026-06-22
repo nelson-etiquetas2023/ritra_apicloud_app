@@ -14,13 +14,14 @@ build_property.ProjectTypeGuids =
 build_property.InvariantGlobalization = false
 build_property.PlatformNeutralAssembly = 
 build_property.EnforceExtendedAnalyzerRules = 
+build_property.EntryPointFilePath = 
 build_property._SupportedPlatformList = browser
 build_property.RootNamespace = WEB
 build_property.RootNamespace = WEB
 build_property.ProjectDir = C:\Programacion\RitramaCloud2026\WEB\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = false
-build_property.RazorLangVersion = 9.0
+build_property.RazorLangVersion = 10.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
 build_property.MSBuildProjectDirectory = C:\Programacion\RitramaCloud2026\WEB
@@ -64,6 +65,26 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Reports/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwb3J0c1xJbmRleC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Reports/Report1.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwb3J0c1xSZXBvcnQxLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Reports/Report2.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwb3J0c1xSZXBvcnQyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Reports/Report3.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwb3J0c1xSZXBvcnQzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Reports/ReportPdf.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwb3J0c1xSZXBvcnRQZGYucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/TestComponentModal.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVzdENvbXBvbmVudE1vZGFsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -99,6 +120,10 @@ build_metadata.AdditionalFiles.CssScope = b-9g43u1h7ve
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Componentes/QuickGridProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcUXVpY2tHcmlkUHJvZHVjdHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-enea5apfkx
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Products/DetailsProducts.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcRGV0YWlsc1Byb2R1Y3RzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-li0rp9l4f0
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Products/ModalCreateProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTW9kYWxDcmVhdGVQcm9kdWN0cy5yYXpvcg==

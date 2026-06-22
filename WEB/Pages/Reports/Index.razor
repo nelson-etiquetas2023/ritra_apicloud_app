@@ -1,0 +1,82 @@
+﻿@page "/Reports/"
+@layout MainLayout
+@inherits LayoutComponentBase
+
+<div class="bb-page">
+    <Sidebar @ref="sidebar" 
+             Href="/"
+             IconName="IconName.FileBarGraph"
+             Title="REPORTES"
+             DataProvider="SidebarDataProvider" />
+            <main>
+        <nav style="display:flex; justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;">
+                        <Icon Name="IconName.List" Size="IconSize.x2" role="button" @onclick="ToggleSidebar" Class="p-2" />
+                        <div>
+                    <Button Color="ButtonColor.Warning" Style="width:120px;"><Icon Name="IconName.Activity" /> Cargar </Button>
+                    <Button Color="ButtonColor.Dark" Style="width:120px;"><Icon Name="IconName.FileExcel" /> Excel </Button>
+                    <Button Color="ButtonColor.Dark" Style="width:120px;"><Icon Name="IconName.FilePdf" /> Pdf </Button>
+                    <Button Color="ButtonColor.Dark" Style="width:120px;"><Icon Name="IconName.FileTypeTxt" /> Txt </Button>
+                        </div>
+                        
+               
+             </div>
+            <div style="display:flex">
+                <label>Start date:</label>
+                <DateInput TValue="DateOnly" @bind-Value="@date1" Placeholder="Enter Date" Style="margin-right:5px;" />
+                <label>End date:</label>
+                <DateInput TValue="DateOnly" @bind-Value="@date2" Placeholder="Enter Date" />
+            </div>
+                    
+                </nav>
+                <article class="content px-4">
+                    @Body
+                </article>
+            </main>
+</div>
+
+
+@code {
+    Sidebar sidebar = default!;
+    IEnumerable<NavItem>? navItems;
+    private DateOnly date1 = DateOnly.FromDateTime(DateTime.Now.AddDays(1));
+    private DateOnly date2 = DateOnly.FromDateTime(DateTime.Now.AddDays(1));
+
+    private async Task<SidebarDataProviderResult> SidebarDataProvider(SidebarDataProviderRequest request)
+    {
+        if (navItems is null)
+            navItems = GetNavItems();
+
+        return await Task.FromResult(request.ApplyTo(navItems));
+    }
+
+    private IEnumerable<NavItem> GetNavItems()
+    {
+        navItems = new List<NavItem>
+        {
+            new NavItem { Id = "1", Href = "/Reports/ReportPdf", IconName = IconName.Person, Text = "Reporte de Usuarios"},
+
+            new NavItem { Id = "2", IconName = IconName.Box, Text = "Rep. Inventarios" },
+            new NavItem { Id = "21", Href = "/Reports/Report1", IconName = IconName.Printer, Text = "Inventario Valorizado ", ParentId="2"},
+            new NavItem { Id = "22", Href = "/Reports/Report2", IconName = IconName.Printer, Text = "Movimiento almacenes", ParentId="2"},
+            new NavItem { Id = "23", Href = "/Reports/Report3", IconName = IconName.Printer, Text = "Inventario producto", ParentId="2"},
+
+
+            new NavItem { Id = "4", IconName = IconName.Shop, Text = "Reportes Compras" },
+            new NavItem { Id = "5", Href = "/alerts", IconName = IconName.Printer, Text = "Compras por fecha", ParentId="4"},
+            new NavItem { Id = "6", Href = "/breadcrumb", IconName = IconName.Printer, Text = "Comras por proveedor", ParentId="4"},
+            new NavItem { Id = "7", Href = "/sidebar", IconName = IconName.Printer, Text = "Cuentas x pagar", ParentId="4"},
+
+            new NavItem { Id = "8", IconName = IconName.WindowPlus, Text = "Reportes Ventas" },
+            new NavItem { Id = "9", Href = "/autocomplete", IconName = IconName.Printer, Text = "Ventas por perido", ParentId="8"},
+            new NavItem { Id = "10", Href = "/currency-input", IconName = IconName.Printer, Text = "Ventas x cliente", ParentId="8"},
+            new NavItem { Id = "11", Href = "/number-input", IconName = IconName.Printer, Text = "Ventas x producto", ParentId="8"},
+            new NavItem { Id = "12", Href = "/switch", IconName = IconName.Printer, Text = "Cuentas x Cobrar", ParentId="8"},
+        };
+
+        return navItems;
+    }
+    private void ToggleSidebar() => sidebar.ToggleSidebar();
+}
+}
+

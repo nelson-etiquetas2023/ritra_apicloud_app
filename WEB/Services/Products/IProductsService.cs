@@ -14,5 +14,6 @@ namespace WEB.Services.Products
         Task<byte[]> GetProductImageAsync(int imageId);
         Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
+        string GetImageUrl(int imageId, int productId);
     }
 }

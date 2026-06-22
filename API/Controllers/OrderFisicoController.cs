@@ -1,5 +1,6 @@
 ﻿using API.Services.Inventory;
 using API.Services.Reports;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 

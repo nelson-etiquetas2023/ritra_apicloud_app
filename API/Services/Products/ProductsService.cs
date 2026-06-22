@@ -5,22 +5,17 @@ using Shared.Dtos;
 
 namespace API.Services.Products
 {
-    public class ProductsService : IProductsService
+    public class ProductsService(ApplicationDbContext context, IWebHostEnvironment environment) : IProductsService
     {
-        private readonly ApplicationDbContext context;
-        private readonly IWebHostEnvironment _environment;
-
-        public ProductsService(ApplicationDbContext context, IWebHostEnvironment environment)
-        {
-            this.context = context;
-            _environment = environment;
-        }
+        private readonly ApplicationDbContext context = context;
+        private readonly IWebHostEnvironment _environment = environment;
 
         public async Task<List<Product>> GetProductAsync()
         {
             return await context.Productos
                 .Include(p => p.Images)
                 .ToListAsync();
+
         }
 
         public async Task<Product?> GetProductByIdAsync(int productId)
@@ -49,7 +44,7 @@ namespace API.Services.Products
             existing.Unidad = producto.Unidad;
             existing.Codebar = producto.Codebar;
             existing.Price = producto.Price;
-            existing.Desactivado = producto.Desactivado;
+            //existing.Desactivado = producto.Desactivado;
             // NO modificar las imágenes aquí, se manejan por separado en UpdateProductImageAsync
 
             await context.SaveChangesAsync();
@@ -168,7 +163,7 @@ namespace API.Services.Products
                             // Decodificar base64
                             var base64Index = imageData.Base64Data.IndexOf(',');
                             var cleanBase64 = base64Index >= 0 
-                                ? imageData.Base64Data.Substring(base64Index + 1) 
+                                ? imageData.Base64Data[(base64Index + 1)..] 
                                 : imageData.Base64Data;
 
                             var imageBytes = Convert.FromBase64String(cleanBase64);
@@ -238,7 +233,7 @@ namespace API.Services.Products
                 // Decodificar base64
                 var base64Index = imageData.Base64Data.IndexOf(',');
                 var cleanBase64 = base64Index >= 0 
-                    ? imageData.Base64Data.Substring(base64Index + 1) 
+                    ? imageData.Base64Data[(base64Index + 1)..] 
                     : imageData.Base64Data;
 
                 var imageBytes = Convert.FromBase64String(cleanBase64);

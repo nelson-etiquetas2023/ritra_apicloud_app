@@ -1,4 +1,5 @@
 using API.Data;
+using API.Services.AppMovil;
 using API.Services.Auth;
 using API.Services.Config;
 using API.Services.Inventory;
@@ -10,19 +11,20 @@ using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+var MyallowSpecificOrigins = "_myAllowSpecificOrigins";
 
 QuestPDF.Settings.License = LicenseType.Community;
 
 //Configurar los CORS.
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("RitramaCors", policy =>
+    options.AddPolicy(name: MyallowSpecificOrigins, policy =>
     {
-        policy.WithOrigins("https://localhost:7052", "http://localhost:7052")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-
+        policy.WithOrigins("http://localhost:5094", "http://scanpro.dpdns.org", "https://scanpro.dpdns.org:8080")
+        
+        .AllowAnyHeader()
+        .AllowAnyMethod();
     });
 });
 
@@ -30,6 +32,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options => 
 options.UseSqlServer(builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA")));
 
+//Inyeccion de mis servicios.
 builder.Services.AddScoped<IProductsService, ProductsService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
@@ -37,12 +40,17 @@ builder.Services.AddScoped<IReportsService, ReportsService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
+builder.Services.AddScoped<IAppMovilService, AppMovilService>();
+
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseHttpsRedirection();
+
 
 // Crear carpeta de uploads si no existe
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
@@ -59,16 +67,6 @@ using (var scope = app.Services.CreateScope())
     DataSeeder.Seed(dbcontext);
 }
 
-
-//migraciopnes automaticas.
-//using (var scope = app.Services.CreateScope())
-//{
-//    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//   db.Database.EnsureDeleted();  // Borra la base de datos
-//    db.Database.EnsureCreated();  // La vuelve a crear según los modelos
-//}
-
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -83,10 +81,11 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
+//app.UseHttpsRedirection();
+app.UseRouting();
+
+app.UseCors(MyallowSpecificOrigins);
+
 app.UseAuthorization();
-
 app.MapControllers();
-
-app.UseCors("RitramaCors");
-
 app.Run();

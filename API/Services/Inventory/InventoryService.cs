@@ -1,4 +1,6 @@
 ﻿using API.Data;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
 
@@ -82,11 +84,13 @@ namespace API.Services.Inventory
 
             return true;
         }
+
+        [EnableCors]
+        [HttpGet]
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {
             var orders = await Context.Order_InvFisico_Header
                 .Include(o => o.OrdersDetails).ToListAsync();            
-
 
             return orders;
         }

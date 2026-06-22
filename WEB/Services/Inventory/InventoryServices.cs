@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using Shared.Dtos;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace WEB.Services.Inventory
 {
@@ -233,6 +234,12 @@ namespace WEB.Services.Inventory
         {
             var url = $"api/orderfisico/getorders";
             var clientHttp = httpFactory.CreateClient("ritrama");
+
+            //adjuntar el token bearer de seguridad para
+            //que los cors permita la conexion con la api.
+
+           
+
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();

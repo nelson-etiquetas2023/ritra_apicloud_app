@@ -1529,14 +1529,64 @@
           "unidad": {
             "type": "string"
           },
-          "desactivado": {
-            "type": "boolean"
-          },
           "images": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductImage"
             }
+          },
+          "costo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stock": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stock_Mix": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stock_Max": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stockStatus": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "skuNumber": {
+            "type": "string"
+          },
+          "partNumber": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "statusProducts": {
+            "type": "string"
           }
         }
       },

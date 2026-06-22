@@ -1,5 +1,14 @@
-wwwroot\images\escanner-inventario.webp
-wwwroot\icon-192.png
-wwwroot\favicon.png
 wwwroot\css\app.css
+wwwroot\favicon.png
+wwwroot\icon-192.png
+wwwroot\images\bota1.jpg
+wwwroot\images\bota2.jpg
+wwwroot\images\bota3.jpg
+wwwroot\images\bota4.jpg
+wwwroot\images\bota5.jpg
+wwwroot\images\Cardboard Box.png
+wwwroot\images\detailsProducts.png
+wwwroot\images\escanner-inventario.webp
+wwwroot\images\reports.png
+wwwroot\images\Unpacking.png
 C:\Programacion\RitramaCloud2026\WEB\wwwroot\css\app.css

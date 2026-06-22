@@ -3,7 +3,6 @@
 @inject IJSRuntime JS
 @inject IHttpClientFactory HttpClientFactory
 @using Shared.Dtos
-@using System.Text.Json;
 
 <Preload LoadingText="Guardando..."/>
 
@@ -81,12 +80,12 @@
                 <Button Type="ButtonType.Submit" style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
                 <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
             </div>
-            <div class="form-check mb-5 mt-5">
+            @* <div class="form-check mb-5 mt-5">
                 <InputCheckbox @bind-Value="productoLocal.Desactivado" class="form-check-input" id="checkActivate" />
                 <label class="form-check-label" for="checkActivate">
                     Desactivar producto
                 </label>
-            </div>
+            </div> *@
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -390,7 +389,7 @@
             Price = loadedProduct.Price,
             Codebar = loadedProduct.Codebar,
             Unidad = loadedProduct.Unidad,
-            Desactivado = loadedProduct.Desactivado,
+            //Desactivado = loadedProduct.Desactivado,
             Images = loadedProduct.Images != null ? new List<ProductImage>(loadedProduct.Images) : new List<ProductImage>()
         };
 

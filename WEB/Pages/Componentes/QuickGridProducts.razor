@@ -1,6 +1,7 @@
 ﻿@using WEB.Pages.Products
 @inject IProductsService service
 @inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
 
 <ConfirmDialog @ref="dialog" />
 
@@ -18,8 +19,10 @@
                 @if (firstImage != null)
                 {
                     <img src="@GetImageUrl(firstImage.Id, item.Product_id)" 
+                         style="cursor:pointer"   
                          alt="@item.Product_Name" 
                          class="product-thumbnail"
+                         @onclick="() => GotoDetilsProducts(item.Product_id)"
                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23f0f0f0%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2212%22 fill=%22%23999%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3ENo imagen%3C/text%3E%3C/svg%3E'" />
                 }
                 else
@@ -72,6 +75,12 @@
     private ConfirmDialog dialog = default!;
     // Versiones para evitar cache de imágenes por producto
     private Dictionary<int, long> imageVersions = new();
+
+    private void GotoDetilsProducts(int productId)
+    {
+     
+        NavigationManager.NavigateTo($"/products/DetailsProducts/{productId}");
+    }
 
     private async Task EditProducts(Product product)
     {
@@ -140,7 +149,7 @@
             productoActualizado.Unidad = productUpdate.Unidad;
             productoActualizado.Price = productUpdate.Price;
             productoActualizado.Codebar = productUpdate.Codebar;
-            productoActualizado.Desactivado = productUpdate.Desactivado;
+            //productoActualizado.Desactivado = productUpdate.Desactivado;
             // ACTUALIZA LAS IMÁGENES
             productoActualizado.Images = productUpdate.Images != null
                 ? new List<ProductImage>(productUpdate.Images)

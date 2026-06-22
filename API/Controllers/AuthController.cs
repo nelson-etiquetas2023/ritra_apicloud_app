@@ -1,4 +1,6 @@
 ﻿using API.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 using Shared.Security;
@@ -14,6 +16,7 @@ namespace API.Controllers
 
         [HttpPost]
         [Route("login")]
+        
         public async Task<ActionResult<ServiceResponse<string>>> Login([FromBody] UserLogin request) 
         {
             var response = await Authservice.Login(request.Email, request.Password);

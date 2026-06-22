@@ -20,9 +20,18 @@ namespace Shared.Dtos
 
         [Required(ErrorMessage ="el producto debe tener una unidad")]
         public string Unidad { get; set; } = null!;
+        public List<ProductImage> Images { get; set; } = [];
 
-        public bool Desactivado { get; set; }
-
-        public List<ProductImage> Images { get; set; } = new List<ProductImage>();
+        public double Costo { get; set; } = 0;
+        public double Stock { get; set; } = 0;
+        public double Stock_Mix { get; set; }
+        public double Stock_Max { get; set; }
+        public string StockStatus { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public string SkuNumber { get; set; } = null!;
+        public string PartNumber { get; set; } = null!;
+        public string Model { get; set; } = null!;
+        public string Marca { get; set; } = null!;
+        public string StatusProducts { get; set; } = null!;
     }
 }

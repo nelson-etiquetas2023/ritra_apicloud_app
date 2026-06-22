@@ -3,8 +3,6 @@
 @inject IJSRuntime JS
 @using WEB.Pages.Products
 
-<AuthorizeView>
-    <Authorized>
         <ModalCreateProducts @ref="ModalCreate" OnProductCreated="LoadProducts" />
         <h1><Icon Name="IconName.Box" Size="IconSize.x1" /> Productos</h1>
         <!--Menu principal-->
@@ -45,11 +43,7 @@
                 productsFiltered="productsFiltered!.AsQueryable()" 
                 pagination="pagination" OnUpdateListProduct="RefreshListProducts" />
         }
-    </Authorized>
-    <NotAuthorized>
-        <p>usted no esta autorizado!</p>
-    </NotAuthorized>
-</AuthorizeView>
+   
 
 @code {
 

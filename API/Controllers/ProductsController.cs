@@ -80,7 +80,6 @@ namespace API.Controllers
         [Route("updateproducts")]
         public async Task<IActionResult> UpdateProductsAsync([FromBody] ParametrosUpdateProducts parametros)
         {
-
             var updated = await service.UpdateProductAsync(parametros.id, parametros.producto);
             if (updated == null) NotFound();
             return Ok(updated);

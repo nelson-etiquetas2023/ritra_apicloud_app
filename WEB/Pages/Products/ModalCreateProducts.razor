@@ -258,6 +258,15 @@
             }
 
             // Crear request con producto e imágenes
+            product.Costo = 0;
+            product.Description = "";
+            product.Marca = "";
+            product.Model = "";
+            product.PartNumber = "";
+            product.SkuNumber = "";
+            //product.SerialStatus = false;
+            product.StatusProducts = "";
+            product.StockStatus = "";
             var request = new CreateProductWithImagesRequest
             {
                 Product = product,
