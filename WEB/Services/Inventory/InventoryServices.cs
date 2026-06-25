@@ -238,8 +238,7 @@ namespace WEB.Services.Inventory
             //adjuntar el token bearer de seguridad para
             //que los cors permita la conexion con la api.
 
-           
-
+       
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();

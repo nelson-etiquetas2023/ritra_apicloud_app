@@ -10,14 +10,14 @@
         "projectUniqueName": "C:\\Programacion\\RitramaCloud2026\\WEB\\WEB.csproj",
         "projectName": "WEB",
         "projectPath": "C:\\Programacion\\RitramaCloud2026\\WEB\\WEB.csproj",
-        "packagesPath": "C:\\Users\\Npino\\.nuget\\packages\\",
+        "packagesPath": "C:\\Users\\Npino.DC\\.nuget\\packages\\",
         "outputPath": "C:\\Programacion\\RitramaCloud2026\\WEB\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Npino\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Npino.DC\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],

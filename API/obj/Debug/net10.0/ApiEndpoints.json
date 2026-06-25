@@ -515,6 +515,80 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "API.Controllers.AppMovil.PurshaseOrderController",
+    "Method": "CreateOrder",
+    "RelativePath": "api/PurshaseOrder/createorder",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "order",
+        "Type": "Shared.Dtos.AppMovil.OrderPurchase",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.PurshaseOrderController",
+    "Method": "DeleteOrderPurchase",
+    "RelativePath": "api/PurshaseOrder/deleteorderpurchase/{orderid}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "orderid",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.PurshaseOrderController",
+    "Method": "GetOrderPurchaseById",
+    "RelativePath": "api/PurshaseOrder/getorderpurchasebyid/{orderid}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "orderid",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.PurshaseOrderController",
+    "Method": "GetOrdersPurchaseAsync",
+    "RelativePath": "api/PurshaseOrder/getorderspurchase",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.PurshaseOrderController",
+    "Method": "UpdateOrderPurchase",
+    "RelativePath": "api/PurshaseOrder/updateorderspurchase",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "order",
+        "Type": "Shared.Dtos.AppMovil.OrderPurchase",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "API.Controllers.UploadController",
     "Method": "DeleteImage",
     "RelativePath": "api/Upload/deleteimage",

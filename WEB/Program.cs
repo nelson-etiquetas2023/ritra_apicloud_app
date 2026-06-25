@@ -10,8 +10,8 @@ using WEB.Services.Auth;
 using WEB.Services.LocalStorage;
 using WEB.Services.Upload;
 
-//var ritrama_local = "http://localhost:5220/";
-var Deploy_Server = "https://scanapi.dpdns.org:443";
+var server_local = "http://localhost:5220/";
+//var Deploy_Server = "https://scanapi.dpdns.org:443";
 
 // Alternativa: si la API está en otro puerto, usa:
 // var ritrama_local = "https://localhost:7000/"; // Para HTTPS en desarrollo
@@ -25,7 +25,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services.AddHttpClient("ritrama", options => {
-    options.BaseAddress = new Uri(Deploy_Server);
+    options.BaseAddress = new Uri(server_local);
     options.Timeout = TimeSpan.FromSeconds(15);
     options.DefaultRequestHeaders.Add("User-Agent", "BlazorApp");
 });
