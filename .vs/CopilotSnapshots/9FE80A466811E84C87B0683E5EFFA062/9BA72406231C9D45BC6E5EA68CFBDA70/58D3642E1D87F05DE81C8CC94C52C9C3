@@ -1,0 +1,90 @@
+﻿using API.Data;
+using API.Services.AppMovil;
+using API.Services.Auth;
+using API.Services.Config;
+using API.Services.Inventory;
+using API.Services.Products;
+using API.Services.Reports;
+using API.Services.Upload;
+using API.Services.Users;
+using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
+
+var builder = WebApplication.CreateBuilder(args);
+
+
+QuestPDF.Settings.License = LicenseType.Community;
+
+//Configurar los CORS.
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PoliticaCORS", app => {
+        app.WithOrigins("http://192.168.10.10:9000")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+    });
+});
+
+// Add services to the container.
+builder.Services.AddDbContext<ApplicationDbContext>(options => 
+options.UseSqlServer(builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA")));
+
+//Inyeccion de mis servicios.
+builder.Services.AddScoped<IProductsService, ProductsService>();
+builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IReportsService, ReportsService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUploadService, UploadService>();
+builder.Services.AddScoped<IAppMovilService, AppMovilService>();
+
+
+builder.Services.AddControllers();
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+//app.UseHttpsRedirection();
+
+
+// Crear carpeta de uploads si no existe
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
+//seeder
+using (var scope = app.Services.CreateScope())
+{
+    var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbcontext.Database.EnsureCreated();
+    DataSeeder.Seed(dbcontext);
+}
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+// Servir archivos estáticos desde la carpeta uploads
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(app.Environment.ContentRootPath, "uploads")),
+    RequestPath = "/uploads"
+});
+
+app.UseRouting();
+
+//Activacion de los CORS
+app.UseCors("PoliticaCORS");
+
+app.UseAuthorization();
+app.MapControllers();
+app.Run();

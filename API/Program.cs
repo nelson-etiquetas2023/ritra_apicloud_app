@@ -3,6 +3,7 @@ using API.Services.AppMovil;
 using API.Services.Auth;
 using API.Services.Config;
 using API.Services.Inventory;
+using API.Services.OcMovil;
 using API.Services.Products;
 using API.Services.Reports;
 using API.Services.Upload;
@@ -11,26 +12,39 @@ using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-var MyallowSpecificOrigins = "_myAllowSpecificOrigins";
 
-QuestPDF.Settings.License = LicenseType.Community;
-
-//Configurar los CORS.
-
+//Confguración de CORS.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: MyallowSpecificOrigins, policy =>
+    options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5094", "http://scanpro.dpdns.org", "https://scanpro.dpdns.org:8080")
-        
+        policy.WithOrigins("http://192.168.10.10:9000", 
+            "https://192.168.10.10:9000",
+            "http://192.168.10.26:5094",
+            "https://192.168.10.26:5094")
         .AllowAnyHeader()
         .AllowAnyMethod();
     });
 });
 
+QuestPDF.Settings.License = LicenseType.Community;
+
 // Add services to the container.
-builder.Services.AddDbContext<ApplicationDbContext>(options => 
-options.UseSqlServer(builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA")));
+try
+{
+    var connectionString = builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA");
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Cadena de conexión 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
+    }
+
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
+catch (Exception ex)
+{
+   Console.WriteLine($"Error al configurar la base de datos: {ex.Message}");
+}
 
 //Inyeccion de mis servicios.
 builder.Services.AddScoped<IProductsService, ProductsService>();
@@ -41,51 +55,41 @@ builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IAppMovilService, AppMovilService>();
-
+builder.Services.AddScoped<IOcMovilService, OcMovilService>();
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
-
-
-// Crear carpeta de uploads si no existe
-var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
-if (!Directory.Exists(uploadsPath))
-{
-    Directory.CreateDirectory(uploadsPath);
-}
-
-//seeder
-using (var scope = app.Services.CreateScope())
-{
-    var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbcontext.Database.EnsureCreated();
-    DataSeeder.Seed(dbcontext);
-}
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-// Servir archivos estáticos desde la carpeta uploads
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(app.Environment.ContentRootPath, "uploads")),
     RequestPath = "/uploads"
 });
+// Crear carpeta de uploads si no existe
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+//seeder
+try
+{
+    using var scope = app.Services.CreateScope();
+    var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbcontext.Database.EnsureCreated();
+    DataSeeder.Seed(dbcontext);
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Error en DataSeeder");
+}
 
-//app.UseHttpsRedirection();
 app.UseRouting();
-
-app.UseCors(MyallowSpecificOrigins);
-
+app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+

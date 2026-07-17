@@ -2,6 +2,8 @@
 using Shared.Dtos;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace WEB.Services.Products
 {
@@ -24,6 +26,53 @@ namespace WEB.Services.Products
             var baseUrl = client.BaseAddress?.ToString().TrimEnd('/');
             var version = imageVersions.ContainsKey(productId) ? imageVersions[productId] : 0L;
             return $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
+        }
+
+        public async Task<Product?> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files)
+        {
+            try
+            {
+                var url = $"api/products/createproductwithfiles";
+                var clientHttp = HttpFactory.CreateClient("ritrama");
+
+                using var content = new MultipartFormDataContent();
+
+                // Agregar el producto como JSON en un campo 'product'
+                var productJson = JsonSerializer.Serialize(product, jsonOptions);
+                var productContent = new StringContent(productJson, Encoding.UTF8, "application/json");
+                content.Add(productContent, "product");
+
+                // Agregar archivos
+                for (int i = 0; i < files.Count; i++)
+                {
+                    var file = files[i];
+                    if (file == null) continue;
+
+                    var stream = file.OpenReadStream(maxAllowedSize: 50_000_000);
+                    var streamContent = new StreamContent(stream);
+                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
+                    // Name 'files' so server can bind Request.Form.Files
+                    content.Add(streamContent, "files", file.Name);
+                }
+
+                var response = await clientHttp.PostAsync(url, content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"CreateProductWithFilesAsync: server returned {response.StatusCode}");
+                    return null;
+                }
+
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson)) return null;
+
+                var created = await JsonSerializer.DeserializeAsync<Product>(new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
+                return created;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating product with files: {ex.Message}");
+                return null;
+            }
         }
 
 

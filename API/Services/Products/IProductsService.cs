@@ -1,4 +1,5 @@
 ﻿using Shared.Dtos;
+using Microsoft.AspNetCore.Http;
 
 namespace API.Services.Products
 {
@@ -12,6 +13,7 @@ namespace API.Services.Products
         Task<bool> AddProductImageAsync(int productId, IFormFile file, int imageIndex);
         Task<bool> DeleteProductImageAsync(int imageId);
         Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
+        Task<Product?> CreateProductWithFilesAsync(Product product, IFormFileCollection files);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
     }
 }

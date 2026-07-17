@@ -1,4 +1,6 @@
 ﻿using API.Services.Config;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 
@@ -6,6 +8,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    
     public class ConfigController : ControllerBase
     {
         private readonly IConfigService service;
@@ -17,8 +20,8 @@ namespace API.Controllers
 
         [HttpGet]
         [Route("getloaddataconfig")]
-
-        public async Task<IActionResult> GetLoadDataConfigAsync() 
+    
+        public async Task<IActionResult> GetLoadDataConfigAsync()
         {
             var data = await service.LoadConfigurationAsync();
             return Ok(data);

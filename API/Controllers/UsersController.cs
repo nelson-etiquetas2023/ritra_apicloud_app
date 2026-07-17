@@ -1,4 +1,5 @@
 ﻿using API.Services.Users;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Security;
 
@@ -6,7 +7,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
+  
     public class UsersController : ControllerBase
     {
         private readonly IUsersService service;

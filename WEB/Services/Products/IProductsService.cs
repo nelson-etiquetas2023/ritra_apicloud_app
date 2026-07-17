@@ -1,4 +1,5 @@
 ﻿using Shared.Dtos;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace WEB.Services.Products
 {
@@ -13,6 +14,7 @@ namespace WEB.Services.Products
         Task<bool> DeleteProductImageAsync(int imageId);
         Task<byte[]> GetProductImageAsync(int imageId);
         Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
+        Task<Product?> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
         string GetImageUrl(int imageId, int productId);
     }

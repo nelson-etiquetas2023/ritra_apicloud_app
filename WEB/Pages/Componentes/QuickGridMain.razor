@@ -1,6 +1,6 @@
 ﻿<div>
     <QuickGrid Items="filteredOrders!.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-hover table-bordered table-striped" Pagination="@pagination">
-        <PropertyColumn Property="@(p => p.renglon)" Title="Rg." />
+        <PropertyColumn Property="@(p => p.Renglon)" Title="Rg." />
         <TemplateColumn Title="Documento" Align="Align.Center" Sortable="true">
             <a href="CodebarDetails/@Escapar(context.OrderNumberID)" style="color:black;text-decoration:none;font-weight:bold;"><Icon Name="IconName.FileEarmark" /> @context.OrderNumberID</a>
         </TemplateColumn>

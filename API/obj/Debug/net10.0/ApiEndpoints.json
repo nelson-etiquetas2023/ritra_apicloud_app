@@ -83,6 +83,95 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "API.Controllers.AppMovil.OrdenCompraController",
+    "Method": "AddOrder",
+    "RelativePath": "api/OrdenCompra/addorder",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "oc",
+        "Type": "Shared.Dtos.Compras.OrdenCompra",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.OrdenCompraController",
+    "Method": "DeleteOrderAsync",
+    "RelativePath": "api/OrdenCompra/deleteorder/{Id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.OrdenCompraController",
+    "Method": "GetOrderAsync",
+    "RelativePath": "api/OrdenCompra/getorderbyid/{Id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Id",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.OrdenCompraController",
+    "Method": "GetOrdersAsync",
+    "RelativePath": "api/OrdenCompra/getorders",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[Shared.Dtos.Compras.OrdenCompra, Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "API.Controllers.AppMovil.OrdenCompraController",
+    "Method": "UpdateOrderAsync",
+    "RelativePath": "api/OrdenCompra/updateorder/{Id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Id",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "Oc",
+        "Type": "Shared.Dtos.Compras.OrdenCompra",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "API.Controllers.OrderFisicoController",
     "Method": "CreateOrdersAsync",
     "RelativePath": "api/OrderFisico/createorder",
@@ -369,6 +458,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.ProductsController",
+    "Method": "CreateProductWithFilesAsync",
+    "RelativePath": "api/Products/createproductwithfiles",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {

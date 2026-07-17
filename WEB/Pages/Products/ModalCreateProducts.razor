@@ -233,31 +233,7 @@
 
         try
         {
-            // Preparar las imágenes en base64
-            var images = new List<Base64ImageData>();
-            for (int i = 0; i < 3; i++)
-            {
-                if (!string.IsNullOrEmpty(imagePreviews[i]))
-                {
-                    // Extraer base64 sin el prefijo data:...;base64,
-                    var base64Data = imagePreviews[i];
-                    var base64Index = base64Data.IndexOf(',');
-                    var cleanBase64 = base64Index >= 0 ? base64Data.Substring(base64Index + 1) : base64Data;
-
-                    // Detectar el ContentType del archivo
-                    var contentType = DetectContentType(imageNames[i]);
-
-                    images.Add(new Base64ImageData
-                    {
-                        Base64Data = cleanBase64,
-                        FileName = imageNames[i],
-                        ContentType = contentType,
-                        ImageIndex = i
-                    });
-                }
-            }
-
-            // Crear request con producto e imágenes
+            // Crear request con producto e imágenes (multipart)
             product.Costo = 0;
             product.Description = "";
             product.Marca = "";
@@ -267,14 +243,8 @@
             //product.SerialStatus = false;
             product.StatusProducts = "";
             product.StockStatus = "";
-            var request = new CreateProductWithImagesRequest
-            {
-                Product = product,
-                Images = images
-            };
-
-            // Crear producto con imágenes
-            var createdProduct = await service.CreateProductWithImagesAsync(request);
+            // Crear producto con imágenes mediante multipart/form-data
+            var createdProduct = await service.CreateProductWithFilesAsync(product, selectedFiles);
 
             if (createdProduct == null)
             {

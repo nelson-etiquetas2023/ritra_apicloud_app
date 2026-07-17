@@ -1,14 +1,18 @@
 ﻿using API.Services.Products;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Shared.Dtos;
 
 namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ProductsController(IProductsService service) : ControllerBase
+   
+    public class ProductsController(IProductsService service, ILogger<ProductsController> logger) : ControllerBase
     {
         private readonly IProductsService service = service;
+        private readonly ILogger<ProductsController> _logger = logger;
 
         [HttpGet]
         [Route("getproducts")]
@@ -73,6 +77,50 @@ namespace API.Controllers
         public async Task<IActionResult> CreateProductsAsync(Product producto) 
         {
             var created = await service.CreateproductAsync(producto);
+            return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
+        }
+
+        [HttpPost]
+        [Route("createproductwithfiles")]
+        [RequestSizeLimit(long.MaxValue)]
+        public async Task<IActionResult> CreateProductWithFilesAsync()
+        {
+            _logger.LogInformation("CreateProductWithFilesAsync: ContentLength={ContentLength}", Request.ContentLength);
+
+            var form = await Request.ReadFormAsync();
+            var productJson = form["product"].FirstOrDefault();
+            var files = form.Files;
+
+            if (string.IsNullOrEmpty(productJson))
+            {
+                _logger.LogWarning("CreateProductWithFilesAsync: product form field missing");
+                return BadRequest("Missing product data");
+            }
+
+            Product? product = null;
+            try
+            {
+                product = JsonSerializer.Deserialize<Product>(productJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreateProductWithFilesAsync: error deserializing product JSON");
+                return BadRequest("Invalid product JSON");
+            }
+
+            if (product == null)
+            {
+                _logger.LogWarning("CreateProductWithFilesAsync: deserialized product is null");
+                return BadRequest("Invalid product data");
+            }
+
+            var created = await service.CreateProductWithFilesAsync(product, files);
+            if (created == null)
+            {
+                _logger.LogError("CreateProductWithFilesAsync: service returned null");
+                return StatusCode(500, "Error creating product with files");
+            }
+
             return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
         }
 
@@ -141,14 +189,28 @@ namespace API.Controllers
 
         [HttpPost]
         [Route("createproductwithimages")]
+        [RequestSizeLimit(long.MaxValue)]
         public async Task<IActionResult> CreateProductWithImagesAsync([FromBody] CreateProductWithImagesRequest request)
         {
+            _logger.LogInformation("CreateProductWithImagesAsync: ContentLength={ContentLength}", Request.ContentLength);
+
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("ModelState invalid: {Errors}", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            }
+
             if (request == null || request.Product == null)
+            {
+                _logger.LogWarning("CreateProductWithImagesAsync: request or request.Product is null");
                 return BadRequest("Invalid request");
+            }
 
             var created = await service.CreateProductWithImagesAsync(request);
             if (created == null)
+            {
+                _logger.LogError("CreateProductWithImagesAsync: service returned null when creating product {ProductName}", request.Product.Product_Name);
                 return StatusCode(500, "Error creating product with images");
+            }
 
             return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
         }

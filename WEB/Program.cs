@@ -11,6 +11,7 @@ using WEB.Services.LocalStorage;
 using WEB.Services.Upload;
 
 var server_local = "http://localhost:5220/";
+//var server_etiquetas = "http://192.168.10.10:8080";
 //var Deploy_Server = "https://scanapi.dpdns.org:443";
 
 // Alternativa: si la API está en otro puerto, usa:

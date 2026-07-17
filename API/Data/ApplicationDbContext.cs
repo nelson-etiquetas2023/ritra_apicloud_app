@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
 using Shared.Dtos.AppMovil;
+using Shared.Dtos.Compras;
 using Shared.Security;
 
 namespace API.Data
@@ -18,6 +19,9 @@ namespace API.Data
         public DbSet<UploadResult> Uploads { get; set; }
         public DbSet<OrderPurchase> OrderPurchase { get; set; }
         public DbSet<OrderPurchaseDetails> OrderPurchaseDetails { get; set; }
+        public DbSet<OrdenCompra> Compra { get; set; }
+        public DbSet<DetalleCompras> DetalleCompra { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,6 +31,13 @@ namespace API.Data
                 .HasPrecision(18, 2);
 
             modelBuilder.Entity<OrderPurchaseDetails>().Property(o => o.Costo)
+                .HasPrecision(18, 2);
+
+
+            modelBuilder.Entity<DetalleCompras>().Property(o => o.Costo)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleCompras>().Property(o => o.Subtotal)
                 .HasPrecision(18, 2);
 
 
@@ -43,6 +54,15 @@ namespace API.Data
                         .HasForeignKey(d => d.OrderNumberID)
                         .HasPrincipalKey(o => o.OrderNumberID)
                         .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OrdenCompra>()
+                .HasMany(o => o.Items)
+                .WithOne(o => o.Order)
+                .HasForeignKey(d => d.Numero)
+                .HasPrincipalKey(o => o.Numero)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
         }
     }
 }

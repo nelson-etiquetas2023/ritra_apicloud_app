@@ -2,13 +2,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace API.Services.Products
 {
-    public class ProductsService(ApplicationDbContext context, IWebHostEnvironment environment) : IProductsService
+    public class ProductsService(ApplicationDbContext context, IWebHostEnvironment environment, ILogger<ProductsService> logger) : IProductsService
     {
         private readonly ApplicationDbContext context = context;
         private readonly IWebHostEnvironment _environment = environment;
+        private readonly ILogger<ProductsService> _logger = logger;
 
         public async Task<List<Product>> GetProductAsync()
         {
@@ -149,7 +152,7 @@ namespace API.Services.Products
 
                 if (productId <= 0)
                 {
-                    Console.WriteLine("Error: Product ID no fue asignado correctamente");
+                    _logger.LogError("Error: Product ID no fue asignado correctamente");
                     return null;
                 }
 
@@ -193,11 +196,11 @@ namespace API.Services.Products
 
                             // Guardar referencia en BD
                             context.Images.Add(productImage);
-                            Console.WriteLine($"Image added: {imageData.FileName} (Index: {imageData.ImageIndex}) for Product {productId}");
+                            _logger.LogInformation("Image added: {FileName} (Index: {Index}) for Product {ProductId}", imageData.FileName, imageData.ImageIndex, productId);
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error processing image {imageData.FileName}: {ex.Message}");
+                            _logger.LogError(ex, "Error processing image {FileName}", imageData.FileName);
                             // Continuar con la siguiente imagen si hay error
                         }
                     }
@@ -212,9 +215,77 @@ namespace API.Services.Products
 
                 return createdProduct;
             }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating product with images");
+                    return null;
+                }
+        }
+
+        public async Task<Product?> CreateProductWithFilesAsync(Product product, IFormFileCollection files)
+        {
+            try
+            {
+                // Agregar producto
+                context.Productos.Add(product);
+                await context.SaveChangesAsync();
+
+                var productId = product.Product_id;
+                if (productId <= 0)
+                {
+                    _logger.LogError("CreateProductWithFilesAsync: Product id no asignado después de SaveChanges");
+                    return null;
+                }
+
+                var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsPath))
+                    Directory.CreateDirectory(uploadsPath);
+
+                for (int i = 0; i < files.Count; i++)
+                {
+                    var file = files[i];
+                    if (file == null || file.Length == 0) continue;
+
+                    try
+                    {
+                        var fileExt = Path.GetExtension(file.FileName);
+                        var storedFileName = $"{Guid.NewGuid()}{fileExt}";
+                        var filePath = Path.Combine(uploadsPath, storedFileName);
+
+                        await using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                        }
+
+                        var productImage = new ProductImage
+                        {
+                            ProductId = productId,
+                            FileName = file.FileName,
+                            StoredFileName = storedFileName,
+                            ContentType = file.ContentType ?? "application/octet-stream",
+                            ImageIndex = i
+                        };
+
+                        context.Images.Add(productImage);
+                        _logger.LogInformation("CreateProductWithFilesAsync: saved image {FileName} as {StoredFileName} for product {ProductId}", file.FileName, storedFileName, productId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "CreateProductWithFilesAsync: error saving file {FileName}", file?.FileName);
+                    }
+                }
+
+                await context.SaveChangesAsync();
+
+                var created = await context.Productos
+                    .Include(p => p.Images)
+                    .FirstOrDefaultAsync(p => p.Product_id == productId);
+
+                return created;
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating product with images: {ex.Message}");
+                _logger.LogError(ex, "CreateProductWithFilesAsync: error general");
                 return null;
             }
         }

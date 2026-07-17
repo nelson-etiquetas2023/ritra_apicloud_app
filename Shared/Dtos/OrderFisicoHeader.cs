@@ -21,9 +21,9 @@ namespace Shared.Dtos
         public bool Document_Anulado { get; set; }
         public string Area_Almacen { get; set; } = null!;
         public bool Sincro_Document { get; set; }
-        public int renglon { get; set; } = 0;
+        public int Renglon { get; set; } = 0;
         [JsonIgnore]
         public Equipo? Equipo { get; set; }
-        public ICollection<OrderFisicoDetails> OrdersDetails { get; set; } = new List<OrderFisicoDetails>();
+        public ICollection<OrderFisicoDetails> OrdersDetails { get; set; } = [];
     }
 }

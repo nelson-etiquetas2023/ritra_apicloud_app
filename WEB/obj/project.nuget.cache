@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "IyNgDFFoCU4=",
+  "dgSpecHash": "Jk7+4M4/cO0=",
   "success": true,
   "projectFilePath": "C:\\Programacion\\RitramaCloud2026\\WEB\\WEB.csproj",
   "expectedPackageFiles": [
@@ -10,7 +10,7 @@
     "C:\\Users\\Npino.DC\\.nuget\\packages\\documentformat.openxml\\3.1.1\\documentformat.openxml.3.1.1.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\documentformat.openxml.framework\\3.1.1\\documentformat.openxml.framework.3.1.1.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\excelnumberformat\\1.1.0\\excelnumberformat.1.1.0.nupkg.sha512",
-    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.9\\microsoft.aspnetcore.app.internal.assets.10.0.9.nupkg.sha512",
+    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.10\\microsoft.aspnetcore.app.internal.assets.10.0.10.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.aspnetcore.authorization\\10.0.9\\microsoft.aspnetcore.authorization.10.0.9.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.aspnetcore.components\\10.0.9\\microsoft.aspnetcore.components.10.0.9.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.aspnetcore.components.analyzers\\10.0.9\\microsoft.aspnetcore.components.analyzers.10.0.9.nupkg.sha512",
@@ -42,12 +42,12 @@
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.extensions.validation\\10.0.9\\microsoft.extensions.validation.10.0.9.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.jsinterop\\10.0.9\\microsoft.jsinterop.10.0.9.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.jsinterop.webassembly\\10.0.9\\microsoft.jsinterop.webassembly.10.0.9.nupkg.sha512",
-    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.9\\microsoft.net.illink.tasks.10.0.9.nupkg.sha512",
-    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.net.sdk.webassembly.pack\\10.0.9\\microsoft.net.sdk.webassembly.pack.10.0.9.nupkg.sha512",
+    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.10\\microsoft.net.illink.tasks.10.0.10.nupkg.sha512",
+    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.net.sdk.webassembly.pack\\10.0.10\\microsoft.net.sdk.webassembly.pack.10.0.10.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\rbush.signed\\4.0.0\\rbush.signed.4.0.0.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\sixlabors.fonts\\1.0.0\\sixlabors.fonts.1.0.0.nupkg.sha512",
     "C:\\Users\\Npino.DC\\.nuget\\packages\\system.io.packaging\\8.0.1\\system.io.packaging.8.0.1.nupkg.sha512",
-    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.netcore.app.runtime.mono.browser-wasm\\10.0.9\\microsoft.netcore.app.runtime.mono.browser-wasm.10.0.9.nupkg.sha512"
+    "C:\\Users\\Npino.DC\\.nuget\\packages\\microsoft.netcore.app.runtime.mono.browser-wasm\\10.0.10\\microsoft.netcore.app.runtime.mono.browser-wasm.10.0.10.nupkg.sha512"
   ],
   "logs": []
 }

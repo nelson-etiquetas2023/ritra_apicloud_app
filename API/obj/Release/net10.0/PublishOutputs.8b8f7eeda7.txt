@@ -1,6 +1,8 @@
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\API.exe
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\appsettings.Development.json
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\appsettings.json
+C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\dotnet-tools.json
+C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\libman.json
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\LatoFont\Lato-Black.ttf
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\LatoFont\Lato-BlackItalic.ttf
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\LatoFont\Lato-Bold.ttf
@@ -23,7 +25,6 @@ C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\LatoFont\OFL
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\API.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\API.runtimeconfig.json
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\API.pdb
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.AspNetCore.OpenApi.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.Bcl.Cryptography.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.Data.SqlClient.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.Data.SqlClient.Extensions.Abstractions.dll
@@ -38,7 +39,6 @@ C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.Id
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.IdentityModel.Protocols.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.IdentityModel.Tokens.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.OpenApi.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Microsoft.SqlServer.Server.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\QuestPDF.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\System.Configuration.ConfigurationManager.dll
@@ -72,18 +72,12 @@ C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\osx
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\osx-arm64\native\libqpdf.dylib
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\osx-x64\native\libQuestPdfSkia.dylib
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\osx-x64\native\libqpdf.dylib
+C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-arm64\native\QuestPdfSkia.dll
+C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-arm64\native\qpdf.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\QuestPdfSkia.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\libgcc_s_seh-1.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\libstdc++-6.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\libwinpthread-1.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\qpdf.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x64\native\zlib1.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\QuestPdfSkia.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\libgcc_s_dw2-1.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\libstdc++-6.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\libwinpthread-1.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\qpdf.dll
-C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\runtimes\win-x86\native\zlib1.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Shared.dll
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\Shared.pdb
 C:\Programacion\RitramaCloud2026\API\obj\Release\net10.0\PubTmp\Out\API.deps.json

@@ -73,6 +73,69 @@ namespace API.Migrations
                     b.ToTable("OrderPurchaseDetails");
                 });
 
+            modelBuilder.Entity("Shared.Dtos.Compras.DetalleCompras", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Costo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Produc_id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Product_name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Numero");
+
+                    b.ToTable("DetalleCompra");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Compras.OrdenCompra", b =>
+                {
+                    b.Property<string>("Numero")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Sincro")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<double>("Total")
+                        .HasColumnType("float");
+
+                    b.HasKey("Numero");
+
+                    b.ToTable("Compra");
+                });
+
             modelBuilder.Entity("Shared.Dtos.Equipo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -213,6 +276,9 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Renglon")
+                        .HasColumnType("int");
+
                     b.Property<bool>("Sincro_Document")
                         .HasColumnType("bit");
 
@@ -223,9 +289,6 @@ namespace API.Migrations
                     b.Property<string>("Status_Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("renglon")
-                        .HasColumnType("int");
 
                     b.HasKey("OrderNumberID");
 
@@ -511,6 +574,17 @@ namespace API.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Shared.Dtos.Compras.DetalleCompras", b =>
+                {
+                    b.HasOne("Shared.Dtos.Compras.OrdenCompra", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("Numero")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("Shared.Dtos.OrderFisicoDetails", b =>
                 {
                     b.HasOne("Shared.Dtos.Equipo", null)
@@ -542,6 +616,11 @@ namespace API.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Compras.OrdenCompra", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Shared.Dtos.Equipo", b =>

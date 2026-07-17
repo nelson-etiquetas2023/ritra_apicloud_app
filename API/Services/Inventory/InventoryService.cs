@@ -85,7 +85,7 @@ namespace API.Services.Inventory
             return true;
         }
 
-        [EnableCors]
+        
         [HttpGet]
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {

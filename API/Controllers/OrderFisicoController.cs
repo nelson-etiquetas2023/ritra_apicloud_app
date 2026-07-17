@@ -1,6 +1,5 @@
 ﻿using API.Services.Inventory;
 using API.Services.Reports;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Dtos;
 
@@ -8,16 +7,10 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-   
-    public class OrderFisicoController : ControllerBase
+    public class OrderFisicoController(IInventoryService service, IReportsService reports) : ControllerBase
     {
-        public IInventoryService service { get; set; }
-        public IReportsService reports { get; set; }
-        public OrderFisicoController(IInventoryService service, IReportsService reports)
-        {
-            this.service = service;
-            this.reports = reports;
-        }
+        public IInventoryService Service { get; set; } = service;
+        public IReportsService Reports { get; set; } = reports;
 
         [HttpPost]
         [Route("savenumberconsecinventory")]
@@ -26,7 +19,7 @@ namespace API.Controllers
             var number = Parametros.Numero;
             var filter = Parametros.Filtro;
             if (number == null || filter == null) return false; 
-            await service.SaveNumberConsecInventoryAsync(number!, filter);
+            await Service.SaveNumberConsecInventoryAsync(number!, filter);
             return true;
         }
 
@@ -35,7 +28,8 @@ namespace API.Controllers
         [Route("updatedatascanproducts")]
         public async Task<bool> UpdateScanProductsAsync([FromBody] ScanProducts scanproduct) 
         {
-            var updated = await service.UpdateScanProductsAsync(scanproduct);
+            var updated = await Service.UpdateScanProductsAsync(scanproduct);
+            if(!updated) return false;
             return true;
         }
 
@@ -43,21 +37,21 @@ namespace API.Controllers
         [Route("getconfigbyid/{filter}")]
         public async Task<DocumentSettings> GetConfigById(string filter) 
         {
-            return await service.GetConfigById(filter);
+            return await Service.GetConfigById(filter);
         }
 
         [HttpGet]
         [Route("generatereportscanproducts/{id}")]
         public async Task GenerateReportsScanProductsAsync(string id) 
         {
-            await reports.GetReportScaProducts(id);
+            await Reports.GetReportScaProducts(id);
         }
 
         [HttpDelete]
         [Route("deletescanproducts/{id}")]
         public async Task<bool> DeleteScanProductsAsync(Guid id) 
         {
-            var deleted = await service.DeleteScanProductsAsync(id);
+            var deleted = await Service.DeleteScanProductsAsync(id);
             if(!deleted) return false;
             return true;
         }
@@ -67,7 +61,7 @@ namespace API.Controllers
         [Route("getscanproducts/{OrderId}")]
         public async Task<List<ScanProducts>> GetScanProductsAsync(string OrderId) 
         {
-            var productsScan = await service.GetScanProductsAsync(OrderId);
+            var productsScan = await Service.GetScanProductsAsync(OrderId);
             return productsScan;
         }
 
@@ -75,16 +69,17 @@ namespace API.Controllers
         [Route("savedatascanproducts")]
         public async Task<IActionResult> SaveDataProductScanAsync([FromBody] List<ScanProducts> productscan) 
         {
-            var saved = await service.SaveDataProductScanAsync(productscan);
+            var saved = await Service.SaveDataProductScanAsync(productscan);
             return Ok(saved);
         }
 
 
         [HttpGet]
         [Route("getorders")]
-        public async Task<IActionResult> GetOrdersAsync() 
+
+        public async Task<IActionResult> GetOrdersAsync()
         {
-            var orders = await service.GetOrdersAsync();
+            var orders = await Service.GetOrdersAsync();
             return Ok(orders);
         }
 
@@ -92,7 +87,7 @@ namespace API.Controllers
         [Route("getorderbyid/{OrderNumber}")]
         public async Task<IActionResult> GetOrderByIdAsync(string OrderNumber) 
         {
-            var order = await service.GetOrderByIdAsync(OrderNumber);
+            var order = await Service.GetOrderByIdAsync(OrderNumber);
             if (order == null) return NotFound();
             return Ok(order);
         }
@@ -101,7 +96,7 @@ namespace API.Controllers
         [Route("createorder")]
         public async Task<IActionResult> CreateOrdersAsync([FromBody] OrderFisicoHeader order) 
         {
-            var created = await service.CreateOrderAsync(order);
+            var created = await Service.CreateOrderAsync(order);
             return Ok(created);
         }
 
@@ -109,7 +104,7 @@ namespace API.Controllers
         [Route("updateorder/{orderNumber}")]
         public async Task<ActionResult> UpdateOrdersAsync(string orderNumber, [FromBody] OrderFisicoHeader order) 
         {
-            var updated = await service.UpdateOrderAsync(orderNumber, order);
+            var updated = await Service.UpdateOrderAsync(orderNumber, order);
             if (updated == null) return NotFound();
             return Ok(updated);
         }
@@ -118,7 +113,7 @@ namespace API.Controllers
         [Route("deleteorder/{OrderNumber}")]
         public async Task<IActionResult> DeleteOrdersAsync(string OrderNumber) 
         {
-            var deleted = await service.DeleteOrderAsync(OrderNumber);
+            var deleted = await Service.DeleteOrderAsync(OrderNumber);
             if(!deleted) return NotFound();
             return NoContent();
         }

@@ -1,5 +1,6 @@
 ﻿using API.Data;
 using API.Services.Upload;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
@@ -9,7 +10,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
+    
     public class UploadController(IUploadService uploadService, ApplicationDbContext context) : ControllerBase
     {
         private readonly IUploadService _uploadService = uploadService;
