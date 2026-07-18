@@ -52,7 +52,7 @@ namespace API.Services.OcMovil
             {
                 var newItem = new DetalleCompras
                 {
-                    Produc_id = item.Produc_id,
+                    Product_id = item.Product_id,
                     Product_name = item.Product_name,
                     Costo = item.Costo,
                     Subtotal = item.Subtotal,
