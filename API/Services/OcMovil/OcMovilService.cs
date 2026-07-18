@@ -1,5 +1,4 @@
 ﻿using API.Data;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos.Compras;
 
@@ -42,6 +41,8 @@ namespace API.Services.OcMovil
             existingOrder.Description = oc.Description;
             existingOrder.Fecha = oc.Fecha;
             existingOrder.Status = oc.Status;
+            existingOrder.Total = oc.Total;
+            existingOrder.Sincro = oc.Sincro;
 
             context.DetalleCompra.RemoveRange(existingOrder.Items);
 
@@ -52,8 +53,11 @@ namespace API.Services.OcMovil
             {
                 var newItem = new DetalleCompras
                 {
+                    Numero = Numero,
+
                     Product_id = item.Product_id,
                     Product_name = item.Product_name,
+                    Cantidad = item.Cantidad,
                     Costo = item.Costo,
                     Subtotal = item.Subtotal,
                 };
