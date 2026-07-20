@@ -24,7 +24,7 @@ namespace WEB.Services.Products
         {
             var client = HttpFactory.CreateClient("ritrama");
             var baseUrl = client.BaseAddress?.ToString().TrimEnd('/');
-            var version = imageVersions.ContainsKey(productId) ? imageVersions[productId] : 0L;
+            var version = imageVersions.TryGetValue(productId, out long value) ? value : 0L;
             return $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
         }
 

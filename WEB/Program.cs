@@ -1,4 +1,3 @@
-
 global using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -9,6 +8,7 @@ using WEB.Services.Products;
 using WEB.Services.Auth;
 using WEB.Services.LocalStorage;
 using WEB.Services.Upload;
+using WEB.Services.OrdenCompra;
 
 var server_local = "http://localhost:5220/";
 //var server_etiquetas = "http://192.168.10.10:8080";
@@ -40,6 +40,7 @@ builder.Services.AddScoped<IProductsService, ProductsService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILocalStorage, LocalStorage>();
 builder.Services.AddScoped<UploadService>();
+builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
 
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
