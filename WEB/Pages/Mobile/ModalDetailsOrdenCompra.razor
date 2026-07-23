@@ -1,0 +1,97 @@
+﻿@page "/Mobile/ModalDetailsOrdenCompra"
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <!-- aqui html para  el encabezado-->
+        <div class="order-header">
+            <h1>Numero de documento: @order.Numero</h1>
+        </div>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        <!--Header-->
+        <div class="order-info">
+            <div class="info-box proveedor">
+                <h3>Datos del Proveedor</h3>
+                <p><strong>Proveedor: </strong>@order.Supply_Name</p>
+                <p><strong>Fecha: </strong>@order.Fecha</p>
+                <p><strong>Status: </strong>@order.Status</p>
+            </div>
+            <div class="info-box orden">
+                <h3>Detalle de la Orden</h3>
+                <p><strong>Referencia: </strong>@order.Reference</p>
+                <p><strong>Tipo Documento: </strong>@order.Tipo_Documento</p>
+                <p><strong>Numero de Productos: </strong>@order.Items.Count</p>
+            </div>
+        </div>
+        <!--Detalle-->
+        <section class="order-detalle">
+            <h3>Detalle de productos</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Id.</th>
+                        <th>Nombre del Producto</th>
+                        <th>Cantidad</th>
+                        <th>Costo</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in order.Items)
+                    {
+                        <tr>
+                            <td>@item.Product_id</td>
+                            <td>@item.Product_name</td>
+                            <td>@item.Cantidad</td>
+                            <td>@item.Costo</td>
+                            <td>@item.Subtotal</td>
+                        </tr>
+                    }
+                </tbody>
+             
+            </table>
+        </section>
+    </BodyTemplate>
+    <FooterTemplate>
+        <!-- aqui html para el pie de modal-->
+        <table>
+            <tr>
+                <td class="total-label">SubTotal :</td>
+                <td class="total-value"><strong>@order.Subtotal</strong></td>
+            </tr>
+            <tr>
+                <td class="total-label">Impuestos :</td>
+                <td class="total-value"><strong>@order.Impuesto</strong></td>
+            </tr>
+            <tr>
+                <td class="total-label total-final">Total General: </td>
+                <td class="total-value total-final"><strong>@order.Total</strong></td>
+            </tr>
+        </table>
+    </FooterTemplate>
+</Modal>
+
+
+@code {
+
+    public OrdenCompra order { get; set; } = new();
+
+    private Modal modal = default!;
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    public async Task ShowAsync(OrdenCompra oc)
+    {
+        order = oc;
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

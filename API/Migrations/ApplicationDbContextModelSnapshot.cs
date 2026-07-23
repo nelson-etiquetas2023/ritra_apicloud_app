@@ -122,11 +122,32 @@ namespace API.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
+                    b.Property<double>("Impuesto")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("Sincro")
                         .HasColumnType("bit");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<double>("Subtotal")
+                        .HasColumnType("float");
+
+                    b.Property<int>("Supply_Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Supply_Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tipo_Documento")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<double>("Total")
                         .HasColumnType("float");

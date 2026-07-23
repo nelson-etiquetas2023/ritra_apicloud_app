@@ -1,8 +1,13 @@
 ﻿@inject IOrdenCompraService servicio
-
 @page "/mobile"
+
+<Preload LoadingText="Cargando..." />
+
+<ModalDetailsOrdenCompra @ref="modalDetails" />
+
+
 <h3>Conexion con Aplicacion movil.</h3>
-<button class="btn btn-primary">Sincronizar</button>
+<button class="btn btn-primary" @onclick="LoadOrders">Sincronizar</button>
 
 <h5>Documentos sincronizados</h5>
 <table class="table table-bordered table-striped">
@@ -12,60 +17,57 @@
             <th>Numero</th>
             <th>Fecha</th>
             <th>Descripcion</th>
-            <th>Acciones</th>
             <th>Status</th>
             <th>Sincro</th>
-
+            <th>Tipo Doc.</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
-        <tr>
-            <td>1</td>
-            <td>1250</td>
-            <td>20-07-2026</td>
-            <td>Distribuidora santo domingo</td>
-            <td>Abierto</td>
-            <td>20-07-2026:2:24 p.m.</td>
-
-            <th><a href="#" style="text-decoration:none">Update </a>
-                <a href="#" style="text-decoration:none">Details </a>
-                <a href="#" style="text-decoration:none">Delete </a></th>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>1251</td>
-            <td>21-07-2026</td>
-            <td>Empresa Rica</td>
-            <td>Abierto</td>
-            <td>20-07-2026:3:14 p.m.</td>
-            <th>
-                <a href="#" style="text-decoration:none">Update </a>
-                <a href="#" style="text-decoration:none">Details </a>
-                <a href="#" style="text-decoration:none">Delete </a>
-            </th>
-        </tr>
-        <tr>
-            <td>3</td>
-            <td>1252</td>
-            <td>21-07-2026</td>
-            <td>Embutidos RJ.</td>
-            <td>Cerrado</td>
-            <td>20-07-2026:4:07 p.m.</td>
-                <th><a href="#" style="text-decoration:none">Update </a>
-                <a href="#" style="text-decoration:none">Details </a>
-                <a href="#" style="text-decoration:none">Delete </a></th>
-        </tr>
+        @if (Ordenes == null || !Ordenes.Any())
+        {
+            <tr>
+                <td colspan="8" class="text-center">No hay datos...</td>
+            </tr>
+        }
+        else
+        {
+            var idx = 1;
+            @foreach (var item in Ordenes)
+            {
+                <tr>
+                    <td>@idx</td>
+                    <td>@item.Numero</td>
+                    <td>@item.Fecha.ToString("dd-MM-yyyy")</td>
+                    <td>@item.Description</td>
+                    <td>@(item.Status == 1 ? "Abierto" : "Cerrado")</td>
+                    <td>@(item.Sincro ? "Sí" : "No")</td>
+                    <td>@item.Tipo_Documento</td>
+                    <td>
+                        <a href="#" style="text-decoration:none">Update</a>
+                        <a href="javascript:void(0)" @onclick="() => ShowDetails(item)" style="text-decoration:none">Details</a>
+                        <a href="#" style="text-decoration:none">Delete</a>
+                    </td>
+                </tr>
+                idx++;
+            }
+        }
     </tbody>
 </table>
-<h5>Numero de Documentos: 03</h5>
+
+<h5>Numero de Documentos: @Ordenes?.Count</h5>
+
 <br />
 <br />
 
 
 @code {
 
-    private List<OrdenCompra>? Ordenes;
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+    ModalDetailsOrdenCompra modalDetails { get; set; } = default!;
 
+    private List<OrdenCompra>? Ordenes;
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,7 +76,22 @@
 
     private async Task LoadOrders()
     {
-        Ordenes = await servicio.GetOrdersAsync();
+        try
+        {
+            PreloadService.Show(SpinnerColor.Dark);
+            await Task.Delay(1000);
+            Ordenes = await servicio.GetOrdersAsync();
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+
+    }
+
+    private async Task ShowDetails(OrdenCompra oc)
+    {
+        await modalDetails.ShowAsync(oc);
     }
 
 }

@@ -61,6 +61,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTW9iaWxlXEluZGV4LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Mobile/ModalUpdateOrdenCompra.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTW9iaWxlXE1vZGFsVXBkYXRlT3JkZW5Db21wcmEucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Programacion/RitramaCloud2026/WEB/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTm90Rm91bmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -124,6 +128,10 @@ build_metadata.AdditionalFiles.CssScope = b-9g43u1h7ve
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Componentes/QuickGridProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29tcG9uZW50ZXNcUXVpY2tHcmlkUHJvZHVjdHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-enea5apfkx
+
+[C:/Programacion/RitramaCloud2026/WEB/Pages/Mobile/ModalDetailsOrdenCompra.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTW9iaWxlXE1vZGFsRGV0YWlsc09yZGVuQ29tcHJhLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-q97ni9kwtp
 
 [C:/Programacion/RitramaCloud2026/WEB/Pages/Products/DetailsProducts.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcRGV0YWlsc1Byb2R1Y3RzLnJhem9y
