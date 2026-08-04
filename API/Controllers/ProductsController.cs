@@ -1,5 +1,6 @@
 ﻿using API.Services.Products;
 using Microsoft.AspNetCore.Authorization;
+using API.Storage;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using Shared.Dtos;
@@ -9,10 +10,12 @@ namespace API.Controllers
     [ApiController]
     [Route("api/[controller]")]
    
-    public class ProductsController(IProductsService service, ILogger<ProductsController> logger) : ControllerBase
+    public class ProductsController(IProductsService service, ILogger<ProductsController> logger, IWebHostEnvironment environment, IConfiguration configuration) : ControllerBase
     {
         private readonly IProductsService service = service;
         private readonly ILogger<ProductsController> _logger = logger;
+        private readonly IWebHostEnvironment _environment = environment;
+        private readonly IConfiguration _configuration = configuration;
 
         [HttpGet]
         [Route("getproducts")]
@@ -124,12 +127,58 @@ namespace API.Controllers
             return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
         }
 
+        [HttpPost]
+        [Route("bulkcreateproducts")]
+        public async Task<IActionResult> BulkCreateProductsAsync([FromBody] List<Product> products)
+        {
+            var count = await service.BulkCreateProductsAsync(products);
+            return Ok(new { count });
+        }
+
+        [HttpPost]
+        [Route("import-excel")]
+        [RequestSizeLimit(30_000_000)]
+        public async Task<IActionResult> ImportProductsFromExcelAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No se recibió ningún archivo.");
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".xlsx" && extension != ".xls")
+                return BadRequest("El archivo debe ser un Excel (.xlsx o .xls).");
+
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                var result = await service.ImportFromExcelAsync(stream);
+                _logger.LogInformation("Importación de productos finalizada: insertados {Inserted}, actualizados {Updated}, omitidos {Skipped}",
+                    result.Inserted, result.Updated, result.Skipped);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al importar productos desde Excel");
+                return StatusCode(500, new ProductImportResult
+                {
+                    Errors = [new ProductImportError { Row = 0, Message = $"Error interno al procesar el archivo: {ex.Message}" }]
+                });
+            }
+        }
+
         [HttpPut]
         [Route("updateproducts")]
         public async Task<IActionResult> UpdateProductsAsync([FromBody] ParametrosUpdateProducts parametros)
         {
+            if (parametros?.producto == null)
+                return BadRequest("Invalid product data");
+
             var updated = await service.UpdateProductAsync(parametros.id, parametros.producto);
-            if (updated == null) NotFound();
+            if (updated == null) 
+                return NotFound();
             return Ok(updated);
         }
 
@@ -138,7 +187,8 @@ namespace API.Controllers
         public async Task<IActionResult> DeleteProductsAsync(int id) 
         {
             var deleted = await service.DeleteProductAsync(id);
-            if (!deleted) NotFound();
+            if (!deleted) 
+                return NotFound();
             return NoContent();
         }
 
@@ -179,11 +229,14 @@ namespace API.Controllers
             if (image == null)
                 return NotFound();
 
-            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", image.StoredFileName ?? string.Empty);
-            if (!System.IO.File.Exists(uploadsPath))
+            var filePath = Path.Combine(ProductImageStorage.GetPath(_environment, _configuration), image.StoredFileName ?? string.Empty);
+            if (!System.IO.File.Exists(filePath))
                 return NotFound("File not found on server");
 
-            var bytes = await System.IO.File.ReadAllBytesAsync(uploadsPath);
+            var bytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
             return File(bytes, image.ContentType ?? "application/octet-stream", image.FileName);
         }
 

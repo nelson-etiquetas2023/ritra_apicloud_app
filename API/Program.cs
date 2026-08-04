@@ -8,12 +8,15 @@ using API.Services.Products;
 using API.Services.Reports;
 using API.Services.Upload;
 using API.Services.Users;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using QuestPDF.Infrastructure;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Confguración de CORS.
+//Confguraciï¿½n de CORS.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -21,7 +24,9 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://192.168.10.10:9000", 
             "https://192.168.10.10:9000",
             "http://192.168.10.26:5094",
-            "https://192.168.10.26:5094")
+            "https://192.168.10.26:5094",
+            "http://localhost:9000",
+            "https://localhost:9000")
         .AllowAnyHeader()
         .AllowAnyMethod();
     });
@@ -35,7 +40,7 @@ try
     var connectionString = builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA");
     if (string.IsNullOrEmpty(connectionString))
     {
-        throw new InvalidOperationException("Cadena de conexión 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
+        throw new InvalidOperationException("Cadena de conexiï¿½n 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
     }
 
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -57,16 +62,40 @@ builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IAppMovilService, AppMovilService>();
 builder.Services.AddScoped<IOcMovilService, OcMovilService>();
 
+builder.Services.AddLogging(config =>
+{
+    config.AddConsole();
+    config.AddDebug();
+});
+
+var secret = builder.Configuration.GetSection("AppSettings:Token").Value;
+if (!string.IsNullOrEmpty(secret))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(1)
+            };
+        });
+}
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(app.Environment.ContentRootPath, "uploads")),
-    RequestPath = "/uploads"
-});
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+//        Path.Combine(app.Environment.ContentRootPath, "uploads")),
+//    RequestPath = "/uploads"
+//});
 // Crear carpeta de uploads si no existe
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
 if (!Directory.Exists(uploadsPath))
@@ -78,7 +107,7 @@ try
 {
     using var scope = app.Services.CreateScope();
     var dbcontext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbcontext.Database.EnsureCreated();
+    dbcontext.Database.Migrate();
     DataSeeder.Seed(dbcontext);
 }
 catch (Exception ex)
@@ -89,6 +118,7 @@ catch (Exception ex)
 
 app.UseRouting();
 app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

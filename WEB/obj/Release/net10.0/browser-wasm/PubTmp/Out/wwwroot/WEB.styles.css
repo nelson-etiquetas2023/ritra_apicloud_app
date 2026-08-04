@@ -300,8 +300,8 @@ main[b-dyxcep1v5s] {
 
 /* Estilos para el thumbnail de imagen del producto */
 .product-thumbnail[b-enea5apfkx] {
-    width: 80px;
-    height: 80px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
     object-position: center;
     border-radius: 6px;
@@ -318,6 +318,49 @@ main[b-dyxcep1v5s] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transform: scale(1.08);
 }
+/* /Pages/Mobile/ModalDetailsOrdenCompra.razor.rz.scp.css */
+/* CSS for ModalDetailsOrdenCompra component */
+
+.order-header[b-q97ni9kwtp] {
+    width: 100%;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center
+}
+
+.order-info[b-q97ni9kwtp] {
+    display:flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.info-box[b-q97ni9kwtp] {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05)
+}
+
+    .info-box h3[b-q97ni9kwtp] {
+        margin-top: 0;
+        color: #0078d7;
+    }
+
+.status.aprobado[b-q97ni9kwtp] {
+    background: #28a745;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.9em;
+}
+
+.order-detalle[b-q97ni9kwtp] {
+    color: #0078d7;
+    margin-bottom: 10px;
+}
+
 /* /Pages/Products/DetailsProducts.razor.rz.scp.css */
 /* Galería de Productos - Estilos Profesionales eCommerce */
 
@@ -673,7 +716,7 @@ main[b-dyxcep1v5s] {
 .image-preview-area[b-dwivyl0kvg] {
     position: relative;
     width: 100%;
-    height: 220px;
+    height: 150px;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     display: flex;
     align-items: center;
@@ -716,7 +759,7 @@ main[b-dyxcep1v5s] {
 
 .image-placeholder[b-dwivyl0kvg] {
     width: 100%;
-    height: 220px;
+    height: 150px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -733,12 +776,12 @@ main[b-dyxcep1v5s] {
 }
 
 .placeholder-icon[b-dwivyl0kvg] {
-    font-size: 32px;
+    font-size: 24px;
     transition: all 0.3s ease;
 }
 
 .clickable-box:hover .placeholder-icon[b-dwivyl0kvg] {
-    font-size: 40px;
+    font-size: 32px;
     transform: scale(1.1);
 }
 
@@ -848,8 +891,27 @@ main[b-dyxcep1v5s] {
 
     .clickable-box:hover .placeholder-icon[b-dwivyl0kvg] {
         font-size: 28px;
+        }
     }
-}
+
+    /* Prevenir cierre del modal - solución completa */
+    :global(.modal-backdrop)[b-dwivyl0kvg] {
+        cursor: default !important;
+    }
+
+    :global(.modal)[b-dwivyl0kvg] {
+        pointer-events: auto !important;
+    }
+
+    :global(.modal-backdrop.show)[b-dwivyl0kvg] {
+        pointer-events: none !important;
+    }
+
+    :global(.modal.show .modal-dialog)[b-dwivyl0kvg] {
+        pointer-events: auto !important;
+    }
+
+
 /* /Pages/Products/ModalUpdateProducts.razor.rz.scp.css */
 /* Estilos para la edición de imágenes */
 

@@ -8,7 +8,7 @@ namespace Shared.Dtos.Compras
         [Key]
         public int Id { get; set; } //PK
         public string Numero { get; set; } = "";
-        public int Product_id { get; set; }
+        public string Product_id { get; set; } = "";
         public string Product_name { get; set; } = "";
         public int Cantidad { get; set; }
         public decimal Costo { get; set; }

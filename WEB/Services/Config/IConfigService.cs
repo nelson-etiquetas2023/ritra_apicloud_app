@@ -6,5 +6,13 @@ namespace WEB.Services.Config
     {
         Task<List<Parameter>> LoadDataConfig();
         Task<bool> UpdateDocumentSettings(string filter, DocumentSettings setting);
+        Task<List<Category>> GetCategoriesAsync();
+        Task<Category?> CreateCategoryAsync(Category category);
+        Task<Category?> UpdateCategoryAsync(int id, Category category);
+        Task<bool> DeleteCategoryAsync(int id);
+        Task<List<ProductUnit>> GetProductUnitsAsync();
+        Task<ProductUnit?> CreateProductUnitAsync(ProductUnit unit);
+        Task<ProductUnit?> UpdateProductUnitAsync(int id, ProductUnit unit);
+        Task<bool> DeleteProductUnitAsync(int id);
     }
 }

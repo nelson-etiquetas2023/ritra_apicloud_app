@@ -1,15 +1,22 @@
 ﻿@inject IProductsService service;
-@inject NavigationManager navigator;
 @inject IJSRuntime JS
 @inject IHttpClientFactory HttpClientFactory
+@inject IConfigService configService
 @using Shared.Dtos
 
 <Preload LoadingText="Guardando..."/>
 
 <Modal @ref="modalUpdate" Size="ModalSize.Large">
     <HeaderTemplate><Icon Name="IconName.DatabaseSlash" Size="IconSize.x3" />
-        <strong>Modificar Proucto.</strong></HeaderTemplate>
+        <strong>Modificar Producto.</strong></HeaderTemplate>
     <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
         <EditForm Model="productoLocal" OnValidSubmit="UpdateProducts">
             <DataAnnotationsValidator/>
             <div class="mb-3">
@@ -19,17 +26,29 @@
             </div>
             <div class="mb-3">
                 <label for="txt_category"><strong>Categoria :</strong></label>
-                <InputText class="form-control" id="txt_category" @bind-Value="productoLocal.Product_Type" />
+                <InputSelect class="form-select" id="txt_category" @bind-Value="productoLocal.Product_Type">
+                    <option value="">Seleccione una categoría...</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Name">@category.Name</option>
+                    }
+                </InputSelect>
                 <ValidationMessage For="@(() => productoLocal.Product_Type)" />
             </div>
             <div class="mb-3">
                 <label for="txt_unidad"><strong>Unidad :</strong></label>
-                <InputText class="form-control" id="txt_unidad" @bind-Value="productoLocal.Unidad" />
+                <InputSelect class="form-select" id="txt_unidad" @bind-Value="productoLocal.Unidad">
+                    <option value="">Seleccione una unidad...</option>
+                    @foreach (var unit in units.Where(u => u.IsActive))
+                    {
+                        <option value="@unit.Name">@unit.Name</option>
+                    }
+                </InputSelect>
                 <ValidationMessage For="@(() => productoLocal.Unidad)" />
             </div>
             <div class="mb-3">
-                <label for="txt_price"><strong>Precio :</strong></label>
-                <InputNumber class="form-control" id="txt_price" @bind-Value="productoLocal.Price" />
+                <label for="txt_costo"><strong>Costo :</strong></label>
+                <InputNumber class="form-control" id="txt_costo" @bind-Value="productoLocal.Costo" />
             </div>
             <div class="mb-3">
                 <label for="txt_codebar"><strong>Codigo de Barra :</strong></label>
@@ -73,7 +92,7 @@
                     }
                 </div>
 
-                <InputFile @ref="fileInput" OnChange="OnFileSelected" accept="image/*" hidden />
+                <InputFile @ref="fileInput" OnChange="OnFileSelected" accept="image/*" style="display:none" />
             </div>
 
             <div class="mb-3">
@@ -99,6 +118,9 @@
     private List<Base64ImageData> newImages = new();
     private int nextImageSlot = 0;
     private int lastLoadedProductId = -1;
+    private List<Category> categories = [];
+    private List<ProductUnit> units = [];
+    private string errorMessage = string.Empty;
 
     // Crear una copia local del producto para evitar problemas de binding
     private Product productoLocal = new Product();
@@ -219,14 +241,11 @@
         try
         {
             nextImageSlot = index;
-            if (fileInput != null)
-            {
-                await JS.InvokeVoidAsync("eval", "document.querySelector('input[type=file]').click()");
-            }
+            await JS.InvokeVoidAsync("triggerFileInput");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Error opening file dialog: {ex.Message}");
         }
     }
 
@@ -240,9 +259,18 @@
             {
                 // Leer archivo
                 var buffer = new byte[file.Size];
-                using (var stream = file.OpenReadStream(maxAllowedSize: 10_000_000))
+                await using (var stream = file.OpenReadStream(maxAllowedSize: 10_000_000))
                 {
-                    await stream.ReadAsync(buffer);
+                    var totalRead = 0;
+                    var remaining = (int)file.Size;
+                    while (remaining > 0)
+                    {
+                        var read = await stream.ReadAsync(buffer, totalRead, remaining);
+                        if (read == 0)
+                            break;
+                        totalRead += read;
+                        remaining -= read;
+                    }
                 }
 
                 // Crear preview en base64
@@ -304,38 +332,77 @@
     private async Task UpdateProducts()
     {
         PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
 
         try
         {
             int productid = productoLocal.Product_id;
 
-            // Actualizar datos del producto usando la copia local
-            await service.UpdateProductAsync(productid, productoLocal);
+            var updateSuccess = await service.UpdateProductAsync(productid, productoLocal);
+            if (!updateSuccess)
+            {
+                errorMessage = "No se pudo actualizar el producto. Intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
 
-            // Actualizar imágenes si hay nuevas
             if (newImages.Count > 0)
             {
-                foreach (var image in newImages)
+                var imageErrors = new List<string>();
+                for (int i = 0; i < newImages.Count; i++)
                 {
-                    await service.UpdateProductImageAsync(productid, image);
+                    var success = await service.UpdateProductImageAsync(productid, newImages[i]);
+                    if (!success)
+                    {
+                        imageErrors.Add($"Imagen {i + 1}: {newImages[i].FileName}");
+                    }
+                }
+if (imageErrors.Count > 0)
+                {
+                    errorMessage = $"Error al guardar algunas im�genes: {string.Join(", ", imageErrors)}";
+                }
+
+                foreach (var newImg in newImages)
+                {
+                    var existingImage = productoLocal.Images?.FirstOrDefault(i => i.ImageIndex == newImg.ImageIndex);
+                    if (existingImage != null)
+                    {
+                        existingImage.FileName = newImg.FileName;
+                        existingImage.ContentType = newImg.ContentType;
+                    }
+                    else
+                    {
+                        if (productoLocal.Images == null)
+                            productoLocal.Images = new List<ProductImage>();
+                        productoLocal.Images.Add(new ProductImage
+                        {
+                            ProductId = productid,
+                            FileName = newImg.FileName,
+                            ContentType = newImg.ContentType,
+                            ImageIndex = newImg.ImageIndex
+                        });
+                    }
                 }
             }
 
-            // Notificar con la copia actualizada
-            await OnProductUpdate.InvokeAsync(productoLocal);
+            // Recargar desde el servidor para tener los IDs/imágenes reales
+            // y notificar al grid con datos auténticos.
+            var refreshed = await service.GetProductByIdAsync(productid);
+            var toNotify = refreshed ?? productoLocal;
+            await OnProductUpdate.InvokeAsync(toNotify);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            errorMessage = $"Error al guardar los cambios: {ex.Message}";
+            Console.WriteLine($"Error updating product: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
         }
 
-        await modalUpdate.HideAsync();
         newImages.Clear();
         imagePreviews = new string[3];
         imageNames = new string[3];
-        await Task.Delay(1000);
+        await modalUpdate.HideAsync();
         PreloadService.Hide();
-        navigator.NavigateTo("/products");
     }
 
     public async Task ShowAsync()
@@ -365,6 +432,8 @@
 
     public async Task ShowAsyncWithProduct(int productId)
     {
+        categories = await configService.GetCategoriesAsync();
+        units = await configService.GetProductUnitsAsync();
         Console.WriteLine($"ShowAsyncWithProduct called for product ID {productId}");
 
         // Cargar el producto desde el servidor
@@ -384,12 +453,23 @@
         productoLocal = new Product
         {
             Product_id = loadedProduct.Product_id,
+            Product_Code = loadedProduct.Product_Code,
             Product_Name = loadedProduct.Product_Name,
             Product_Type = loadedProduct.Product_Type,
             Price = loadedProduct.Price,
             Codebar = loadedProduct.Codebar,
             Unidad = loadedProduct.Unidad,
-            //Desactivado = loadedProduct.Desactivado,
+            Costo = loadedProduct.Costo,
+            Stock = loadedProduct.Stock,
+            Stock_Mix = loadedProduct.Stock_Mix,
+            Stock_Max = loadedProduct.Stock_Max,
+            StockStatus = loadedProduct.StockStatus,
+            Description = loadedProduct.Description,
+            Marca = loadedProduct.Marca,
+            Model = loadedProduct.Model,
+            PartNumber = loadedProduct.PartNumber,
+            SkuNumber = loadedProduct.SkuNumber,
+            StatusProducts = loadedProduct.StatusProducts,
             Images = loadedProduct.Images != null ? new List<ProductImage>(loadedProduct.Images) : new List<ProductImage>()
         };
 

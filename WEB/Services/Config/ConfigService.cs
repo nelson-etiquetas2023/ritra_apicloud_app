@@ -2,6 +2,7 @@
 using Shared.Dtos;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Json;
 
 namespace WEB.Services.Config
 {
@@ -51,6 +52,68 @@ namespace WEB.Services.Config
             {
                 return false;
             }
+        }
+
+        public async Task<List<Category>> GetCategoriesAsync()
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.GetAsync("api/config/categories");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<Category>>(jsonOptions) ?? [];
+        }
+
+        public async Task<Category?> CreateCategoryAsync(Category category)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PostAsJsonAsync("api/config/categories", category, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<Category>(jsonOptions);
+        }
+
+        public async Task<Category?> UpdateCategoryAsync(int id, Category category)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PutAsJsonAsync($"api/config/categories/{id}", category, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<Category>(jsonOptions);
+        }
+
+        public async Task<bool> DeleteCategoryAsync(int id)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.DeleteAsync($"api/config/categories/{id}");
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<List<ProductUnit>> GetProductUnitsAsync()
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.GetAsync("api/config/units");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<ProductUnit>>(jsonOptions) ?? [];
+        }
+
+        public async Task<ProductUnit?> CreateProductUnitAsync(ProductUnit unit)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PostAsJsonAsync("api/config/units", unit, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<ProductUnit>(jsonOptions);
+        }
+
+        public async Task<ProductUnit?> UpdateProductUnitAsync(int id, ProductUnit unit)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PutAsJsonAsync($"api/config/units/{id}", unit, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<ProductUnit>(jsonOptions);
+        }
+
+        public async Task<bool> DeleteProductUnitAsync(int id)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.DeleteAsync($"api/config/units/{id}");
+            return response.IsSuccessStatusCode;
         }
     }
 }

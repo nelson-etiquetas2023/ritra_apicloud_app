@@ -1,0 +1,4 @@
+C:\SCANPROWEB-WITH-AGENTS\RitramaCloud2026\WEB\obj\Release\net10.0\browser-wasm\PubTmp\Out\wwwroot\index.html
+C:\SCANPROWEB-WITH-AGENTS\RitramaCloud2026\WEB\obj\Release\net10.0\browser-wasm\PubTmp\Out\WEB.runtimeconfig.json
+C:\SCANPROWEB-WITH-AGENTS\RitramaCloud2026\WEB\obj\Release\net10.0\browser-wasm\PubTmp\Out\dotnet.js
+C:\SCANPROWEB-WITH-AGENTS\RitramaCloud2026\WEB\obj\Release\net10.0\browser-wasm\PubTmp\Out\web.config

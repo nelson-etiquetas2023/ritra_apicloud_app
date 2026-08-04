@@ -25,7 +25,7 @@ namespace WEB.Services.Upload
             var response = await clienteHttp.PostAsync(url, files);
             response.EnsureSuccessStatusCode();
             var results = await response.Content.ReadFromJsonAsync<List<UploadResult>>();
-            return results!;
+            return results ?? new List<UploadResult>();
         }
 
         public async Task<List<UploadResult>> GetAllImages()
@@ -35,7 +35,7 @@ namespace WEB.Services.Upload
             var response = await clienteHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var results = await response.Content.ReadFromJsonAsync<List<UploadResult>>();
-            return results!;
+            return results ?? [];
         }
 
         public async Task<byte[]> GetImageById(int id)

@@ -10,8 +10,8 @@ using WEB.Services.LocalStorage;
 using WEB.Services.Upload;
 using WEB.Services.OrdenCompra;
 
-var server_local = "http://localhost:5220/";
-//var server_etiquetas = "http://192.168.10.10:8080";
+//var server_local = "http://localhost:5220/";
+var server_etiquetas = "http://192.168.10.10:8080";
 //var Deploy_Server = "https://scanapi.dpdns.org:443";
 
 // Alternativa: si la API está en otro puerto, usa:
@@ -26,10 +26,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services.AddHttpClient("ritrama", options => {
-    options.BaseAddress = new Uri(server_local);
+    options.BaseAddress = new Uri(server_etiquetas);
     options.Timeout = TimeSpan.FromSeconds(15);
     options.DefaultRequestHeaders.Add("User-Agent", "BlazorApp");
-});
+}).AddHttpMessageHandler<AuthMessageHandler>();
 
 builder.Services.AddBlazorBootstrap();
 
@@ -41,6 +41,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILocalStorage, LocalStorage>();
 builder.Services.AddScoped<UploadService>();
 builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+builder.Services.AddTransient<AuthMessageHandler>();
 
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();

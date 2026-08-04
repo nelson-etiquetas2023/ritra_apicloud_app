@@ -136,32 +136,13 @@ namespace WEB.Services.Products
         }
         public async Task<bool> UpdateProductAsync(int id, Product product)
         {
-            product.Description = "";
-            product.Marca = "";
-            product.Model = "";
-            product.PartNumber = "";
-            product.SkuNumber = "";
-            product.StatusProducts = "";
-            product.StockStatus = "";
-
-
-
-            //utilizo la tupla para pasar 2 parametros.
             var parametros = new ParametrosUpdateProducts(id, product);
             var url = $"api/products/updateproducts";
             var json = JsonSerializer.Serialize(parametros, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
             var clientHttp = HttpFactory.CreateClient("ritrama");
             var response = await clientHttp.PutAsync(url, jsonContent);
-            response.EnsureSuccessStatusCode();
-            if (response.IsSuccessStatusCode)
-            {
-                return true;
-            }
-            else 
-            {
-                return false;
-            }
+            return response.IsSuccessStatusCode;
         }
         public async Task<bool> AddProductImageAsync(int productId, MultipartFormDataContent content, int imageIndex)
         {
@@ -252,6 +233,59 @@ namespace WEB.Services.Products
                 return null;
             }
         }
+        public async Task<int> BulkCreateProductsAsync(List<Product> products)
+        {
+            var url = $"api/products/bulkcreateproducts";
+            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var json = JsonSerializer.Serialize(products, jsonOptions);
+            var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await clientHttp.PostAsync(url, jsonContent);
+            if (!response.IsSuccessStatusCode) return 0;
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<Dictionary<string, int>>(responseJson, jsonOptions);
+            return result?.GetValueOrDefault("count") ?? 0;
+        }
+
+        public async Task<ProductImportResult> ImportProductsFromExcelAsync(IBrowserFile file)
+        {
+            try
+            {
+                var url = "api/products/import-excel";
+                var clientHttp = HttpFactory.CreateClient("ritrama");
+
+                using var content = new MultipartFormDataContent();
+                using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);
+                var streamContent = new StreamContent(stream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(
+                    file.ContentType ?? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                content.Add(streamContent, "file", file.Name);
+
+                var response = await clientHttp.PostAsync(url, content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"ImportProductsFromExcelAsync: server returned {response.StatusCode}");
+                    return new ProductImportResult
+                    {
+                        Errors = [new ProductImportError { Row = 0, Message = $"Error del servidor: {(int)response.StatusCode}" }]
+                    };
+                }
+
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson)) return new ProductImportResult();
+
+                return await JsonSerializer.DeserializeAsync<ProductImportResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new ProductImportResult();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error importing products from excel: {ex.Message}");
+                return new ProductImportResult
+                {
+                    Errors = [new ProductImportError { Row = 0, Message = ex.Message }]
+                };
+            }
+        }
+
         public async Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData)
         {
             try

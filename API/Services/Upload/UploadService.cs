@@ -5,10 +5,11 @@ using System.Net;
 
 namespace API.Services.Upload
 {
-    public class UploadService(IWebHostEnvironment environment, ApplicationDbContext context) : IUploadService
+    public class UploadService(IWebHostEnvironment environment, ApplicationDbContext context, ILogger<UploadService> logger) : IUploadService
     {
         private readonly IWebHostEnvironment _environment = environment;
         private readonly ApplicationDbContext _context = context;
+        private readonly ILogger<UploadService> _logger = logger;
 
         public async Task<List<UploadResult>> UploadFilesAsync(List<IFormFile> files)
         {
@@ -25,21 +26,34 @@ namespace API.Services.Upload
                         ContentType = file.ContentType
                     };
 
-                    var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
-                    if (!Directory.Exists(uploadsPath))
+                    try
                     {
-                        Directory.CreateDirectory(uploadsPath);
+                        var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads");
+                        if (!Directory.Exists(uploadsPath))
+                        {
+                            Directory.CreateDirectory(uploadsPath);
+                        }
+
+                        var filePath = Path.Combine(uploadsPath, uploadResult.StoredFileName);
+
+                        await using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(fileStream);
+                        }
+
+                        _logger.LogInformation("Archivo guardado exitosamente: {FileName} en {FilePath}", file.FileName, filePath);
+
+                        _context.Uploads.Add(uploadResult);
+                        uploadResults.Add(uploadResult);
                     }
-
-                    var filePath = Path.Combine(uploadsPath, uploadResult.StoredFileName);
-
-                    await using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    catch (UnauthorizedAccessException ex)
                     {
-                        await file.CopyToAsync(fileStream);
+                        _logger.LogError(ex, "Error de permisos al guardar archivo {FileName}. Verifica los permisos de la carpeta uploads.", file.FileName);
                     }
-
-                    _context.Uploads.Add(uploadResult);
-                    uploadResults.Add(uploadResult);
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al guardar archivo {FileName}", file.FileName);
+                    }
                 }
             }
 
@@ -86,8 +100,9 @@ namespace API.Services.Upload
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error eliminando imagen con ID {ImageId}", id);
                 return false;
             }
         }
@@ -126,14 +141,21 @@ namespace API.Services.Upload
 
                 await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
 
+                _logger.LogInformation("Imagen base64 guardada: {FileName} en {FilePath}", originalFileName, filePath);
+
                 _context.Uploads.Add(uploadResult);
                 await _context.SaveChangesAsync();
 
                 return uploadResult;
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "Error de permisos al guardar imagen base64 {FileName}. Verifica los permisos de la carpeta uploads.", originalFileName);
+                return null;
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving base64 image: {ex.Message}");
+                _logger.LogError(ex, "Error saving base64 image: {ErrorMessage}", ex.Message);
                 return null;
             }
         }

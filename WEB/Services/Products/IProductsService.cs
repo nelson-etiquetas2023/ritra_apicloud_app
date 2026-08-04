@@ -16,6 +16,8 @@ namespace WEB.Services.Products
         Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
         Task<Product?> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
+        Task<int> BulkCreateProductsAsync(List<Product> products);
+        Task<ProductImportResult> ImportProductsFromExcelAsync(IBrowserFile file);
         string GetImageUrl(int imageId, int productId);
     }
 }

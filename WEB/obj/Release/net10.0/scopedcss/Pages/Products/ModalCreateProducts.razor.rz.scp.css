@@ -30,7 +30,7 @@
 .image-preview-area[b-dwivyl0kvg] {
     position: relative;
     width: 100%;
-    height: 220px;
+    height: 150px;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     display: flex;
     align-items: center;
@@ -73,7 +73,7 @@
 
 .image-placeholder[b-dwivyl0kvg] {
     width: 100%;
-    height: 220px;
+    height: 150px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -90,12 +90,12 @@
 }
 
 .placeholder-icon[b-dwivyl0kvg] {
-    font-size: 32px;
+    font-size: 24px;
     transition: all 0.3s ease;
 }
 
 .clickable-box:hover .placeholder-icon[b-dwivyl0kvg] {
-    font-size: 40px;
+    font-size: 32px;
     transform: scale(1.1);
 }
 
@@ -205,5 +205,24 @@
 
     .clickable-box:hover .placeholder-icon[b-dwivyl0kvg] {
         font-size: 28px;
+        }
     }
-}
+
+    /* Prevenir cierre del modal - solución completa */
+    :global(.modal-backdrop)[b-dwivyl0kvg] {
+        cursor: default !important;
+    }
+
+    :global(.modal)[b-dwivyl0kvg] {
+        pointer-events: auto !important;
+    }
+
+    :global(.modal-backdrop.show)[b-dwivyl0kvg] {
+        pointer-events: none !important;
+    }
+
+    :global(.modal.show .modal-dialog)[b-dwivyl0kvg] {
+        pointer-events: auto !important;
+    }
+
+

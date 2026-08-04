@@ -11,4 +11,4 @@ wwwroot\images\detailsProducts.png
 wwwroot\images\escanner-inventario.webp
 wwwroot\images\reports.png
 wwwroot\images\Unpacking.png
-C:\Programacion\RitramaCloud2026\WEB\wwwroot\css\app.css
+C:\SCANPROWEB-WITH-AGENTS\RitramaCloud2026\WEB\wwwroot\css\app.css

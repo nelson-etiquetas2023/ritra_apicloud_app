@@ -40,50 +40,137 @@
     <!-- Add sortable.js reference if SortableList component is used in your application. -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+
+    <script>
+        function setItem(key, value) 
+        {
+            try {
+                localStorage.setItem(key, value);
+                return true;
+            } catch (e) {
+                console.warn('Almacenamiento local bloqueado al guardar:', e);
+                return false;
+            }
+        }
+
+        function getItem(key) 
+        {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                console.warn('Almacenamiento local bloqueado al leer:', e);
+                return null;
+            }
+        }
+
+        function deleteItem(key) 
+        {
+            try {
+                localStorage.removeItem(key);
+            } catch (e) {
+                console.warn('Almacenamiento local bloqueado al eliminar:', e);
+            }
+        }
+
+        function clearStorage() 
+        {
+            try {
+                localStorage.clear();
+            } catch (e) {
+                console.warn('Almacenamiento local bloqueado al limpiar:', e);
+            }
+        }
+
+        function downloadFile(filename, base64)
+        {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadFileTxt(filename, base64)
+        {
+            const link = document.createElement('a');
+            link.href = "data:text/plain;base64," + base64;
+            link.download = filename;
+            link.click();
+        }
+
+        function PreventEnterKey(id)
+        {
+            var formObj = document.getElementById(id);
+            formObj.addEventListener('keydown', function(event) {
+                if (event.key == "Enter")
+                {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+
+        // Prevenir cierre del modal al hacer clic fuera
+        function makeModalStatic(modalId) {
+            const modalElement = document.getElementById(modalId);
+            if (modalElement) {
+                const bsModal = bootstrap.Modal.getInstance(modalElement);
+                if (bsModal) {
+                    // Prevenir cierre por backdrop
+                    modalElement.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('modal')) {
+                            e.stopPropagation();
+                        }
+                    });
+                }
+            }
+        }
+
+        // Drag & drop del archivo Excel en la franja de importación de productos
+        window.initProductDropZone = (dotNetRef) => {
+            const zone = document.getElementById('dropZone');
+            if (!zone) return;
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+
+                const isValid = /\.(xlsx|xls)$/i.test(file.name);
+                if (!isValid) {
+                    dotNetRef.invokeMethodAsync('OnInvalidFileDropped');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const result = ev.target.result || '';
+                    const base64 = result.indexOf(',') >= 0 ? result.split(',')[1] : result;
+                    dotNetRef.invokeMethodAsync('OnFileDropped', file.name, file.size, file.type || '', base64);
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        window.triggerFileInput = () => {
+            const fileInput = document.querySelector('input[type=file][accept*="image"]');
+            if (fileInput) {
+                fileInput.click();
+            }
+        };
+    </script>
 </body>
 
 </html>
-<script>
-
-    function setItem(key, value) 
-    {
-        localStorage.setItem(key, value);
-    }
-
-    function getItem(key) 
-    {
-        return localStorage.getItem(key);
-    }
-
-    function deleteItem(key) 
-    {
-        localStorage.removeItem(key);
-    }
-
-    function downloadFileExcel(filename, base64)
-    {
-        const link = document.createElement('a');
-        link.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + base64
-        link.download = filename;
-        link.click();
-    }
-
-    function downloadFileTxt(filename, base64)
-    {
-        const link = document.createElement('a');
-        link.href = "data:text/plain;base64," + base64;
-        link.download = filename;
-        link.click();
-    }
-    function PreventEnterKey(id)
-    {
-        var formObj = document.getElementById(id);
-        formObj.addEventListener('keydown', function(event) {
-            if (event.key == "Enter")
-            {
-                event.preventDefault();
-                return false;
-            }
-        });
-    }
-</script>

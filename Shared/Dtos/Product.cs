@@ -8,6 +8,9 @@ namespace Shared.Dtos
         [Required(ErrorMessage = "el producto debe tener un id...")]
         public int Product_id { get; set; }
 
+        [Required(ErrorMessage = "el producto debe tener un codigo que lo identifique...")]
+        public string Product_Code { get; set; } = "";
+
         [Required(ErrorMessage = "el producto debe tener nombre descriptivo...")]
         public string Product_Name { get; set; } = null!;
 
@@ -22,7 +25,7 @@ namespace Shared.Dtos
         public string Unidad { get; set; } = null!;
         public List<ProductImage> Images { get; set; } = [];
 
-        public double Costo { get; set; } = 0;
+        public decimal Costo { get; set; } = 0;
         public double Stock { get; set; } = 0;
         public double Stock_Mix { get; set; }
         public double Stock_Max { get; set; }

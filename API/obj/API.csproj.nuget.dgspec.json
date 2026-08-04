@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Programacion\\RitramaCloud2026\\API\\API.csproj": {}
+    "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\API\\API.csproj": {}
   },
   "projects": {
-    "C:\\Programacion\\RitramaCloud2026\\API\\API.csproj": {
+    "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\API\\API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Programacion\\RitramaCloud2026\\API\\API.csproj",
+        "projectUniqueName": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\API\\API.csproj",
         "projectName": "API",
-        "projectPath": "C:\\Programacion\\RitramaCloud2026\\API\\API.csproj",
+        "projectPath": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\API\\API.csproj",
         "packagesPath": "C:\\Users\\Npino.DC\\.nuget\\packages\\",
-        "outputPath": "C:\\Programacion\\RitramaCloud2026\\API\\obj\\",
+        "outputPath": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -34,8 +34,8 @@
             "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Programacion\\RitramaCloud2026\\Shared\\Shared.csproj": {
-                "projectPath": "C:\\Programacion\\RitramaCloud2026\\Shared\\Shared.csproj"
+              "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\Shared.csproj": {
+                "projectPath": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\Shared.csproj"
               }
             }
           }
@@ -57,6 +57,14 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
+            "ClosedXML": {
+              "target": "Package",
+              "version": "[0.105.1, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[10.0.10, )"
+            },
             "Microsoft.CodeAnalysis.Analyzers": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
@@ -69,31 +77,31 @@
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.10, )"
             },
             "Microsoft.EntityFrameworkCore.Abstractions": {
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.10, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.10, )"
             },
             "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.10, )"
             },
             "Microsoft.EntityFrameworkCore.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.10, )"
             },
             "QuestPDF": {
               "target": "Package",
-              "version": "[2026.7.1, )"
+              "version": "[2026.7.2, )"
             }
           },
           "imports": [
@@ -533,14 +541,14 @@
         }
       }
     },
-    "C:\\Programacion\\RitramaCloud2026\\Shared\\Shared.csproj": {
+    "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Programacion\\RitramaCloud2026\\Shared\\Shared.csproj",
+        "projectUniqueName": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\Shared.csproj",
         "projectName": "Shared",
-        "projectPath": "C:\\Programacion\\RitramaCloud2026\\Shared\\Shared.csproj",
+        "projectPath": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\Shared.csproj",
         "packagesPath": "C:\\Users\\Npino.DC\\.nuget\\packages\\",
-        "outputPath": "C:\\Programacion\\RitramaCloud2026\\Shared\\obj\\",
+        "outputPath": "C:\\SCANPROWEB-WITH-AGENTS\\RitramaCloud2026\\Shared\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

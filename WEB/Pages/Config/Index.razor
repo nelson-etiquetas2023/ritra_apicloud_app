@@ -1,5 +1,6 @@
 ﻿@page "/config"
 @inject IConfigService service 
+@inject IJSRuntime JS
 
 <Preload LoadingText="Loading data..." />
 <Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopRight" />
@@ -68,6 +69,69 @@
                     </Content>
                 </AccordionItem>
             </Accordion>
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Gestión de categorías de productos</strong>
+                    <Button Color="ButtonColor.Primary" @onclick="NewCategory"><Icon Name="IconName.Plus" /> Nueva categoría</Button>
+                </div>
+                <div class="card-body">
+                    <input class="form-control mb-3" placeholder="Buscar categoría..." @bind="categorySearch" @bind:event="oninput" />
+                    @if (showCategoryForm)
+                    {
+                        <EditForm Model="editingCategory" OnValidSubmit="SaveCategory" class="border rounded p-3 mb-3 bg-light">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-md-5 mb-2"><label class="form-label">Nombre *</label><InputText class="form-control" @bind-Value="editingCategory.Name" /><ValidationMessage For="@(() => editingCategory.Name)" /></div>
+                                <div class="col-md-5 mb-2"><label class="form-label">Descripción</label><InputText class="form-control" @bind-Value="editingCategory.Description" /></div>
+                                <div class="col-md-2 mb-2 d-flex align-items-end"><Switch @bind-Value="editingCategory.IsActive" Label="Activa" /></div>
+                            </div>
+                            <Button Type="ButtonType.Submit" Color="ButtonColor.Success">Guardar</Button>
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" @onclick="CancelCategory">Cancelar</Button>
+                        </EditForm>
+                    }
+                    <table class="table table-hover align-middle">
+                        <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody>
+                            @foreach (var category in FilteredCategories)
+                            {
+                                <tr><td>@category.Name</td><td>@category.Description</td><td><span class="badge @(category.IsActive ? "bg-success" : "bg-secondary")">@(category.IsActive ? "Activa" : "Inactiva")</span></td><td class="text-end"><Button Color="ButtonColor.Link" @onclick="() => EditCategory(category)">Editar</Button><Button Color="ButtonColor.Link" @onclick="() => DeleteCategory(category)">Eliminar</Button></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Gestión de unidades de productos</strong>
+                    <Button Color="ButtonColor.Primary" @onclick="NewUnit"><Icon Name="IconName.Plus" /> Nueva unidad</Button>
+                </div>
+                <div class="card-body">
+                    <input class="form-control mb-3" placeholder="Buscar unidad..." @bind="unitSearch" @bind:event="oninput" />
+                    @if (showUnitForm)
+                    {
+                        <EditForm Model="editingUnit" OnValidSubmit="SaveUnit" class="border rounded p-3 mb-3 bg-light">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-md-5 mb-2"><label class="form-label">Nombre *</label><InputText class="form-control" @bind-Value="editingUnit.Name" /><ValidationMessage For="@(() => editingUnit.Name)" /></div>
+                                <div class="col-md-5 mb-2"><label class="form-label">Descripción</label><InputText class="form-control" @bind-Value="editingUnit.Description" /></div>
+                                <div class="col-md-2 mb-2 d-flex align-items-end"><Switch @bind-Value="editingUnit.IsActive" Label="Activa" /></div>
+                            </div>
+                            <Button Type="ButtonType.Submit" Color="ButtonColor.Success">Guardar</Button>
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" @onclick="CancelUnit">Cancelar</Button>
+                        </EditForm>
+                    }
+                    <table class="table table-hover align-middle">
+                        <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                        <tbody>
+                            @foreach (var unit in FilteredUnits)
+                            {
+                                <tr><td>@unit.Name</td><td>@unit.Description</td><td><span class="badge @(unit.IsActive ? "bg-success" : "bg-secondary")">@(unit.IsActive ? "Activa" : "Inactiva")</span></td><td class="text-end"><Button Color="ButtonColor.Link" @onclick="() => EditUnit(unit)">Editar</Button><Button Color="ButtonColor.Link" @onclick="() => DeleteUnit(unit)">Eliminar</Button></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div class="col-2"></div>
         </div>
     </div>
@@ -81,10 +145,116 @@
     List<Parameter> settings = [];
     DocumentSettings documentSettings = new();
     string exampleFormat = "";
+    List<Category> categories = [];
+    Category editingCategory = new();
+    string categorySearch = "";
+    bool showCategoryForm;
+
+    List<ProductUnit> units = [];
+    ProductUnit editingUnit = new();
+    string unitSearch = "";
+    bool showUnitForm;
+
+    IEnumerable<Category> FilteredCategories => categories.Where(c =>
+        string.IsNullOrWhiteSpace(categorySearch) ||
+        c.Name.Contains(categorySearch, StringComparison.OrdinalIgnoreCase) ||
+        c.Description.Contains(categorySearch, StringComparison.OrdinalIgnoreCase));
+
+    IEnumerable<ProductUnit> FilteredUnits => units.Where(u =>
+        string.IsNullOrWhiteSpace(unitSearch) ||
+        u.Name.Contains(unitSearch, StringComparison.OrdinalIgnoreCase) ||
+        u.Description.Contains(unitSearch, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
         await LoadDataConfig();
+        await LoadCategories();
+        await LoadUnits();
+    }
+
+    private async Task LoadCategories() => categories = await service.GetCategoriesAsync();
+    private async Task LoadUnits() => units = await service.GetProductUnitsAsync();
+
+    private void NewCategory()
+    {
+        editingCategory = new Category { IsActive = true };
+        showCategoryForm = true;
+    }
+
+    private void EditCategory(Category category)
+    {
+        editingCategory = new Category { Id = category.Id, Name = category.Name, Description = category.Description, IsActive = category.IsActive };
+        showCategoryForm = true;
+    }
+
+    private async Task SaveCategory()
+    {
+        var saved = editingCategory.Id == 0
+            ? await service.CreateCategoryAsync(editingCategory)
+            : await service.UpdateCategoryAsync(editingCategory.Id, editingCategory);
+
+        if (saved == null)
+        {
+            messages.Add(new ToastMessage { Type = ToastType.Danger, Title = "Categorías", Message = "No se pudo guardar. Verifica que el nombre no esté repetido." });
+            return;
+        }
+
+        await LoadCategories();
+        showCategoryForm = false;
+        messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Categorías", Message = "Categoría guardada correctamente." });
+    }
+
+    private void CancelCategory() => showCategoryForm = false;
+
+    private async Task DeleteCategory(Category category)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la categoría '{category.Name}'?")) return;
+        if (await service.DeleteCategoryAsync(category.Id))
+        {
+            await LoadCategories();
+            messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Categorías", Message = "Categoría eliminada." });
+        }
+    }
+
+    private void NewUnit()
+    {
+        editingUnit = new ProductUnit { IsActive = true };
+        showUnitForm = true;
+    }
+
+    private void EditUnit(ProductUnit unit)
+    {
+        editingUnit = new ProductUnit { Id = unit.Id, Name = unit.Name, Description = unit.Description, IsActive = unit.IsActive };
+        showUnitForm = true;
+    }
+
+    private async Task SaveUnit()
+    {
+        var saved = editingUnit.Id == 0
+            ? await service.CreateProductUnitAsync(editingUnit)
+            : await service.UpdateProductUnitAsync(editingUnit.Id, editingUnit);
+
+        if (saved == null)
+        {
+            messages.Add(new ToastMessage { Type = ToastType.Danger, Title = "Unidades", Message = "No se pudo guardar. Verifica que el nombre no esté repetido." });
+            return;
+        }
+
+        await LoadUnits();
+        showUnitForm = false;
+        messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Unidades", Message = "Unidad guardada correctamente." });
+    }
+
+    private void CancelUnit() => showUnitForm = false;
+
+    private async Task DeleteUnit(ProductUnit unit)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la unidad '{unit.Name}'?")) return;
+        if (await service.DeleteProductUnitAsync(unit.Id))
+        {
+            await LoadUnits();
+            messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Unidades", Message = "Unidad eliminada." });
+        }
     }
 
     private async Task LoadDataConfig()

@@ -1,15 +1,22 @@
 ﻿@inject IProductsService service
 @inject IJSRuntime JS
+@inject IConfigService configService
 @using Shared.Dtos
 
 <Preload LoadingText="Guardando..."/>
 
-<Modal @ref="modal" Size="ModalSize.Large">
+<Modal @ref="modal" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
     <HeaderTemplate><Icon Name="IconName.Plus" Size="IconSize.x3" /><strong> Crear producto</strong> </HeaderTemplate>
     <BodyTemplate>
 
             <EditForm Model="@product" OnValidSubmit="CreateProducts">
                 <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="txt_ProductCode"><strong>Coidgo de Producto:</strong> </label>
+                <InputText class="form-control" id="txt_ProductCode" @bind-Value=product.Product_Code" />
+                <ValidationMessage For="@(() => product.Product_Code)" />
+            </div>
 
                 <div class="mb-3">
                     <label for="txt_productname"><strong>Nombre del Producto:</strong> </label>
@@ -19,17 +26,29 @@
 
                 <div class="mb-3">
                     <label for="txt_category"><strong>Categoria :</strong></label>
-                    <InputText class="form-control" id="txt_category" @bind-Value="product.Product_Type" />
+                    <InputSelect class="form-select" id="txt_category" @bind-Value="product.Product_Type">
+                        <option value="">Seleccione una categoría...</option>
+                        @foreach (var category in categories.Where(c => c.IsActive))
+                        {
+                            <option value="@category.Name">@category.Name</option>
+                        }
+                    </InputSelect>
                     <ValidationMessage For="@(() => product.Product_Type)" />
                 </div>
                 <div class="mb-3">
                     <label for="txt_unidad"><strong>Unidad :</strong></label>
-                    <InputText class="form-control" id="txt_unidad" @bind-Value="product.Unidad" />
+                    <InputSelect class="form-select" id="txt_unidad" @bind-Value="product.Unidad">
+                        <option value="">Seleccione una unidad...</option>
+                        @foreach (var unit in units.Where(u => u.IsActive))
+                        {
+                            <option value="@unit.Name">@unit.Name</option>
+                        }
+                    </InputSelect>
                     <ValidationMessage For="@(() => product.Unidad)" />
                 </div>
                 <div class="mb-3">
-                    <label for="txt_price"><strong>Precio :</strong></label>
-                    <InputNumber class="form-control" id="txt_price" @bind-Value="product.Price" />
+                    <label for="txt_costo"><strong>Costo :</strong></label>
+                    <InputNumber class="form-control" id="txt_costo" @bind-Value="product.Costo" />
                 </div>
                 <div class="mb-3">
                     <label for="txt_codebar"><strong>Codigo de barra :</strong></label>
@@ -39,6 +58,9 @@
                 <!-- Sección de Imágenes -->
                 <div class="mb-3">
                     <label><strong>📸 Imágenes del Producto (máx 3)</strong></label>
+                    <small class="text-muted d-block">
+                        Imágenes seleccionadas: <strong>@selectedFiles.Count/3</strong>
+                    </small>
                     <p class="text-muted small">Haz clic en una caja vacía para agregar imagen o usa el botón de abajo</p>
 
                     <div class="row mt-3 mb-3">
@@ -80,15 +102,12 @@
 
                     <div class="mb-3">
                         <InputFile @ref="fileInput" OnChange="OnFileSelected" accept="image/*" hidden />
-                        <small class="text-muted d-block">
-                            Imágenes seleccionadas: <strong>@selectedFiles.Count/3</strong>
-                        </small>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <Button Type="ButtonType.Submit" Style="background-color:green;color:white"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
-                    <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+                    <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                    <Button Style="background-color:black;color:white" @onclick="HideAsync" class="btn-cancel"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
                 </div>
             </EditForm>
     </BodyTemplate>
@@ -110,6 +129,8 @@
     private string[] imagePreviews = new string[3];
     private string[] imageNames = new string[3];
     private int nextImageSlot = 0;  // Índice del siguiente slot disponible
+    private List<Category> categories = [];
+    private List<ProductUnit> units = [];
 
     private async Task ClickImageBox(int index)
     {
@@ -234,7 +255,6 @@
         try
         {
             // Crear request con producto e imágenes (multipart)
-            product.Costo = 0;
             product.Description = "";
             product.Marca = "";
             product.Model = "";
@@ -254,20 +274,32 @@
             {
                 Console.WriteLine($"Producto creado exitosamente: ID={createdProduct.Product_id}, Imágenes={createdProduct.Images?.Count ?? 0}");
             }
+
+            // Limpiar datos antes de cerrar
+            selectedFiles.Clear();
+            imagePreviews = new string[3];
+            imageNames = new string[3];
+            nextImageSlot = 0;
+
+            // Cerrar modal correctamente
+            await modal.HideAsync();
+
+            // Esperar un momento para que el modal termine de ocultarse
+            await Task.Delay(300);
+
+            // Notificar que el producto fue creado
+            await OnProductCreated.InvokeAsync();
+
+            await Task.Delay(500);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Error general en CreateProducts: {ex.Message}");
         }
-
-        await modal.HideAsync();
-        await OnProductCreated.InvokeAsync();
-        selectedFiles.Clear();
-        imagePreviews = new string[3];
-        imageNames = new string[3];
-        nextImageSlot = 0;
-        await Task.Delay(1000);
-        PreloadService.Hide();
+        finally
+        {
+            PreloadService.Hide();
+        }
     }
 
     private string DetectContentType(string fileName)
@@ -286,6 +318,8 @@
 
     public async Task ShowAsync()
     {
+        categories = await configService.GetCategoriesAsync();
+        units = await configService.GetProductUnitsAsync();
         product = new Product();
         product.Product_Name = "";
         product.Product_Type = "";

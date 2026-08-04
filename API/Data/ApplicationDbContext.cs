@@ -14,6 +14,8 @@ namespace API.Data
         public DbSet<OrderFisicoDetails> Order_InvFisico_Details { get; set; }
         public DbSet<Equipo> Equipos { get; set; }
         public DbSet<Parameter> Parametros { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<ProductUnit> ProductUnits { get; set; }
         public DbSet<ScanProducts> ScanProducts { get; set; }
         public DbSet<ProductImage> Images { get; set; }
         public DbSet<UploadResult> Uploads { get; set; }
@@ -38,6 +40,9 @@ namespace API.Data
                 .HasPrecision(18, 2);
 
             modelBuilder.Entity<DetalleCompras>().Property(o => o.Subtotal)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Product>().Property(p => p.Costo)
                 .HasPrecision(18, 2);
 
 

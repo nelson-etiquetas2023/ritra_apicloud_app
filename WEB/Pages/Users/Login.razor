@@ -47,6 +47,10 @@
         {
             errorMessage = string.Empty;
             await localStorage.SetItemAsync("authToken", result.Data);
+            if (!localStorage.StorageAvailable)
+            {
+                toastsService.Notify(new ToastMessage(ToastType.Warning, "Sesión no guardada: el navegador bloqueó el almacenamiento local. La sesión se mantendrá solo en memoria hasta que cierres la pestaña."));
+            }
             await authStateProvider.GetAuthenticationStateAsync();
             toastsService.Notify(new ToastMessage(ToastType.Warning, $"login correcto..."));
             await Task.Delay(2000);

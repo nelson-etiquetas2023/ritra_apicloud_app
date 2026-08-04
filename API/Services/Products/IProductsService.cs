@@ -15,5 +15,7 @@ namespace API.Services.Products
         Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
         Task<Product?> CreateProductWithFilesAsync(Product product, IFormFileCollection files);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
+        Task<int> BulkCreateProductsAsync(List<Product> products);
+        Task<ProductImportResult> ImportFromExcelAsync(Stream excelStream);
     }
 }

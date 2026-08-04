@@ -11,7 +11,7 @@
 <div>
     <QuickGrid Items="productsFiltered" 
             class="table table-hover table-bordered table-striped" ItemsPerPage="@pageSize" Pagination="@pagination" style="margin-top:15px;">
-        <PropertyColumn Property="@(products => products.Product_id)" Title="Product Id" />
+        <PropertyColumn Property="@(products => products.Product_Code)" Title="Code" />
         <TemplateColumn Title="Imagen">
             @{
                 var item = (Product)context;
@@ -34,6 +34,7 @@
         <PropertyColumn Property="@(products => products.Product_Name)" Title="Nombre del Producto" Sortable="true" />
         <PropertyColumn Property="@(products => products.Product_Type)" Title="Categoria" />
         <PropertyColumn Property="@(products => products.Unidad)" Title="Unidad" />
+        <PropertyColumn Property="@(products => products.Costo)" Title="Costo" />
         <PropertyColumn Property="@(products => products.Price)" Title="Precio" />
         <PropertyColumn Property="@(products => products.Codebar)" Title="Codigo de Barra" />
         <!--Columna de Herramientas o Action-->
@@ -75,6 +76,9 @@
     private ConfirmDialog dialog = default!;
     // Versiones para evitar cache de imágenes por producto
     private Dictionary<int, long> imageVersions = new();
+    // Versión base única por instancia: cada carga del grid genera URLs nuevas,
+    // evitando que el navegador sirva una imagen cacheada con el mismo ?v=0.
+    private readonly long baseVersion = DateTime.UtcNow.Ticks;
 
     private void GotoDetilsProducts(int productId)
     {
@@ -87,9 +91,7 @@
         try
         {
             Console.WriteLine($"EditProducts: Opening edit modal for product {product.Product_id}");
-            // Pasar el producto ID directamente al modal
             await modalUpdate.ShowAsyncWithProduct(product.Product_id);
-            await OnUpdateListProduct.InvokeAsync(productsFiltered);
         }
         catch (Exception ex)
         {
@@ -119,8 +121,10 @@
     {
         var client = HttpClientFactory.CreateClient("ritrama");
         var baseUrl = client.BaseAddress?.ToString().TrimEnd('/') ?? "http://localhost:5220";
-        var version = imageVersions.ContainsKey(productId) ? imageVersions[productId] : 0L;
-        return $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
+        var version = imageVersions.ContainsKey(productId) ? imageVersions[productId] : baseVersion;
+        var url = $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
+        Console.WriteLine($"GetImageUrl: product={productId} image={imageId} version={version}");
+        return url;
     }
 
     private async void UpdateListDelete(int productid)
@@ -139,27 +143,20 @@
 
     private async Task ActualizarLista(Product productUpdate)
     {
-        var lista = productsFiltered?.ToList();
-        var productoActualizado = lista?.FirstOrDefault(p => p.Product_id == productUpdate.Product_id);
+        var lista = productsFiltered?.ToList() ?? new List<Product>();
+        var index = lista.FindIndex(p => p.Product_id == productUpdate.Product_id);
 
-        if (productoActualizado != null)
+        if (index >= 0)
         {
-            productoActualizado.Product_Name = productUpdate.Product_Name;
-            productoActualizado.Product_Type = productUpdate.Product_Type;
-            productoActualizado.Unidad = productUpdate.Unidad;
-            productoActualizado.Price = productUpdate.Price;
-            productoActualizado.Codebar = productUpdate.Codebar;
-            //productoActualizado.Desactivado = productUpdate.Desactivado;
-            // ACTUALIZA LAS IMÁGENES
-            productoActualizado.Images = productUpdate.Images != null
-                ? new List<ProductImage>(productUpdate.Images)
-                : new List<ProductImage>();
+            // Reemplazar con una instancia NUEVA (cambio de referencia) para que
+            // QuickGrid detecte el cambio y vuelva a renderizar la fila/imagen.
+            lista[index] = productUpdate;
             // Incrementar versión para forzar recarga de la imagen en el grid
             imageVersions[productUpdate.Product_id] = DateTime.UtcNow.Ticks;
         }
 
-    productsFiltered = (lista ?? new List<Product>()).ToList().AsQueryable();
-    await OnUpdateListProduct.InvokeAsync(productsFiltered);
-    StateHasChanged(); // Fuerza el refresco visual del grid
+        productsFiltered = lista.AsQueryable();
+        await OnUpdateListProduct.InvokeAsync(productsFiltered);
+        StateHasChanged(); // Fuerza el refresco visual del grid
     }
 }

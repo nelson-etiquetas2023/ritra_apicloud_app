@@ -6,5 +6,6 @@
         Task<T?> GetItemAsync<T>(string key);
         Task RemoveItemAsync(string key);
         Task ClearAsync();
+        bool StorageAvailable { get; }
     }
 }
