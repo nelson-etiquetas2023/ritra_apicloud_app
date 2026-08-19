@@ -115,5 +115,44 @@ namespace WEB.Services.Config
             var response = await client.DeleteAsync($"api/config/units/{id}");
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<List<Warehouse>> GetWarehousesAsync()
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.GetAsync("api/config/warehouses");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<Warehouse>>(jsonOptions) ?? [];
+        }
+
+        public async Task<List<Location>> GetLocationsAsync()
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.GetAsync("api/config/locations");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<List<Location>>(jsonOptions) ?? [];
+        }
+
+        public async Task<Location?> CreateLocationAsync(Location location)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PostAsJsonAsync("api/config/locations", location, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<Location>(jsonOptions);
+        }
+
+        public async Task<Location?> UpdateLocationAsync(int id, Location location)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.PutAsJsonAsync($"api/config/locations/{id}", location, jsonOptions);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<Location>(jsonOptions);
+        }
+
+        public async Task<bool> DeleteLocationAsync(int id)
+        {
+            var client = httpFactory.CreateClient("ritrama");
+            var response = await client.DeleteAsync($"api/config/locations/{id}");
+            return response.IsSuccessStatusCode;
+        }
     }
 }

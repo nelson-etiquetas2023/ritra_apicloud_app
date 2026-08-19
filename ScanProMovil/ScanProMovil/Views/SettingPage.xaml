@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.SettingPage"
+             Title="Configuración"
+             BackgroundColor="#f0f0f0">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Label Text="Identificación del dispositivo"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   TextColor="#1D3557" />
+
+            <Label Text="Nombre del dispositivo:"
+                   FontSize="13" />
+            <Entry x:Name="EntryDeviceName"
+                   Placeholder="Ej: TC5X-Npino"
+                   TextColor="Black" />
+
+            <Label Text="Código de referencia del dispositivo:"
+                   FontSize="13" />
+            <Label x:Name="LabelDeviceCode"
+                   FontSize="13"
+                   TextColor="#5F6368"
+                   IsVisible="False" />
+
+            <BoxView HeightRequest="1" Color="#D0D0D0" Margin="0,4" />
+
+            <Label Text="Almacén"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   TextColor="#1D3557" />
+
+            <Label Text="Nombre de referencia del almacén:"
+                   FontSize="13" />
+            <Entry x:Name="EntryWarehouseName"
+                   Placeholder="Ej: ALMACEN-01"
+                   TextColor="Black" />
+
+            <Label x:Name="LabelMsg"
+                   FontSize="13"
+                   TextColor="Red"
+                   IsVisible="False" />
+
+            <Button x:Name="BtnSave"
+                    Text="GUARDAR"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    TextColor="White"
+                    BackgroundColor="DodgerBlue"
+                    Clicked="BtnSave_Clicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

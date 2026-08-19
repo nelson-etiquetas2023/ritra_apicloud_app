@@ -37,6 +37,9 @@
         <PropertyColumn Property="@(products => products.Costo)" Title="Costo" />
         <PropertyColumn Property="@(products => products.Price)" Title="Precio" />
         <PropertyColumn Property="@(products => products.Codebar)" Title="Codigo de Barra" />
+        <PropertyColumn Property="@(products => products.Stock)" Title="Existencia" />
+
+
         <!--Columna de Herramientas o Action-->
         <TemplateColumn Title="Acciones" Context="item">
             <Tooltip Title="Editar Documento" Placement="TooltipPlacement.Top">

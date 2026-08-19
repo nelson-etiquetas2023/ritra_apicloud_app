@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Products.ProductDetails"
+             xmlns:viewmodel="clr-namespace:ScanProMovil.ViewModels"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             x:DataType="viewmodel:ProductDetailsViewModel" 
+             Title="Detalle de Producto">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="5">
+            <Label Text="{Binding Producto.Product_Name}" 
+                   WidthRequest="300"
+                   FontSize="18" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center"
+                   />
+            <BoxView HeightRequest="0.5"
+                     HorizontalOptions="Fill"
+                    Color="LightGray"
+                    Margin="0,10"/>
+            <CarouselView ItemsSource="{Binding Producto.Images}"
+              IndicatorView="indicator"
+              PeekAreaInsets="50"
+              WidthRequest="300"
+              HeightRequest="300"
+              HorizontalScrollBarVisibility="Never"
+              VerticalScrollBarVisibility="Never">
+              <CarouselView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ProductImagen">
+                    <Image Source="{Binding Url}" 
+                           Aspect="AspectFit"/>
+                </DataTemplate>
+              </CarouselView.ItemTemplate>
+            </CarouselView>
+            <IndicatorView x:Name="indicator"
+                           IndicatorColor="LightGray"
+                           SelectedIndicatorColor="black"
+                           HorizontalOptions="Center"/>
+            <VerticalStackLayout Margin="10,10,10,40">
+                <Label Text="Detalle de Producto" 
+                       HorizontalOptions="Fill"
+                       HorizontalTextAlignment="Center"
+                       Padding="0,20"
+                       FontAttributes="Bold" FontSize="16" Background="LightGray" Margin="0,0,0,10"/>
+                <Label Text="Categoria:" FontAttributes="Bold"/>
+                <Entry x:Name="txt_categoria" Text="{Binding Producto.Product_Type}" />
+                <Label Text="Unidad :" FontAttributes="Bold"/>
+                <Entry x:Name="txt_unidad" Text="{Binding Producto.Unidad}" />
+                <Label Text="Precio $:" FontAttributes="Bold"/>
+                <Entry x:Name="txt_precio" Text="{Binding Producto.Price}" />
+                <Label Text="Codigo de Barra:" FontAttributes="Bold" />
+                <Entry x:Name="txt_codebar" Text="{Binding Producto.CodeBar}"/>
+                <Label Text="Descripcion del Producto:" FontAttributes="Bold" />
+                <Entry x:Name="txt_productname" Text="{Binding Producto.Product_Name}" />
+            </VerticalStackLayout>
+            <Button Text="Guardar" Command="{Binding SaveProductsCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+    
+    
+    
+</ContentPage>

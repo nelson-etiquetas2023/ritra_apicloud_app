@@ -1,0 +1,158 @@
+@inject ISuppliersService service
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modalUpdate" Size="ModalSize.Large">
+    <HeaderTemplate><Icon Name="IconName.PencilSquare" Size="IconSize.x3" />
+        <strong>Modificar Proveedor.</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="supplierLocal" OnValidSubmit="UpdateSupplier">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="txt_suppliername"><strong>Nombre del Proveedor :</strong></label>
+                    <InputText class="form-control" id="txt_suppliername" @bind-Value="supplierLocal.SupplierName" />
+                    <ValidationMessage For="@(() => supplierLocal.SupplierName)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_ruc"><strong>RUC / Registro Fiscal :</strong></label>
+                    <InputText class="form-control" id="txt_ruc" @bind-Value="supplierLocal.Ruc" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_contact"><strong>Persona de Contacto :</strong></label>
+                    <InputText class="form-control" id="txt_contact" @bind-Value="supplierLocal.ContactName" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_phone"><strong>Teléfono :</strong></label>
+                    <InputText class="form-control" id="txt_phone" @bind-Value="supplierLocal.Phone" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_email"><strong>Email :</strong></label>
+                    <InputText class="form-control" id="txt_email" @bind-Value="supplierLocal.Email" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_website"><strong>Sitio Web :</strong></label>
+                    <InputText class="form-control" id="txt_website" @bind-Value="supplierLocal.Website" />
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label for="txt_address"><strong>Dirección :</strong></label>
+                    <InputText class="form-control" id="txt_address" @bind-Value="supplierLocal.Address" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_city"><strong>Ciudad :</strong></label>
+                    <InputText class="form-control" id="txt_city" @bind-Value="supplierLocal.City" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_country"><strong>País :</strong></label>
+                    <InputText class="form-control" id="txt_country" @bind-Value="supplierLocal.Country" />
+                </div>
+
+                <div class="col-12 mb-3">
+                    <Switch @bind-Value="supplierLocal.IsActive" Label="Proveedor activo" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modalUpdate = default!;
+    private string errorMessage = string.Empty;
+
+    private Supplier supplierLocal = new();
+
+    [Parameter]
+    public Supplier supplier { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Supplier> OnSupplierUpdate { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task UpdateSupplier()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.UpdateSupplierAsync(supplierLocal.SupplierId, supplierLocal);
+            if (!success)
+            {
+                errorMessage = "No se pudo actualizar el proveedor. Verifique que el RUC no esté registrado o intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            await OnSupplierUpdate.InvokeAsync(supplierLocal);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar los cambios: {ex.Message}";
+            Console.WriteLine($"Error updating supplier: {ex.Message}");
+        }
+
+        await modalUpdate.HideAsync();
+        PreloadService.Hide();
+    }
+
+    public async Task ShowAsyncWithSupplier(int supplierId)
+    {
+        errorMessage = string.Empty;
+
+        var loaded = await service.GetSupplierByIdAsync(supplierId);
+        if (loaded == null)
+        {
+            Console.WriteLine($"ShowAsyncWithSupplier: Supplier {supplierId} not found");
+            return;
+        }
+
+        supplier = loaded;
+        supplierLocal = new Supplier
+        {
+            SupplierId = loaded.SupplierId,
+            SupplierName = loaded.SupplierName,
+            Ruc = loaded.Ruc,
+            ContactName = loaded.ContactName,
+            Phone = loaded.Phone,
+            Email = loaded.Email,
+            Address = loaded.Address,
+            City = loaded.City,
+            Country = loaded.Country,
+            Website = loaded.Website,
+            IsActive = loaded.IsActive
+        };
+
+        StateHasChanged();
+        await modalUpdate.ShowAsync();
+    }
+
+    private async Task HideAsync()
+    {
+        await modalUpdate.HideAsync();
+    }
+}

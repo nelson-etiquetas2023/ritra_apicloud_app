@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.FlyoutMenuPage"
+             xmlns:models="clr-namespace:ScanProMovil.Views"
+             Title="Menú"
+             BackgroundColor="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <VerticalStackLayout Grid.Row="0" Padding="20,28,20,18" Spacing="4">
+            <Border WidthRequest="76"
+                    HeightRequest="76"
+                    StrokeShape="RoundRectangle 38"
+                    Stroke="#D5DCE5"
+                    StrokeThickness="1"
+                    HorizontalOptions="Center"
+                    Padding="0"
+                    BackgroundColor="#E8EDF3">
+                <Image Source="account_50px.png"
+                       WidthRequest="44"
+                       HeightRequest="44"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+            <Label x:Name="UserNameLabel"
+                   TextColor="#1D3557"
+                   FontSize="16"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   LineBreakMode="TailTruncation"
+                   Margin="0,8,0,0" />
+            <Label x:Name="DeviceLabel"
+                   TextColor="#5A6A7A"
+                   FontSize="12"
+                   HorizontalOptions="Center"
+                   LineBreakMode="TailTruncation" />
+            <Label x:Name="WarehouseLabel"
+                   TextColor="#5A6A7A"
+                   FontSize="12"
+                   HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <BoxView Grid.Row="1"
+                 HeightRequest="1"
+                 Color="#E0E5EB"
+                 VerticalOptions="Start"
+                 Margin="16,0" />
+
+        <CollectionView Grid.Row="1"
+                        x:Name="MenuCollection"
+                        SelectionMode="Single"
+                        SelectionChanged="OnMenuItemSelected">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:FlyoutMenuItem">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14" Padding="20,13">
+                        <Image Source="{Binding Icon}" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Title}"
+                               TextColor="#1D3557"
+                               FontSize="15"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <VerticalStackLayout Grid.Row="2" Padding="16,0,16,18">
+            <Button Text="Cerrar sesión"
+                    Clicked="OnLogoutClicked"
+                    BackgroundColor="#B02A37"
+                    TextColor="White"
+                    CornerRadius="8" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

@@ -9,6 +9,14 @@
     <HeaderTemplate><Icon Name="IconName.Plus" Size="IconSize.x3" /><strong> Crear producto</strong> </HeaderTemplate>
     <BodyTemplate>
 
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+
             <EditForm Model="@product" OnValidSubmit="CreateProducts">
                 <DataAnnotationsValidator />
 
@@ -26,24 +34,30 @@
 
                 <div class="mb-3">
                     <label for="txt_category"><strong>Categoria :</strong></label>
-                    <InputSelect class="form-select" id="txt_category" @bind-Value="product.Product_Type">
-                        <option value="">Seleccione una categoría...</option>
-                        @foreach (var category in categories.Where(c => c.IsActive))
-                        {
-                            <option value="@category.Name">@category.Name</option>
-                        }
-                    </InputSelect>
+                    <div class="input-group">
+                        <InputSelect class="form-select" id="txt_category" @bind-Value="product.Product_Type">
+                            <option value="">Seleccione una categoría...</option>
+                            @foreach (var category in categories.Where(c => c.IsActive))
+                            {
+                                <option value="@category.Name">@category.Name</option>
+                            }
+                        </InputSelect>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="OpenCategoryManager" title="Gestionar categorías"><Icon Name="IconName.Gear" /></button>
+                    </div>
                     <ValidationMessage For="@(() => product.Product_Type)" />
                 </div>
                 <div class="mb-3">
                     <label for="txt_unidad"><strong>Unidad :</strong></label>
-                    <InputSelect class="form-select" id="txt_unidad" @bind-Value="product.Unidad">
-                        <option value="">Seleccione una unidad...</option>
-                        @foreach (var unit in units.Where(u => u.IsActive))
-                        {
-                            <option value="@unit.Name">@unit.Name</option>
-                        }
-                    </InputSelect>
+                    <div class="input-group">
+                        <InputSelect class="form-select" id="txt_unidad" @bind-Value="product.Unidad">
+                            <option value="">Seleccione una unidad...</option>
+                            @foreach (var unit in units.Where(u => u.IsActive))
+                            {
+                                <option value="@unit.Name">@unit.Name</option>
+                            }
+                        </InputSelect>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="OpenUnitManager" title="Gestionar unidades"><Icon Name="IconName.Gear" /></button>
+                    </div>
                     <ValidationMessage For="@(() => product.Unidad)" />
                 </div>
                 <div class="mb-3">
@@ -113,6 +127,7 @@
     </BodyTemplate>
 </Modal>
 
+<CategoryUnitManager @ref="categoryUnitManager" OnChanged="ReloadCategoryUnitLists" />
 
 @code {
 
@@ -123,6 +138,7 @@
     protected PreloadService PreloadService { get; set; } = default!;
 
     private Modal modal = default!;
+    private CategoryUnitManager categoryUnitManager = default!;
     private InputFile fileInput = default!;
     private Product product = new();
     private List<IBrowserFile> selectedFiles = new();
@@ -131,6 +147,18 @@
     private int nextImageSlot = 0;  // Índice del siguiente slot disponible
     private List<Category> categories = [];
     private List<ProductUnit> units = [];
+    private string errorMessage = string.Empty;
+
+    private async Task OpenCategoryManager() => await categoryUnitManager.ShowCategoriesAsync();
+
+    private async Task OpenUnitManager() => await categoryUnitManager.ShowUnitsAsync();
+
+    private async Task ReloadCategoryUnitLists()
+    {
+        categories = await configService.GetCategoriesAsync();
+        units = await configService.GetProductUnitsAsync();
+        StateHasChanged();
+    }
 
     private async Task ClickImageBox(int index)
     {
@@ -251,6 +279,7 @@
     private async Task CreateProducts()
     {
         PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
 
         try
         {
@@ -264,16 +293,19 @@
             product.StatusProducts = "";
             product.StockStatus = "";
             // Crear producto con imágenes mediante multipart/form-data
-            var createdProduct = await service.CreateProductWithFilesAsync(product, selectedFiles);
+            var result = await service.CreateProductWithFilesAsync(product, selectedFiles);
 
-            if (createdProduct == null)
+            if (!result.Success)
             {
-                Console.WriteLine("Error al crear el producto - respuesta nula del servidor");
+                errorMessage = result.Message ?? "No se pudo crear el producto.";
+                Console.WriteLine($"Error al crear el producto: {errorMessage}");
+                StateHasChanged();
+                PreloadService.Hide();
+                return;
             }
-            else
-            {
-                Console.WriteLine($"Producto creado exitosamente: ID={createdProduct.Product_id}, Imágenes={createdProduct.Images?.Count ?? 0}");
-            }
+
+            var createdProduct = result.Data;
+            Console.WriteLine($"Producto creado exitosamente: ID={createdProduct?.Product_id}, Imágenes={createdProduct?.Images?.Count ?? 0}");
 
             // Limpiar datos antes de cerrar
             selectedFiles.Clear();
@@ -294,7 +326,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error general en CreateProducts: {ex.Message}");
+            errorMessage = $"Error general en CreateProducts: {ex.Message}";
+            Console.WriteLine(errorMessage);
         }
         finally
         {
@@ -318,6 +351,7 @@
 
     public async Task ShowAsync()
     {
+        errorMessage = string.Empty;
         categories = await configService.GetCategoriesAsync();
         units = await configService.GetProductUnitsAsync();
         product = new Product();
@@ -335,6 +369,7 @@
 
     private async Task HideAsync()
     {
+        errorMessage = string.Empty;
         selectedFiles.Clear();
         imagePreviews = new string[3];
         imageNames = new string[3];

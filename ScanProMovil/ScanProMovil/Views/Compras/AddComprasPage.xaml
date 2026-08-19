@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Compras.AddComprasPage"
+             Title="AGREGAR COMPRA"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
+             x:DataType="vm:AddComprasViewModels">
+
+    <ScrollView>
+        <VerticalStackLayout>
+            <!--Numero de Orden -->
+            <HorizontalStackLayout>
+                <Label Text="Orden Numero:" FontAttributes="Bold" />
+                <Border 
+                    Margin="5,5,5,5"
+                    Stroke="Grey"
+                    StrokeThickness="1"
+                    Background="White">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"></RoundRectangle>
+                    </Border.StrokeShape>
+                    
+                    <Entry x:Name="txtOrderNumberEntry" 
+                        Placeholder="Ingrese el numero de orden" 
+                        FontAttributes="Bold"
+                        IsReadOnly="True"
+                        BackgroundColor="LightGray"
+                        WidthRequest="170"
+                        Text="{Binding NewOrder.Numero}"
+                        />
+                </Border>
+            </HorizontalStackLayout>
+            <!--Fecha de la Orden -->
+            <HorizontalStackLayout VerticalOptions="Start">
+                <Label Text="Fecha:" WidthRequest="135" FontAttributes="Bold" Margin="0,7" />
+                <Border 
+                    Margin="5,5,5,5"
+                    Stroke="Grey"
+                    StrokeThickness="1"
+                    Background="White" WidthRequest="170">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"></RoundRectangle>
+                    </Border.StrokeShape>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Image
+                            Source="edit.png"
+                            WidthRequest="22"
+                            Grid.Column="0"/>
+                        <DatePicker x:Name="txtOrderDateEntry" 
+                            FontAttributes="Bold" 
+                            Date="{Binding NewOrder.Fecha}" 
+                            TextColor ="Black" Grid.Column="1"/>
+                    </Grid>
+                </Border>
+            </HorizontalStackLayout>
+            <!--Description Orden Compra-->
+            <VerticalStackLayout>
+                <Label Text="Descripcion de la orden:" FontAttributes="Bold"/>
+                <Border 
+                    Margin="5,5,5,5"
+                    Stroke="Grey"
+                    StrokeThickness="1"
+                    Background="White" 
+                    WidthRequest="302"
+                    >
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"></RoundRectangle>
+                    </Border.StrokeShape>
+
+                    <Entry x:Name="txt_description"
+                        Placeholder="Ingrese Descripción..."
+                        Text="{Binding NewOrder.Description}"/>
+                </Border>
+            </VerticalStackLayout>
+            <!-- Datos del proveedor -->
+            <Label Text="Datos del proveedor" FontAttributes="Bold"/>
+            <HorizontalStackLayout>
+                <Border 
+                    Margin="10,5,5,5"
+                    Stroke="Grey"
+                    StrokeThickness="1"
+                    Background="White" 
+                    WidthRequest="245">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"></RoundRectangle>
+                    </Border.StrokeShape>
+                    <Entry x:Name="txt_supplyName"
+                        Placeholder="Ingrese Supply Name..."
+                        Text="{Binding NewOrder.Supply_Name}" 
+                        WidthRequest="240" />
+                </Border>
+                <Button x:Name="btn_supplySearch" 
+                        Text="..."
+                        Clicked="SearchSupplyData" WidthRequest="50"/>
+            </HorizontalStackLayout>
+            <!--Add Product-->
+            <Border Margin="5" 
+                Padding="10" 
+                StrokeShape="RoundRectangle 6" 
+                StrokeThickness="1">
+                <VerticalStackLayout>
+                    <Label Text="Agregar Productos" FontAttributes="Bold" />
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,65">
+                        <!--ID PRODUCTO-->
+                        <Border 
+                            Margin="0,5,0,5"
+                            Stroke="Grey"
+                            StrokeThickness="1"
+                            Background="White"  
+                            Grid.Row="0" 
+                            Grid.Column="0" WidthRequest="110">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"></RoundRectangle>
+                            </Border.StrokeShape>
+                            <!--Entry del Product Id-->
+                            <Entry x:Name="txtProductIdEntry" 
+                                   Placeholder="id producto" 
+                                   WidthRequest="110"
+                                   HorizontalTextAlignment="Start"
+                                   TextChanged="txtProductIdEntry_TextChanged"/>
+                        </Border>
+                        <!--Cantidad-->
+                        <Border 
+                            Margin="5,5,5,5"
+                            Stroke="Grey"
+                            StrokeThickness="1"
+                            Background="White" Grid.Row="0" 
+                            Grid.Column="1">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"></RoundRectangle>
+                            </Border.StrokeShape>
+                            <Entry x:Name="txtQuantityEntry" 
+                                   Placeholder="cantidad"
+                                   HorizontalTextAlignment="Start"/>
+                        </Border>
+                        <!--Boton de agregar productos-->
+                        <Button x:Name="btnAddProduct" Text="Add" IsEnabled="False" Clicked="btn_AddProducts_Clicked" Grid.Row="0" Grid.Column="2" />
+                        <!--Descripcion del producto-->
+                        <Border 
+                            Margin="0,5,0,5"
+                            Stroke="Grey"
+                            StrokeThickness="1"
+                            Background="White" 
+                            Grid.Row="1" 
+                            Grid.ColumnSpan="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="10"></RoundRectangle>
+                            </Border.StrokeShape>
+                            <!--Entry de Product Name-->
+                            <Entry 
+                                Placeholder="Nombre del producto" 
+                                 x:Name="txt_NameProducts" 
+                                HorizontalTextAlignment="Start"
+                                />
+                        </Border>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+            <!--Encabezado Detalle de la orden-->
+            <Grid ColumnSpacing="0" RowSpacing="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Padding="15" Background="#EEE">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"></ColumnDefinition>
+                        <ColumnDefinition Width="100"></ColumnDefinition>
+                        <ColumnDefinition Width="60"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Label Text="Prod. Id" FontAttributes="Bold" Grid.Column="0" VerticalOptions="Center" ></Label>
+                    <Label Text="Cant." FontAttributes="Bold" Grid.Column="1" VerticalOptions="Center" ></Label>
+                    <Label Text="Action" FontAttributes="Bold" Grid.Column="2" VerticalOptions="Center" ></Label>
+                </Grid>
+                <!--Detalle de la Orden-->
+                <CollectionView 
+                    x:Name="ItemsCollection" 
+                    Grid.Row="1" 
+                    SelectionMode="None" 
+                    ItemsSource="{Binding NewOrder.Items}"
+                    ItemsLayout="VerticalList" 
+                    ItemSizingStrategy="MeasureAllItems" 
+                    
+                    HorizontalOptions="Fill">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:DetalleCompra">
+                            <Grid 
+                                RowDefinitions="Auto,Auto,Auto"
+                                ColumnDefinitions="80,*,100" 
+                                RowSpacing="5"
+                                ColumnSpacing="5" BackgroundColor="LightGray" Margin="0,8,8,0" Padding="0,5">
+                                <!--ProductId-->
+                                <Label
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Text="{Binding Product_id}" 
+                                    FontSize="12" 
+                                    FontAttributes="Bold"
+                                    HorizontalOptions="Start" />
+                                <!--Product Name-->
+                                <Label
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Grid.ColumnSpan="2"
+                                    Text="{Binding Product_Name }" 
+                                    FontSize="12" 
+                                    FontAttributes="Bold"
+                                    HorizontalOptions="Start" />
+                                <!--Cantidad-->
+                                <Label 
+                                    Grid.Row="1"
+                                    Grid.Column="0" 
+                                    Text="{Binding Cantidad,StringFormat='Cant: {0}'}" 
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start"/>
+                                <!--Costo-->
+                                <Label 
+                                    Grid.Row="1"
+                                    Grid.Column="1" 
+                                    Text="{Binding Costo,StringFormat='Costo: ${0}'}" 
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start"/>
+                                <!--Costo-->
+                                <Label 
+                                    Grid.Row="1"
+                                    Grid.Column="2" 
+                                    Text="{Binding Subtotal ,StringFormat='Sub-Total: ${0:N2}'}" 
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start"/>
+                                
+                                
+                                <!--Acciones --> 
+                                
+                                <VerticalStackLayout Grid.Row="2"
+                                                     Grid.ColumnSpan="3">
+                                    <BoxView 
+                                        HeightRequest="0.5"
+                                        HorizontalOptions="Fill"
+                                        Color="Black"
+                                        Margin="0,10"/>
+                                    <HorizontalStackLayout HorizontalOptions="Center">
+                                        <ImageButton
+                                            Source="edit.png"
+                                            WidthRequest="16"
+                                            HeightRequest="16"
+                                            CornerRadius="8"
+                                            CommandParameter="{Binding .}"
+                                            Clicked="OnEditItem" />
+                                        <ImageButton
+                                            Source="cancel.png"
+                                            WidthRequest="16"
+                                            HeightRequest="16"
+                                            CornerRadius="8"
+                                            CommandParameter="{Binding .}"
+                                            Clicked="OnRemoveItem" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+            <!--Summary-->
+            <BoxView 
+                HeightRequest="0.5"
+                HorizontalOptions="Fill"
+                Color="LightGray"
+                Margin="0,10"/>
+            <Label Text="TOTALES => " FontAttributes="Bold" Margin="10"/>
+            <BoxView 
+                HeightRequest="0.5"
+                HorizontalOptions="Fill"
+                Color="LightGray"
+                Margin="0,10"/>
+            
+            <HorizontalStackLayout>
+                <!--Total Renglones -->
+                <Border Margin="5" 
+                    Padding="10" 
+                    StrokeShape="RoundRectangle 6" 
+                    StrokeThickness="1" BackgroundColor="LightGray">
+                    <VerticalStackLayout>
+                        <Label Text="Renglones : " FontAttributes="Bold"/>
+                        <Label x:Name="lbl_total_renglon" Text="0" FontAttributes="Bold"/>
+                    </VerticalStackLayout>
+                </Border>
+                <!--Total Cantidad -->
+                <Border Margin="5" 
+                    Padding="10" 
+                    StrokeShape="RoundRectangle 6" 
+                    StrokeThickness="1" BackgroundColor="LightGray">
+                    <VerticalStackLayout>
+                        <Label Text="Total Cantidad : " FontAttributes="Bold"/>
+                        <Label x:Name="lbl_total_cant" 
+                               Text="0"
+                               FontAttributes="Bold"/>
+                    </VerticalStackLayout>
+                </Border>
+            </HorizontalStackLayout>
+            <!--Total Costo-->
+            <Border Margin="5" 
+                Padding="10" 
+                StrokeShape="RoundRectangle 6" 
+                StrokeThickness="1" BackgroundColor="LightGray">
+                <VerticalStackLayout>
+                    <Label Text="Total Costo : " FontAttributes="Bold"/>
+                    <Label x:Name="lbl_totalCosto" Text="0" FontAttributes="Bold"/>
+                </VerticalStackLayout>
+            </Border>
+            <!--Activity Indicator-->
+            <HorizontalStackLayout 
+                HorizontalOptions="Center"
+                Margin="10">
+                <ActivityIndicator 
+                    x:Name="SavingIndicator"
+                    IsRunning="False"
+                    IsVisible="False"
+                    Color="Blue"
+                    WidthRequest="50"
+                    HeightRequest="50">
+                </ActivityIndicator>
+                <Label 
+                    x:Name="SavingLabel"
+                    Text="Guardando..."
+                    IsVisible="false"
+                    VerticalOptions="Center"
+                    TextColor="blue"/>
+            </HorizontalStackLayout>
+            <BoxView 
+                HeightRequest="0.5"
+                HorizontalOptions="Fill"
+                Color="LightGray"
+                Margin="0,10"/>
+            <!--Boton de Guardar y Cancelar-->
+            <HorizontalStackLayout>
+                <Button 
+                    x:Name="Btn_Save_Order"
+                    Text="Guardar"  
+                    Margin="20"
+                    Clicked="Btn_Save_Order_Clicked" FontSize="15" />
+                <Button 
+                    x:Name="Btn_Cancel_Order"
+                    Text="Cancelar" 
+                    Margin="20" 
+                    FontSize="15" 
+                    Clicked="Btn_Cancel_Order_Clicked"/>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

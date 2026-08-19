@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Elementos de la solución/" />
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="ScanProMovil/ScanProMovil.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="ScanProMovil.Data/ScanProMovil.Data.csproj" />
+</Solution>

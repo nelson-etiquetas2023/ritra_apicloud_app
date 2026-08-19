@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
 using Shared.Dtos.AppMovil;
+using Shared.Dtos.CargasIniciales;
 using Shared.Dtos.Compras;
 using Shared.Security;
 
@@ -16,13 +17,19 @@ namespace API.Data
         public DbSet<Parameter> Parametros { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<ProductUnit> ProductUnits { get; set; }
+        public DbSet<Warehouse> Warehouses { get; set; }
+        public DbSet<Location> Locations { get; set; }
         public DbSet<ScanProducts> ScanProducts { get; set; }
         public DbSet<ProductImage> Images { get; set; }
-        public DbSet<UploadResult> Uploads { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<Enterprise> Enterprises { get; set; }
         public DbSet<OrderPurchase> OrderPurchase { get; set; }
         public DbSet<OrderPurchaseDetails> OrderPurchaseDetails { get; set; }
         public DbSet<OrdenCompra> Compra { get; set; }
         public DbSet<DetalleCompras> DetalleCompra { get; set; }
+        public DbSet<Inicial> CargasIniciales { get; set; }
+        public DbSet<DetalleInicial> CargasInicialesDetalles { get; set; }
 
 
 
@@ -45,6 +52,21 @@ namespace API.Data
             modelBuilder.Entity<Product>().Property(p => p.Costo)
                 .HasPrecision(18, 2);
 
+            // Índice único para Product_Code
+            modelBuilder.Entity<Product>()
+                .HasIndex(p => p.Product_Code)
+                .IsUnique();
+
+            // Índice único para SupplierCode (P######)
+            modelBuilder.Entity<Supplier>()
+                .HasIndex(s => s.SupplierCode)
+                .IsUnique();
+
+            // Índice único para CustomerCode (C######)
+            modelBuilder.Entity<Customer>()
+                .HasIndex(c => c.CustomerCode)
+                .IsUnique();
+
 
             // Configurar relación One-to-Many entre Product y ProductImage
             modelBuilder.Entity<Product>()
@@ -66,6 +88,27 @@ namespace API.Data
                 .HasForeignKey(d => d.Numero)
                 .HasPrincipalKey(o => o.Numero)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Inicial>()
+                .HasMany(i => i.Detalles)
+                .WithOne(d => d.Inicial)
+                .HasForeignKey(d => d.InicialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DetalleInicial>()
+                .Property(d => d.Costo)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Location>()
+                .Property(l => l.Capacity)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Location>()
+                .Property(l => l.CurrentCapacity)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleInicial>()
+                .HasIndex(d => d.InicialId);
 
 
         }

@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using WEB.Services.Versioning
+@inject AppVersionInfo VersionInfo
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href=""><Icon Name="IconName.UpcScan"  
             Style="margin-right:10px;" /> ScanStock Pro.</a>
@@ -21,6 +24,21 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/customers">
+                <Icon Name="IconName.People" Size="IconSize.x4" Style="margin-right:10px;" /> Clientes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/suppliers">
+                <Icon Name="IconName.Truck" Size="IconSize.x4" Style="margin-right:10px;" /> Proveedores
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/enterprise">
+                <Icon Name="IconName.Building" Size="IconSize.x4" Style="margin-right:10px;" /> Empresa
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
             <NavLink class="nav-link" href="/users">
                 <Icon Name="IconName.Person" Size="IconSize.x4" Style="margin-right:10px;" /> Usuarios
             </NavLink>
@@ -31,8 +49,8 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/Upload">
-                <Icon Name="IconName.CapsulePill" Size="IconSize.x4" Style="margin-right:10px;" /> Catalogo
+            <NavLink class="nav-link" href="/CargaInicial">
+                <Icon Name="IconName.FileExcel" Size="IconSize.x4" Style="margin-right:10px;" /> Carga de Iniciales
             </NavLink>
         </div>
         <div class="nav-item px-3">
@@ -45,7 +63,18 @@
                 <Icon Name="IconName.FileEarmarkBarGraph" Size="IconSize.x4" Style="margin-right:10px;" /> App. Mobile
             </NavLink>
         </div>
-        
+
+        <hr class="version-divider" />
+
+        <div class="version-section px-3">
+            <div class="version-title">
+                <Icon Name="IconName.InfoCircle" Size="IconSize.x4" Style="margin-right:8px;" /> Datos de la versión
+            </div>
+            <div class="version-row"><span>Versión</span><span class="fw-semibold">@VersionInfo.Version</span></div>
+            <div class="version-row"><span>Build</span><span>@VersionInfo.BuildNumber</span></div>
+            <div class="version-row"><span>Fecha</span><span>@VersionInfo.BuildDate</span></div>
+            <div class="version-row"><span>.NET</span><span>@VersionInfo.Framework</span></div>
+        </div>
     </nav>
 </div>
 

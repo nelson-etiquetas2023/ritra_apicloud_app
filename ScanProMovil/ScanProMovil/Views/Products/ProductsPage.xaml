@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Products.ProductsPage"
+             Title="Productos">
+
+    <ScrollView>
+        <!---Pagian de Index de Productos-->
+        <VerticalStackLayout Margin="0,0,0,20" Spacing="10" >
+            <Label 
+        Text="Opciones de Productos:"
+        VerticalOptions="Start"
+        FontAttributes="Bold"
+        HorizontalOptions="Center" />
+            <!--opcion Sincronizar productos desde la web-->
+            <HorizontalStackLayout Background="#f0f0f0" HorizontalOptions="Fill">
+                
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="LoadProductsRemote" />
+                </HorizontalStackLayout.GestureRecognizers>
+                
+                <Image Source="package_delivery_logistics_50px.png" />
+                <VerticalStackLayout HeightRequest="100" Padding="10,25,0,0">
+                    <Label Text="Sincronizar Productos" FontAttributes="Bold" />
+                    <Label Text="descarga los producto desde la web" FontSize="10" />
+                </VerticalStackLayout>
+                <Image Source="chevron_right_50px.png" />
+            </HorizontalStackLayout>
+
+            <!--Datos locales de productos-->
+            <HorizontalStackLayout Background="#f0f0f0" HorizontalOptions="Fill">
+
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="LocalDataProducts" />
+                </HorizontalStackLayout.GestureRecognizers>
+                
+                <Image Source="internet_of_things_50px.png" />
+                <VerticalStackLayout HeightRequest="100" Padding="10,25,0,0">
+                    <Label Text="Registros Locales" FontAttributes="Bold" />
+                    <Label Text="Ver los archivos de productos locales" FontSize="10" />
+                </VerticalStackLayout>
+                <Image Source="chevron_right_50px.png" />
+            </HorizontalStackLayout>
+
+            <!--Codigo de barras-->
+            <HorizontalStackLayout Background="#f0f0f0" HorizontalOptions="Fill">
+
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="CodeBarModule"/>
+                </HorizontalStackLayout.GestureRecognizers>
+                
+                <Image Source="barcode_50px.png" />
+                <VerticalStackLayout HeightRequest="100" Padding="10,25,0,0">
+                    <Label Text="Codigos de Barra" FontAttributes="Bold" />
+                    <Label Text="Imprime las etiquetas de cod barra." FontSize="10" />
+                </VerticalStackLayout>
+                <Image Source="chevron_right_50px.png" />
+            </HorizontalStackLayout>
+            <!--settings-->
+            <BoxView HeightRequest="2" BackgroundColor="Gray" HorizontalOptions="Fill"/>
+            <Label Text="Setting: " FontSize="16" FontAttributes="Bold"/>
+
+            <Grid Margin="2,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="6*" />
+                    <ColumnDefinition Width="4*" />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0" Text="Activar Notificaciones" VerticalOptions="Center" />
+                <Switch Grid.Column="1"  
+                        x:Name="switchActiveNotifications"         
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        IsToggled="False"
+                        ThumbColor="Gray"
+                        OnColor="LawnGreen" />
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

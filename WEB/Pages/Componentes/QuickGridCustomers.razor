@@ -1,0 +1,109 @@
+@using WEB.Pages.Customers
+@inject ICustomersService service
+
+<ConfirmDialog @ref="dialog" />
+
+<ModalUpdateCustomers @ref="modalUpdate"
+                      customer=@customerEdit
+                      OnCustomerUpdate="ActualizarLista" />
+<div>
+    <QuickGrid Items="customersFiltered"
+            class="table table-hover table-bordered table-striped" ItemsPerPage="@pageSize" Pagination="@pagination" style="margin-top:15px;">
+        <PropertyColumn Property="@(customers => customers.customer_id)" Title="ID" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.CustomerCode)" Title="Código" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.CustomerName)" Title="Nombre" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.Direccion)" Title="Dirección" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.Registro_Fiscal)" Title="Registro Fiscal" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.Telefono)" Title="Teléfono" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.Correo)" Title="Correo" Sortable="true" />
+        <PropertyColumn Property="@(customers => customers.Email)" Title="Email" Sortable="true" />
+        <!--Columna de Herramientas o Action-->
+        <TemplateColumn Title="Acciones" Context="item">
+            <Tooltip Title="Editar Cliente" Placement="TooltipPlacement.Top">
+                <a @onclick="() => EditCustomers(item)" style="cursor: pointer;">
+                    <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
+            <Tooltip Title="Eliminar fila" Placement="TooltipPlacement.Top">
+                <a @onclick="() => DeleteCustomers(item.customer_id)" style="cursor: pointer"><Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+<div class="mt-2">
+    <Paginator State="@pagination" />
+</div>
+
+@code {
+
+    public Customer customerEdit = new();
+    ModalUpdateCustomers modalUpdate { get; set; } = default!;
+
+    [Parameter]
+    public IQueryable<Customer>? customersFiltered { get; set; }
+
+    [Parameter]
+    public PaginationState? pagination { get; set; }
+    public int pageSize { get; set; } = 15;
+
+    [Parameter]
+    public EventCallback<IQueryable<Customer>> OnUpdateListCustomer { get; set; }
+
+    private ConfirmDialog dialog = default!;
+
+    private async Task EditCustomers(Customer customer)
+    {
+        try
+        {
+            Console.WriteLine($"EditCustomers: Opening edit modal for customer {customer.customer_id}");
+            await modalUpdate.ShowAsyncWithCustomer(customer.customer_id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"EditCustomers: Error - {ex.Message}");
+        }
+    }
+
+    private async Task DeleteCustomers(int id)
+    {
+        var ConfirmationDeleteCustomers = await
+            dialog.ShowAsync(title: "Esta seguro de borrar este cliente?",
+            message1: "Este registro se borrara. Una vez borrado no podra revertirlo!",
+            message2: "Esta seguro de proceder ?");
+
+        if (ConfirmationDeleteCustomers)
+        {
+            await service.DeleteCustomerAsync(id);
+            UpdateListDelete(id);
+        }
+    }
+
+    private async void UpdateListDelete(int customerId)
+    {
+        var lista = customersFiltered?.ToList();
+        var customerBorrar = lista?.
+        FirstOrDefault(c => c.customer_id == customerId);
+        if (customerBorrar != null)
+        {
+            lista?.Remove(customerBorrar);
+        }
+        customersFiltered = lista?.AsQueryable();
+
+        await OnUpdateListCustomer.InvokeAsync(customersFiltered);
+    }
+
+    private async Task ActualizarLista(Customer customerUpdate)
+    {
+        var lista = customersFiltered?.ToList() ?? new List<Customer>();
+        var index = lista.FindIndex(c => c.customer_id == customerUpdate.customer_id);
+
+        if (index >= 0)
+        {
+            lista[index] = customerUpdate;
+        }
+
+        customersFiltered = lista.AsQueryable();
+        await OnUpdateListCustomer.InvokeAsync(customersFiltered);
+        StateHasChanged();
+    }
+}

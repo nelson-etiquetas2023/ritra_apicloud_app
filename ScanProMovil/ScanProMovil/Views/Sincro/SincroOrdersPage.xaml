@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Sincro.SincroOrdersPage"
+             Title="Sincronización de Ordenes."
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
+             x:DataType="vm:SincroOrdersViewModel">
+    
+    <VerticalStackLayout Padding="15,0,15,0" Spacing="5">
+        <HorizontalStackLayout>
+            <Image Source="console_64px.png" 
+                   WidthRequest="24" 
+                   HeightRequest="24"/>
+            <Label Text="Consola de Sincronizacion."/>
+        </HorizontalStackLayout>
+        
+        <CollectionView 
+                x:Name="CollectionViewLogs"    
+                HeightRequest="200" 
+                BackgroundColor="Black"
+                ItemsSource="{Binding Logs}"
+                SelectionMode="None">
+            
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                    <Label Text="{Binding .}" 
+                           FontFamily="Consolas"
+                           FontSize="13"
+                           TextColor="GreenYellow"
+                           BackgroundColor="Black"/>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            
+        </CollectionView>
+        <Button 
+            x:Name="btnStartSync"
+            ImageSource="upload_to_the_cloud_32px.png"
+            Text="Iniciar Sincronización"
+            ContentLayout="Left, 10"
+            Clicked="btnStartSync_Clicked"
+            BackgroundColor="DodgerBlue"
+            IsEnabled="{Binding IsSincronizarEnabled}"
+            />
+        
+    </VerticalStackLayout>
+    
+</ContentPage>

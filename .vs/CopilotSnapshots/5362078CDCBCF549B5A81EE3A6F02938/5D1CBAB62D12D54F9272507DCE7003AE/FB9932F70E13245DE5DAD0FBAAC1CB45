@@ -1,9 +1,0 @@
-﻿@page "/Products/DetailsProducts/{Product_id:int}"
-
-<h3>Detalle de Productos</h3>
-
-@code {
-    [Parameter]
-    public int Product_id { get; set; }
-
-}

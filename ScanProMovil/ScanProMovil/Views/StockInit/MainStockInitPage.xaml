@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<FlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+            x:Class="ScanProMovil.Views.StockInit.MainStockInitPage"
+            xmlns:entities="clr-namespace:ScanProMovil.Entities"
+            Title="Stock Inicial">
+
+    <FlyoutPage.Detail>
+        <NavigationPage>
+            <x:Arguments>
+                <ContentPage Title="Stock Inicial" BackgroundColor="#F5F7FA">
+                    <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="8">
+
+                        <VerticalStackLayout Grid.Row="0" Spacing="2">
+                            <Label x:Name="SummaryLabel"
+                                   TextColor="#5A6A7A"
+                                   FontSize="13"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+
+                        <Border Grid.Row="1"
+                                Padding="10"
+                                StrokeShape="RoundRectangle 12"
+                                Stroke="#D5DCE5"
+                                StrokeThickness="1"
+                                BackgroundColor="White">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Image Source="search_50px.png"
+                                       WidthRequest="22"
+                                       HeightRequest="22"
+                                       VerticalOptions="Center" />
+                                <Entry x:Name="SearchEntry"
+                                       Grid.Column="1"
+                                       Placeholder="Buscar por número de documento..."
+                                       TextChanged="OnSearchChanged" />
+                            </Grid>
+                        </Border>
+
+                        <CollectionView x:Name="DocsCollection"
+                                        Grid.Row="2"
+                                        SelectionMode="None">
+                            <CollectionView.EmptyView>
+                                <Label Text="Sin documentos" TextColor="#5A6A7A"
+                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="entities:StockInit">
+                                    <Border Margin="0,4"
+                                            Padding="12"
+                                            StrokeShape="RoundRectangle 12"
+                                            Stroke="#D5DCE5"
+                                            StrokeThickness="1"
+                                            BackgroundColor="White">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnDocTapped" />
+                                        </Border.GestureRecognizers>
+                                        <Grid RowDefinitions="Auto,Auto,Auto"
+                                              ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="10">
+
+                                            <Label Grid.Row="0" Grid.Column="0"
+                                                   Text="{Binding Numero}"
+                                                   TextColor="#1D3557"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold" />
+
+                                            <Border Grid.Row="0" Grid.Column="1"
+                                                    Style="{Binding Status, Converter={StaticResource StatusToBadgeStyleConverter}}">
+                                                <Label Text="{Binding Status}"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Iniciado">
+                                                            <Setter Property="TextColor" Value="#991B1B" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Actualizado">
+                                                            <Setter Property="TextColor" Value="#92400E" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Sincronizado">
+                                                            <Setter Property="TextColor" Value="#14532D" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Cerrado">
+                                                            <Setter Property="TextColor" Value="#374151" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Border>
+
+                                            <Label Grid.Row="1" Grid.ColumnSpan="2"
+                                                   Text="{Binding Description}"
+                                                   TextColor="#1D3557"
+                                                   FontSize="13"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="WordWrap" />
+
+                                            <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="2">
+                                                <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy}'}"
+                                                       TextColor="#5A6A7A"
+                                                       FontSize="12" />
+                                                <Label Text="{Binding Document_Teorico}"
+                                                       TextColor="#5A6A7A"
+                                                       FontSize="12" />
+                                            </VerticalStackLayout>
+
+                                            <VerticalStackLayout Grid.Row="2" Grid.Column="1"
+                                                                 Spacing="6"
+                                                                 HorizontalOptions="End">
+                                                <Label Text="{Binding Items.Count, StringFormat='{0} ítems'}"
+                                                       TextColor="#5A6A7A"
+                                                       FontSize="12"
+                                                       HorizontalOptions="End" />
+                                                <ImageButton Source="database_daily_export_50px.png"
+                                                             WidthRequest="18"
+                                                             HeightRequest="18"
+                                                             BackgroundColor="Transparent"
+                                                             Padding="0"
+                                                             CommandParameter="{Binding .}"
+                                                             Clicked="OnSyncItemClicked"
+                                                             HorizontalOptions="End" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </ContentPage>
+            </x:Arguments>
+        </NavigationPage>
+    </FlyoutPage.Detail>
+
+</FlyoutPage>

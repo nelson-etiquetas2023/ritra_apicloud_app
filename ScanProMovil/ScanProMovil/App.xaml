@@ -1,0 +1,82 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:ScanProMovil"
+             x:Class="ScanProMovil.App"
+             xmlns:converters="clr-namespace:ScanProMovil.Converters">
+    <Application.Resources>
+        <ResourceDictionary>
+            <converters:StatusToBadgeStyleConverter x:Key="StatusToBadgeStyleConverter" />
+            <Style x:Key="BadgePendiente" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FEE2E2" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="5,5,5,5" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeIniciado" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FEE2E2" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeActualizado" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FDE68A" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeSincro" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="LightGreen" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeModificado" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FDE68A" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeCerrado" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#E5E7EB" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="AnuladoBadgeStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FCA5A5" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="EnProcesoBadgeStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#93C5FD" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <Style x:Key="BadgeDefault" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#E5E7EB" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+                <Setter Property="Padding" Value="8,2" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+
+
+
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

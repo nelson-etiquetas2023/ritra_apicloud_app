@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.LoginPage"
+             Title="Inicio de Sesión"
+             BackgroundColor="#f0f0f0">
+
+    <Grid>
+        <!-- Formulario de login -->
+        <VerticalStackLayout x:Name="LoginForm"
+                             Padding="30,0,30,0"
+                             Spacing="10"
+                             VerticalOptions="Center">
+            <Image Source="add_key_50px.png"
+                   WidthRequest="80"
+                   HeightRequest="80"
+                   HorizontalOptions="Center" />
+            <Label Text="ScanPro Móvil"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   TextColor="#1D3557"
+                   HorizontalOptions="Center" />
+            <Label Text="Inicio de sesión"
+                   FontSize="14"
+                   TextColor="Gray"
+                   HorizontalOptions="Center" />
+            <Entry x:Name="EntryEmail"
+                   Placeholder="Correo electrónico"
+                   Keyboard="Email"
+                   ReturnType="Next"
+                   Completed="OnEmailCompleted"
+                   BackgroundColor="White"
+                   TextColor="Black" />
+            <Grid>
+                <Entry x:Name="EntryPassword"
+                       Placeholder="Contraseña"
+                       IsPassword="True"
+                       ReturnType="Done"
+                       Completed="OnPasswordCompleted"
+                       BackgroundColor="White"
+                       TextColor="Black" />
+                <Image x:Name="ImageTogglePassword"
+                       Source="eye.svg"
+                       WidthRequest="24"
+                       HeightRequest="24"
+                       Margin="0,0,10,0"
+                       HorizontalOptions="End"
+                       VerticalOptions="Center">
+                    <Image.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnTogglePassword" />
+                    </Image.GestureRecognizers>
+                </Image>
+            </Grid>
+            <Label x:Name="LabelAttempts"
+                   FontSize="13"
+                   TextColor="Gray"
+                   HorizontalOptions="Center" />
+            <Label x:Name="LabelMessage"
+                   FontSize="13"
+                   TextColor="Red"
+                   HorizontalOptions="Center" />
+            <Button x:Name="BtnLogin"
+                    Text="INGRESAR"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    TextColor="White"
+                    BackgroundColor="DodgerBlue"
+                    Clicked="BtnLogin_Clicked" />
+        </VerticalStackLayout>
+
+        <!-- Vista de bloqueo del sistema -->
+        <VerticalStackLayout x:Name="BlockView"
+                             IsVisible="False"
+                             BackgroundColor="#f0f0f0"
+                             Padding="30,0,30,0"
+                             Spacing="10"
+                             VerticalOptions="Center">
+            <Image Source="padlock.png"
+                   WidthRequest="90"
+                   HeightRequest="90"
+                   HorizontalOptions="Center" />
+            <Label Text="Sistema bloqueado"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   TextColor="#B00020"
+                   HorizontalOptions="Center" />
+            <Label x:Name="LabelBlockCountdown"
+                   FontSize="15"
+                   TextColor="Gray"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+            <Label Text="Se superaron los 5 intentos de acceso."
+                   FontSize="13"
+                   TextColor="Gray"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+
+        <!-- Overlay de carga mientras se verifica el login -->
+        <Grid x:Name="LoadingView"
+              IsVisible="False"
+              BackgroundColor="#80000000"
+              ZIndex="10">
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="12">
+                <ActivityIndicator x:Name="LoginIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="White"
+                                   WidthRequest="60"
+                                   HeightRequest="60"
+                                   HorizontalOptions="Center" />
+                <Label Text="Verificando credenciales..."
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+
+</ContentPage>

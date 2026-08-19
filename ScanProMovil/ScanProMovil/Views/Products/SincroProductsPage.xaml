@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Products.GestionProducts"
+             xmlns:viewmodel="clr-namespace:ScanProMovil.ViewModels"
+             x:DataType="viewmodel:ProductsViewModel"
+             Title="Gestion de Productos" 
+             xmlns:model="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data" >
+
+    <Grid RowDefinitions="Auto,Auto,250,70"
+          ColumnDefinitions="80*,20*">
+        <Entry x:Name="search" Grid.ColumnSpan="2" 
+               Grid.Row="0"
+               Placeholder="Busqueda de Productos..."
+               Text="{Binding SearchText}"/>
+        <HorizontalStackLayout Spacing="10" Grid.Row="1" HorizontalOptions="Center" Grid.ColumnSpan="2">
+            <Button Text="Cargar" Command="{Binding GetProductsCommand}" />
+            <Button Text="Buscar" Command="{Binding BuscarProductosCommand}"/>
+        </HorizontalStackLayout>
+        <CollectionView ItemsSource="{Binding Products}"
+             SelectionMode="None"
+             Grid.ColumnSpan="2"
+             Grid.Row="2"
+             >
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="model:Product">
+                    <Border Stroke="Gray" 
+                        StrokeShape="RoundRectangle 20"    
+                        StrokeThickness="2" 
+                        Padding="5" 
+                        Margin="5"
+                        HeightRequest="150">
+                        <Grid ColumnDefinitions="3*,7*">
+                            <Image Grid.Column="0" Source="package_delivery_logistics_50px.png" 
+                               WidthRequest="50" 
+                               HeightRequest="50"/>
+                            <!-- descripción del producto -->
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" Margin="10">
+                                <Label Text="{Binding Product_Name}" FontAttributes="Bold" FontSize="15"/>
+                                <!--detalles del produco -->
+                                <VerticalStackLayout>
+                                    <Label Text="{Binding Product_Type, StringFormat='Categoria: {0}'}" FontSize="10" />
+                                    <Label Text="{Binding Price, StringFormat='Precio:  {0:C} '}" FontSize="10"/>
+                                    <Label Text="{Binding Unidad, StringFormat='Unidad: {0}'}" FontSize="10"/>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnGoToDetailsProduct" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <HorizontalStackLayout Grid.Row="3">
+            <VerticalStackLayout>
+                <Label Grid.Column="0" 
+                    Text="{Binding TotalProducts, StringFormat='Total Productos: {0}'}" 
+                    FontAttributes="Bold" />
+                <Label Text="Ultima Actualización: " FontSize="8"/>
+                <Label Text="{Binding LastUpdated}" 
+                       TextColor="gray" 
+                       FontSize="8"/>
+            </VerticalStackLayout>
+            <Image Source="data_recovery_50px.png" Grid.Column="1" Margin="80,0,0,0" />
+        </HorizontalStackLayout>
+        <!--ActivityIndicator mientras carga los productos de la API-->
+        <Grid 
+            Grid.RowSpan="4"
+            Grid.ColumnSpan="2"
+            ZIndex="999"
+            IsVisible="{Binding IsBusy}"
+            BackgroundColor="#60000000">
+            <VerticalStackLayout 
+                HorizontalOptions="Center"
+                VerticalOptions="Center">
+                <ActivityIndicator 
+                    IsRunning="{Binding IsBusy}"
+                    Color="DodgerBlue"
+                    WidthRequest="60"
+                    HeightRequest="60">
+                </ActivityIndicator>
+                <Label 
+                    Text="Cargando Productos..."
+                    TextColor="white"
+                    FontAttributes="Bold" />
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>
+            
+            
+      

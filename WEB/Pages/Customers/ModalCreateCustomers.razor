@@ -1,0 +1,109 @@
+@inject ICustomersService service
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modal" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
+    <HeaderTemplate><Icon Name="IconName.PersonPlus" Size="IconSize.x3" /><strong> Crear Cliente</strong> </HeaderTemplate>
+    <BodyTemplate>
+        <EditForm Model="@customer" OnValidSubmit="CreateCustomer">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="txt_customername"><strong>Nombre del Cliente :</strong> </label>
+                    <InputText class="form-control" id="txt_customername" @bind-Value="customer.CustomerName" />
+                    <ValidationMessage For="@(() => customer.CustomerName)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_customercode"><strong>Código del Cliente :</strong></label>
+                    <input class="form-control" id="txt_customercode" value="@customer.CustomerCode" readonly
+                           placeholder="Se asignará automáticamente (C######)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_direccion"><strong>Dirección :</strong> </label>
+                    <InputText class="form-control" id="txt_direccion" @bind-Value="customer.Direccion" />
+                    <ValidationMessage For="@(() => customer.Direccion)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_registrofiscal"><strong>Registro Fiscal :</strong></label>
+                    <InputText class="form-control" id="txt_registrofiscal" @bind-Value="customer.Registro_Fiscal" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_telefono"><strong>Teléfono :</strong></label>
+                    <InputText class="form-control" id="txt_telefono" @bind-Value="customer.Telefono" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_correo"><strong>Correo :</strong></label>
+                    <InputText class="form-control" id="txt_correo" @bind-Value="customer.Correo" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_email"><strong>Email :</strong></label>
+                    <InputText class="form-control" id="txt_email" @bind-Value="customer.Email" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync" class="btn-cancel"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public EventCallback OnCustomerCreated { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private Modal modal = default!;
+    private Customer customer = new();
+
+    private async Task CreateCustomer()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+
+        try
+        {
+            var success = await service.CreateCustomerAsync(customer);
+            if (!success)
+            {
+                Console.WriteLine("Error al crear el cliente - respuesta nula del servidor");
+            }
+
+            customer = new Customer();
+            await modal.HideAsync();
+            await Task.Delay(300);
+            await OnCustomerCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error general en CreateCustomer: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    public async Task ShowAsync()
+    {
+        customer = new Customer();
+        await modal.ShowAsync();
+    }
+
+    private async Task HideAsync()
+    {
+        customer = new Customer();
+        await modal.HideAsync();
+    }
+}

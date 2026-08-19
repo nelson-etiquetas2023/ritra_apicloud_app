@@ -79,8 +79,10 @@ namespace API.Controllers
         [Route("createproducts")]
         public async Task<IActionResult> CreateProductsAsync(Product producto) 
         {
-            var created = await service.CreateproductAsync(producto);
-            return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
+            var result = await service.CreateproductAsync(producto);
+            if (!result.Success)
+                return Conflict(new { result.Success, result.Message, result.Data });
+            return Ok(result);
         }
 
         [HttpPost]
@@ -117,14 +119,14 @@ namespace API.Controllers
                 return BadRequest("Invalid product data");
             }
 
-            var created = await service.CreateProductWithFilesAsync(product, files);
-            if (created == null)
+            var result = await service.CreateProductWithFilesAsync(product, files);
+            if (!result.Success)
             {
-                _logger.LogError("CreateProductWithFilesAsync: service returned null");
-                return StatusCode(500, "Error creating product with files");
+                _logger.LogWarning("CreateProductWithFilesAsync: {Message}", result.Message);
+                return Conflict(new { result.Success, result.Message, result.Data });
             }
 
-            return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
+            return Ok(result);
         }
 
         [HttpPost]
@@ -177,9 +179,9 @@ namespace API.Controllers
                 return BadRequest("Invalid product data");
 
             var updated = await service.UpdateProductAsync(parametros.id, parametros.producto);
-            if (updated == null) 
-                return NotFound();
-            return Ok(updated);
+            if (!updated.Success) 
+                return Conflict(new { updated.Success, updated.Message, updated.Data });
+            return Ok(updated.Data);
         }
 
         [HttpDelete]
@@ -258,14 +260,14 @@ namespace API.Controllers
                 return BadRequest("Invalid request");
             }
 
-            var created = await service.CreateProductWithImagesAsync(request);
-            if (created == null)
+            var result = await service.CreateProductWithImagesAsync(request);
+            if (!result.Success)
             {
-                _logger.LogError("CreateProductWithImagesAsync: service returned null when creating product {ProductName}", request.Product.Product_Name);
-                return StatusCode(500, "Error creating product with images");
+                _logger.LogWarning("CreateProductWithImagesAsync: {Message}", result.Message);
+                return Conflict(new { result.Success, result.Message, result.Data });
             }
 
-            return CreatedAtAction(nameof(GetProductById), new { id = created.Product_id }, created);
+            return Ok(result);
         }
 
         [HttpPut]

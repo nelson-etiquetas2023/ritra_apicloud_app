@@ -338,10 +338,10 @@
         {
             int productid = productoLocal.Product_id;
 
-            var updateSuccess = await service.UpdateProductAsync(productid, productoLocal);
-            if (!updateSuccess)
+            var updateResult = await service.UpdateProductAsync(productid, productoLocal);
+            if (!updateResult.Success)
             {
-                errorMessage = "No se pudo actualizar el producto. Intente de nuevo.";
+                errorMessage = updateResult.Message ?? "No se pudo actualizar el producto. Intente de nuevo.";
                 PreloadService.Hide();
                 return;
             }

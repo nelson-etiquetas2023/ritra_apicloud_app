@@ -1,0 +1,112 @@
+@using WEB.Pages.Suppliers
+@inject ISuppliersService service
+
+<ConfirmDialog @ref="dialog" />
+
+<ModalUpdateSuppliers @ref="modalUpdate"
+                      supplier=@supplierEdit
+                      OnSupplierUpdate="ActualizarLista" />
+<div>
+    <QuickGrid Items="suppliersFiltered"
+            class="table table-hover table-bordered table-striped" ItemsPerPage="@pageSize" Pagination="@pagination" style="margin-top:15px;">
+        <PropertyColumn Property="@(suppliers => suppliers.SupplierId)" Title="ID" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.SupplierCode)" Title="Código" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.SupplierName)" Title="Nombre" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.Ruc)" Title="RUC" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.ContactName)" Title="Contacto" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.Phone)" Title="Teléfono" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.Email)" Title="Email" Sortable="true" />
+        <PropertyColumn Property="@(suppliers => suppliers.City)" Title="Ciudad" Sortable="true" />
+        <TemplateColumn Title="Estado" Context="item">
+            <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">@(item.IsActive ? "Activo" : "Inactivo")</span>
+        </TemplateColumn>
+        <!--Columna de Herramientas o Action-->
+        <TemplateColumn Title="Acciones" Context="item">
+            <Tooltip Title="Editar Proveedor" Placement="TooltipPlacement.Top">
+                <a @onclick="() => EditSuppliers(item)" style="cursor: pointer;">
+                    <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
+            <Tooltip Title="Eliminar fila" Placement="TooltipPlacement.Top">
+                <a @onclick="() => DeleteSuppliers(item.SupplierId)" style="cursor: pointer"><Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Dark" /></a>
+            </Tooltip>
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+<div class="mt-2">
+    <Paginator State="@pagination" />
+</div>
+
+@code {
+
+    public Supplier supplierEdit = new();
+    ModalUpdateSuppliers modalUpdate { get; set; } = default!;
+
+    [Parameter]
+    public IQueryable<Supplier>? suppliersFiltered { get; set; }
+
+    [Parameter]
+    public PaginationState? pagination { get; set; }
+    public int pageSize { get; set; } = 15;
+
+    [Parameter]
+    public EventCallback<IQueryable<Supplier>> OnUpdateListSupplier { get; set; }
+
+    private ConfirmDialog dialog = default!;
+
+    private async Task EditSuppliers(Supplier supplier)
+    {
+        try
+        {
+            Console.WriteLine($"EditSuppliers: Opening edit modal for supplier {supplier.SupplierId}");
+            await modalUpdate.ShowAsyncWithSupplier(supplier.SupplierId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"EditSuppliers: Error - {ex.Message}");
+        }
+    }
+
+    private async Task DeleteSuppliers(int id)
+    {
+        var ConfirmationDeleteSuppliers = await
+            dialog.ShowAsync(title: "Esta seguro de borrar este proveedor?",
+            message1: "Este registro se borrara. Una vez borrado no podra revertirlo!",
+            message2: "Esta seguro de proceder ?");
+
+        if (ConfirmationDeleteSuppliers)
+        {
+            await service.DeleteSupplierAsync(id);
+            UpdateListDelete(id);
+        }
+    }
+
+    private async void UpdateListDelete(int supplierId)
+    {
+        var lista = suppliersFiltered?.ToList();
+        var supplierBorrar = lista?.
+        FirstOrDefault(c => c.SupplierId == supplierId);
+        if (supplierBorrar != null)
+        {
+            lista?.Remove(supplierBorrar);
+        }
+        suppliersFiltered = lista?.AsQueryable();
+
+        await OnUpdateListSupplier.InvokeAsync(suppliersFiltered);
+    }
+
+    private async Task ActualizarLista(Supplier supplierUpdate)
+    {
+        var lista = suppliersFiltered?.ToList() ?? new List<Supplier>();
+        var index = lista.FindIndex(c => c.SupplierId == supplierUpdate.SupplierId);
+
+        if (index >= 0)
+        {
+            lista[index] = supplierUpdate;
+        }
+
+        suppliersFiltered = lista.AsQueryable();
+        await OnUpdateListSupplier.InvokeAsync(suppliersFiltered);
+        StateHasChanged();
+    }
+}

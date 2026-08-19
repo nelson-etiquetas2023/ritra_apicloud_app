@@ -1,0 +1,41 @@
+.enterprise-logo-box {
+    width: 120px;
+    height: 120px;
+    border: 2px dashed #adb5bd;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.enterprise-logo-box:hover {
+    border-color: #86b7fe;
+    background-color: #eaf4ff;
+}
+
+.enterprise-logo-box.dragover {
+    border-color: #0dcaf0;
+    background-color: #d1f4ff;
+}
+
+.logo-drop-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.enterprise-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}

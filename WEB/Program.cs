@@ -1,18 +1,24 @@
 global using Microsoft.AspNetCore.Components.Authorization;
+global using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WEB;
 using WEB.Services.Config;
 using WEB.Services.Inventory;
+using WEB.Services.Inventario;
 using WEB.Services.Products;
 using WEB.Services.Auth;
+using WEB.Services.CargasIniciales;
+using WEB.Services.Customers;
+using WEB.Services.Enterprises;
 using WEB.Services.LocalStorage;
-using WEB.Services.Upload;
 using WEB.Services.OrdenCompra;
+using WEB.Services.Suppliers;
+using WEB.Services.Versioning;
 
 //var server_local = "http://localhost:5220/";
-var server_etiquetas = "http://192.168.10.10:8080";
 //var Deploy_Server = "https://scanapi.dpdns.org:443";
+var server_etiquetas = "http://192.168.10.10:8080";
 
 // Alternativa: si la API está en otro puerto, usa:
 // var ritrama_local = "https://localhost:7000/"; // Para HTTPS en desarrollo
@@ -37,10 +43,15 @@ builder.Services.AddBlazorBootstrap();
 builder.Services.AddScoped<IInventoryServices, InventoryServices>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IProductsService, ProductsService>();
+builder.Services.AddScoped<ICustomersService, CustomersService>();
+builder.Services.AddScoped<ISuppliersService, SuppliersService>();
+builder.Services.AddScoped<IEnterprisesService, EnterprisesService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ILocalStorage, LocalStorage>();
-builder.Services.AddScoped<UploadService>();
+builder.Services.AddScoped<ILocalStorage>(sp => new LocalStorage(sp.GetRequiredService<IJSRuntime>(), StorageMode.Session));
 builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+builder.Services.AddScoped<IInventarioService, InventarioService>();
+builder.Services.AddScoped<ICargasInicialesService, CargasInicialesService>();
+builder.Services.AddSingleton<AppVersionInfo>();
 builder.Services.AddTransient<AuthMessageHandler>();
 
 builder.Services.AddOptions();

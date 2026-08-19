@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 
 namespace WEB.Services.OrdenCompra
 {                   
@@ -37,6 +38,25 @@ namespace WEB.Services.OrdenCompra
                 // Aquí puedes registrar el error o mostrar mensaje al usuario
                 Console.WriteLine($"Error al obtener órdenes: {ex.Message}");
                 return [];
+            }
+        }
+
+        public async Task<bool> UpdateOrderAsync(string numero, Shared.Dtos.Compras.OrdenCompra oc)
+        {
+            var url = $"api/ordencompra/updateorder/{numero}";
+            var clienteHttp = HttpFactory.CreateClient("ritrama");
+
+            try
+            {
+                var json = JsonSerializer.Serialize(oc, jsonOptions);
+                var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await clienteHttp.PutAsync(url, jsonContent);
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error al actualizar la orden {numero}: {ex.Message}");
+                return false;
             }
         }
     }

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.StockInit.CreateStockInitPage"
+             Title="Nuevo Stock Inicial"
+             BackgroundColor="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="8">
+
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <VerticalStackLayout Spacing="2">
+                <Label x:Name="NumeroLabel"
+                       TextColor="#1D3557"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       LineBreakMode="TailTruncation" />
+                <Label Text="Nuevo documento de stock inicial"
+                       TextColor="#5A6A7A"
+                       FontSize="13" />
+            </VerticalStackLayout>
+            <Button x:Name="BtnSave"
+                    Grid.Column="1"
+                    Text="Guardar"
+                    BackgroundColor="Green"
+                    TextColor="White"
+                    Clicked="OnSaveClicked" />
+        </Grid>
+
+        <Border Grid.Row="1"
+                Padding="12"
+                StrokeShape="RoundRectangle 12"
+                Stroke="#D5DCE5"
+                StrokeThickness="1"
+                BackgroundColor="White">
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Label Text="Fecha"
+                           TextColor="#1D3557"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center" />
+                    <DatePicker x:Name="FechaPicker"
+                                Grid.Column="1"
+                                FontSize="14"
+                                TextColor="#1D3557"
+                                Format="dd/MM/yyyy" />
+                </Grid>
+                <BoxView HeightRequest="0.5" Color="#E0E5EB" />
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Label Text="Doc. Teórico"
+                           TextColor="#1D3557"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center" />
+                    <Entry x:Name="TeoricoEntry"
+                           Grid.Column="1"
+                           Placeholder="Número del documento teórico (DT-000)"
+                           TextColor="#1D3557"
+                           FontSize="14" />
+                </Grid>
+                <BoxView HeightRequest="0.5" Color="#E0E5EB" />
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Descripción"
+                           TextColor="#1D3557"
+                           FontSize="14"
+                           FontAttributes="Bold" />
+                    <Editor x:Name="DescriptionEditor"
+                            Placeholder="Ej. inventario de bebidas y alimentos bodega 1..."
+                            TextColor="#1D3557"
+                            FontSize="14"
+                            HeightRequest="90"
+                            AutoSize="TextChanges" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <Button x:Name="BtnCancel"
+                    Grid.Column="1"
+                    Text="Cancelar"
+                    BackgroundColor="#6C757D"
+                    TextColor="White"
+                    HorizontalOptions="End"
+                    Clicked="OnCancelClicked" />
+        </Grid>
+
+        <Grid x:Name="SavingOverlay"
+              Grid.RowSpan="3"
+              BackgroundColor="Transparent"
+              IsVisible="False">
+            <HorizontalStackLayout HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   Spacing="10">
+                <ActivityIndicator x:Name="SavingIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="Green"
+                                   WidthRequest="42"
+                                   HeightRequest="42" />
+                <Label x:Name="SavingLabel"
+                       Text="Guardando..."
+                       TextColor="Green"
+                       FontSize="16"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

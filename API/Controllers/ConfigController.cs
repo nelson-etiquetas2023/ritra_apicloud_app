@@ -87,5 +87,31 @@ namespace API.Controllers
             return await service.DeleteProductUnitAsync(id) ? NoContent() : NotFound();
         }
 
+        [HttpGet("warehouses")]
+        public async Task<IActionResult> GetWarehousesAsync() => Ok(await service.GetWarehousesAsync());
+
+        [HttpGet("locations")]
+        public async Task<IActionResult> GetLocationsAsync() => Ok(await service.GetLocationsAsync());
+
+        [HttpPost("locations")]
+        public async Task<IActionResult> CreateLocationAsync([FromBody] Location location)
+        {
+            var created = await service.CreateLocationAsync(location);
+            return created == null ? Conflict("El código ya existe en ese almacén o el código está vacío.") : Ok(created);
+        }
+
+        [HttpPut("locations/{id:int}")]
+        public async Task<IActionResult> UpdateLocationAsync(int id, [FromBody] Location location)
+        {
+            var updated = await service.UpdateLocationAsync(id, location);
+            return updated == null ? Conflict("La ubicación no existe, el código está vacío o ya está siendo utilizado.") : Ok(updated);
+        }
+
+        [HttpDelete("locations/{id:int}")]
+        public async Task<IActionResult> DeleteLocationAsync(int id)
+        {
+            return await service.DeleteLocationAsync(id) ? NoContent() : NotFound();
+        }
+
     }
 }

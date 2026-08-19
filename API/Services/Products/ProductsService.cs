@@ -1,4 +1,4 @@
-ï»¿using API.Data;
+using API.Data;
 using Microsoft.AspNetCore.Mvc;
 using API.Storage;
 using ClosedXML.Excel;
@@ -17,11 +17,11 @@ namespace API.Services.Products
         private readonly ILogger<ProductsService> _logger = logger;
         private readonly IConfiguration _configuration = configuration;
 
-        private string GetUploadsPath()
+        private string GetImagesPath()
         {
-            var uploadsPath = ProductImageStorage.GetPath(_environment, _configuration);
-            Directory.CreateDirectory(uploadsPath);
-            return uploadsPath;
+            var imagesPath = ProductImageStorage.GetPath(_environment, _configuration);
+            Directory.CreateDirectory(imagesPath);
+            return imagesPath;
         }
 
         public async Task<List<Product>> GetProductAsync()
@@ -39,21 +39,68 @@ namespace API.Services.Products
                 .FirstOrDefaultAsync(p => p.Product_id == productId);
         }
 
-        public async Task<Product> CreateproductAsync([FromBody] Product producto)
+        private async Task<Product?> FindProductByCodeAsync(string? code, int? excludeProductId = null)
         {
-            context.Productos.Add(producto);
-            await context.SaveChangesAsync();
-            return producto;
+            if (string.IsNullOrWhiteSpace(code)) return null;
+            var normalized = code.Trim();
+            return await context.Productos.FirstOrDefaultAsync(p =>
+                p.Product_Code.ToLower() == normalized.ToLower() &&
+                (excludeProductId == null || p.Product_id != excludeProductId.Value));
         }
 
-public async Task<Product?> UpdateProductAsync(int productId, Product producto)
+        private static ServiceResponse<Product> DuplicateCodeResponse(Product existing, string code)
+        {
+            return new ServiceResponse<Product>
+            {
+                Success = false,
+                Message = $"El código '{code}' ya está asignado al producto '{existing.Product_Name}' (ID {existing.Product_id}). Debe cambiarlo para registrar este producto.",
+                Data = existing
+            };
+        }
+
+        public async Task<ServiceResponse<Product>> CreateproductAsync([FromBody] Product producto)
+        {
+            var code = producto.Product_Code?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+            }
+
+            var existing = await FindProductByCodeAsync(code);
+            if (existing != null)
+            {
+                return DuplicateCodeResponse(existing, code);
+            }
+
+            producto.Product_Code = code;
+            context.Productos.Add(producto);
+            await context.SaveChangesAsync();
+            return new ServiceResponse<Product> { Success = true, Data = producto };
+        }
+
+public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Product producto)
         {
             var existing = await context.Productos
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Product_id == productId);
-            if (existing == null) return null;
+            if (existing == null)
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El producto no existe." };
+            }
 
-            existing.Product_Code = producto.Product_Code;
+            var code = producto.Product_Code?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+            }
+
+            var duplicate = await FindProductByCodeAsync(code, excludeProductId: productId);
+            if (duplicate != null)
+            {
+                return DuplicateCodeResponse(duplicate, code);
+            }
+
+            existing.Product_Code = code;
             existing.Product_Name = producto.Product_Name;
             existing.Product_Type = producto.Product_Type;
             existing.Unidad = producto.Unidad;
@@ -72,7 +119,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             existing.StatusProducts = producto.StatusProducts;
 
             await context.SaveChangesAsync();
-            return existing;
+            return new ServiceResponse<Product> { Success = true, Data = existing };
         }
 
         public async Task<bool> DeleteProductAsync(int productId)
@@ -87,7 +134,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             {
                 try
                 {
-                    var filePath = Path.Combine(GetUploadsPath(), image.StoredFileName!);
+                    var filePath = Path.Combine(GetImagesPath(), image.StoredFileName!);
                     if (File.Exists(filePath))
                         File.Delete(filePath);
                 }
@@ -120,9 +167,9 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
 
                 try
                 {
-                    var uploadsPath = GetUploadsPath();
+                    var imagesPath = GetImagesPath();
 
-                    var filePath = Path.Combine(uploadsPath, productImage.StoredFileName);
+                    var filePath = Path.Combine(imagesPath, productImage.StoredFileName);
 
                     await using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
@@ -137,7 +184,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    _logger.LogError(ex, "Error de permisos al guardar imagen {FileName}. Verifica los permisos de la carpeta uploads.", file.FileName);
+                    _logger.LogError(ex, "Error de permisos al guardar imagen {FileName}. Verifica los permisos de la carpeta de imágenes.", file.FileName);
                     return false;
                 }
                 catch (Exception ex)
@@ -167,7 +214,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             if (worksheet == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo no contiene hojas de cÃ¡lculo." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo no contiene hojas de cálculo." });
                 return result;
             }
 
@@ -175,7 +222,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             if (lastRow == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo estÃ¡ vacÃ­o." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo está vacío." });
                 return result;
             }
 
@@ -183,13 +230,13 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             if (columns.Code == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontrÃ³ la columna obligatoria 'product_code'. Usa la plantilla de producto." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontró la columna obligatoria 'product_code'. Usa la plantilla de producto." });
                 return result;
             }
             if (columns.Name == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontrÃ³ la columna obligatoria 'nombre'. Usa la plantilla de producto." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontró la columna obligatoria 'nombre'. Usa la plantilla de producto." });
                 return result;
             }
 
@@ -215,7 +262,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 if (string.IsNullOrWhiteSpace(code))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = "El cÃ³digo de producto es obligatorio." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = "El código de producto es obligatorio." });
                     continue;
                 }
 
@@ -229,14 +276,14 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 if (!string.IsNullOrWhiteSpace(costRaw) && !TryParseCost(costRaw, out _))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El costo '{costRaw}' no es un nÃºmero vÃ¡lido." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El costo '{costRaw}' no es un número válido." });
                     continue;
                 }
 
                 if (!fileCodes.Add(code))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El cÃ³digo '{code}' estÃ¡ duplicado en el archivo." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El código '{code}' está duplicado en el archivo." });
                     continue;
                 }
 
@@ -300,7 +347,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                     }
 
                     await context.SaveChangesAsync();
-                    _logger.LogInformation("ImportaciÃ³n: lote {Offset}-{End} procesado (insertados {Inserted}, actualizados {Updated})",
+                    _logger.LogInformation("Importación: lote {Offset}-{End} procesado (insertados {Inserted}, actualizados {Updated})",
                         offset, offset + batch.Count, result.Inserted, result.Updated);
                 }
 
@@ -310,7 +357,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error al importar productos: se revirtiÃ³ toda la operaciÃ³n.");
+                _logger.LogError(ex, "Error al importar productos: se revirtió toda la operación.");
                 result.Success = false;
                 result.Errors.Add(new ProductImportError { Row = 0, Message = $"Error interno al procesar el archivo: {ex.Message}" });
             }
@@ -423,7 +470,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
 
             try
             {
-                var filePath = Path.Combine(GetUploadsPath(), image.StoredFileName!);
+                var filePath = Path.Combine(GetImagesPath(), image.StoredFileName!);
                 if (File.Exists(filePath))
                     File.Delete(filePath);
             }
@@ -437,10 +484,29 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
             return true;
         }
 
-        public async Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request)
+        public async Task<ServiceResponse<Product>> CreateProductWithImagesAsync(CreateProductWithImagesRequest request)
         {
             try
             {
+                if (request?.Product == null)
+                {
+                    return new ServiceResponse<Product> { Success = false, Message = "Datos del producto inválidos." };
+                }
+
+                var code = request.Product.Product_Code?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+                }
+
+                var existing = await FindProductByCodeAsync(code);
+                if (existing != null)
+                {
+                    return DuplicateCodeResponse(existing, code);
+                }
+
+                request.Product.Product_Code = code;
+
                 // Crear el producto
                 context.Productos.Add(request.Product);
                 await context.SaveChangesAsync();
@@ -451,7 +517,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 if (productId <= 0)
                 {
                     _logger.LogError("Error: Product ID no fue asignado correctamente");
-                    return null;
+                    return new ServiceResponse<Product> { Success = false, Message = "No se pudo asignar el identificador del producto." };
                 }
 
                 // Procesar cada imagen en base64
@@ -483,9 +549,9 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                             };
 
                             // Guardar archivo en disco
-                            var uploadsPath = GetUploadsPath();
+                            var imagesPath = GetImagesPath();
 
-                            var filePath = Path.Combine(uploadsPath, storedFileName);
+                            var filePath = Path.Combine(imagesPath, storedFileName);
                             await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
 
                             // Guardar referencia en BD
@@ -502,23 +568,38 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
 
                 await context.SaveChangesAsync();
 
-                // Recargar el producto con sus imÃ¡genes
+                // Recargar el producto con sus imágenes
                 var createdProduct = await context.Productos
                     .Include(p => p.Images)
                     .FirstOrDefaultAsync(p => p.Product_id == productId);
 
-                return createdProduct;
+                return new ServiceResponse<Product> { Success = true, Data = createdProduct };
             }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error creating product with images");
-                    return null;
+                    return new ServiceResponse<Product> { Success = false, Message = $"Error al crear el producto: {ex.Message}" };
                 }
         }
 
-        public async Task<Product?> CreateProductWithFilesAsync(Product product, IFormFileCollection files)
+        public async Task<ServiceResponse<Product>> CreateProductWithFilesAsync(Product product, IFormFileCollection files)
         {
             var savedFiles = new List<string>();
+
+            var code = product?.Product_Code?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+            }
+
+            var existing = await FindProductByCodeAsync(code);
+            if (existing != null)
+            {
+                return DuplicateCodeResponse(existing, code);
+            }
+
+            product!.Product_Code = code;
+
             await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
@@ -530,7 +611,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 if (productId <= 0)
                     throw new InvalidOperationException("El identificador del producto no fue asignado.");
 
-                var uploadsPath = GetUploadsPath();
+                var imagesPath = GetImagesPath();
                 for (var i = 0; i < files.Count; i++)
                 {
                     var file = files[i];
@@ -538,7 +619,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                         continue;
 
                     var storedFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                    var filePath = Path.Combine(uploadsPath, storedFileName);
+                    var filePath = Path.Combine(imagesPath, storedFileName);
 
                     await using (var stream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                     {
@@ -559,9 +640,13 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return await context.Productos
-                    .Include(p => p.Images)
-                    .FirstOrDefaultAsync(p => p.Product_id == productId);
+                return new ServiceResponse<Product>
+                {
+                    Success = true,
+                    Data = await context.Productos
+                        .Include(p => p.Images)
+                        .FirstOrDefaultAsync(p => p.Product_id == productId)
+                };
             }
             catch (Exception ex)
             {
@@ -575,8 +660,8 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                     }
                 }
 
-                _logger.LogError(ex, "No se pudo guardar el producto ni sus imÃ¡genes. Ruta configurada: {UploadsPath}", ProductImageStorage.GetPath(_environment, _configuration));
-                return null;
+                _logger.LogError(ex, "No se pudo guardar el producto ni sus imágenes. Ruta configurada: {ImagesPath}", ProductImageStorage.GetPath(_environment, _configuration));
+                return new ServiceResponse<Product> { Success = false, Message = $"Error al guardar el producto: {ex.Message}" };
             }
         }
 
@@ -603,7 +688,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 var fileExtension = Path.GetExtension(imageData.FileName);
                 var storedFileName = $"{Guid.NewGuid()}{fileExtension}";
 
-                // Buscar imagen existente en ese Ã­ndice
+                // Buscar imagen existente en ese índice
                 var existingImage = producto.Images?.FirstOrDefault(i => i.ImageIndex == imageData.ImageIndex);
 
                 if (existingImage != null)
@@ -611,7 +696,7 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                     // Eliminar archivo antiguo
                     try
                     {
-                        var oldFilePath = Path.Combine(GetUploadsPath(), existingImage.StoredFileName!);
+                        var oldFilePath = Path.Combine(GetImagesPath(), existingImage.StoredFileName!);
                         if (File.Exists(oldFilePath))
                             File.Delete(oldFilePath);
                     }
@@ -637,9 +722,9 @@ public async Task<Product?> UpdateProductAsync(int productId, Product producto)
                 }
 
                 // Guardar archivo en disco
-                var uploadsPath = GetUploadsPath();
+                var imagesPath = GetImagesPath();
 
-                var filePath = Path.Combine(uploadsPath, storedFileName);
+                var filePath = Path.Combine(imagesPath, storedFileName);
                 await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
 
                 await context.SaveChangesAsync();

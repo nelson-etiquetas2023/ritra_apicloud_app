@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.SplashPage"
+             Title="Cargando"
+             BackgroundColor="White">
+
+    <Grid>
+        <VerticalStackLayout Spacing="14"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Center">
+            <Image Source="splash_logo.png"
+                   WidthRequest="160"
+                   HeightRequest="160"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center" />
+            <HorizontalStackLayout x:Name="DotsRow"
+                                   Spacing="10"
+                                   HorizontalOptions="Center">
+                <Ellipse x:Name="Dot1"
+                         Fill="#1D3557"
+                         WidthRequest="12"
+                         HeightRequest="12" />
+                <Ellipse x:Name="Dot2"
+                         Fill="#1D3557"
+                         WidthRequest="12"
+                         HeightRequest="12" />
+                <Ellipse x:Name="Dot3"
+                         Fill="#1D3557"
+                         WidthRequest="12"
+                         HeightRequest="12" />
+            </HorizontalStackLayout>
+            <Label Text="Cargando..."
+                   FontSize="14"
+                   TextColor="Gray"
+                   HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

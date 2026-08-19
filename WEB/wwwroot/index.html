@@ -108,6 +108,54 @@
             link.click();
         }
 
+        function closeSystem()
+        {
+            try {
+                window.close();
+            } catch (e) {
+                console.warn('No se pudo cerrar la ventana:', e);
+            }
+        }
+
+        function setItem(key, value) 
+        {
+            try {
+                sessionStorage.setItem(key, value);
+                return true;
+            } catch (e) {
+                console.warn('Almacenamiento de sesión bloqueado al guardar:', e);
+                return false;
+            }
+        }
+
+        function getItem(key) 
+        {
+            try {
+                return sessionStorage.getItem(key);
+            } catch (e) {
+                console.warn('Almacenamiento de sesión bloqueado al leer:', e);
+                return null;
+            }
+        }
+
+        function deleteItem(key) 
+        {
+            try {
+                sessionStorage.removeItem(key);
+            } catch (e) {
+                console.warn('Almacenamiento de sesión bloqueado al eliminar:', e);
+            }
+        }
+
+        function clearSessionStorage() 
+        {
+            try {
+                sessionStorage.clear();
+            } catch (e) {
+                console.warn('Almacenamiento de sesión bloqueado al limpiar:', e);
+            }
+        }
+
         function PreventEnterKey(id)
         {
             var formObj = document.getElementById(id);
@@ -169,6 +217,116 @@
             if (fileInput) {
                 fileInput.click();
             }
+        };
+
+        // Drag & drop del logo de la empresa
+        window.initLogoDropZone = (dotNetRef) => {
+            const zone = document.getElementById('dropZoneLogo');
+            if (!zone) return;
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.classList.add('dragover');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.classList.remove('dragover');
+
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+
+                if (!/^image\//i.test(file.type)) {
+                    dotNetRef.invokeMethodAsync('OnInvalidFileDropped');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const result = ev.target.result || '';
+                    const base64 = result.indexOf(',') >= 0 ? result.split(',')[1] : result;
+                    dotNetRef.invokeMethodAsync('OnLogoDropped', file.name, file.type || 'image/png', base64);
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        // Obtener la ubicación actual del usuario (GPS del navegador)
+        window.getCurrentLocation = (dotNetRef) => {
+            if (!navigator.geolocation) {
+                alert('Tu navegador no soporta geolocalización.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    dotNetRef.invokeMethodAsync('OnLocationReceived', position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    alert('No se pudo obtener la ubicación: ' + error.message);
+                }
+            );
+        };
+
+        // Drag & drop del archivo Excel en la franja de importación de clientes
+        window.initCustomerDropZone = (dotNetRef) => {
+            const zone = document.getElementById('dropZoneCustomer');
+            if (!zone) return;
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+
+                const isValid = /\.(xlsx|xls)$/i.test(file.name);
+                if (!isValid) {
+                    dotNetRef.invokeMethodAsync('OnInvalidFileDropped');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const result = ev.target.result || '';
+                    const base64 = result.indexOf(',') >= 0 ? result.split(',')[1] : result;
+                    dotNetRef.invokeMethodAsync('OnFileDropped', file.name, file.size, file.type || '', base64);
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        // Drag & drop del archivo Excel en la franja de importación de proveedores
+        window.initSupplierDropZone = (dotNetRef) => {
+            const zone = document.getElementById('dropZoneSupplier');
+            if (!zone) return;
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+
+                const isValid = /\.(xlsx|xls)$/i.test(file.name);
+                if (!isValid) {
+                    dotNetRef.invokeMethodAsync('OnInvalidFileDropped');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const result = ev.target.result || '';
+                    const base64 = result.indexOf(',') >= 0 ? result.split(',')[1] : result;
+                    dotNetRef.invokeMethodAsync('OnFileDropped', file.name, file.size, file.type || '', base64);
+                };
+                reader.readAsDataURL(file);
+            });
         };
     </script>
 </body>

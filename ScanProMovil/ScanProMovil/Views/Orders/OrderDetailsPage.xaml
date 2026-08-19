@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Orders.OrderDetailsPage"
+             Title="Order Details"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
+             x:DataType="vm:OrderDetailsViewModel">
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout>
+                <!--Encabezado de la Orden-->
+                <Border Stroke="gray"
+                StrokeThickness="0.5"
+                StrokeShape="RoundRectangle 8"
+                Padding="10,15,10,15"
+                Margin="5,0,5,5">
+                    <VerticalStackLayout >
+                        <HorizontalStackLayout>
+                            <Image Source="bill_64px.png" WidthRequest="32" HeightRequest="32"/>
+                            <Label Text="Datos de la Orden:" 
+                            FontSize="14" 
+                            TextColor="CadetBlue" 
+                            FontAttributes="Bold" 
+                            Margin="10"/>
+
+
+                        </HorizontalStackLayout>
+
+                        <BoxView 
+                        Grid.ColumnSpan="3" 
+                        HeightRequest="1" 
+                        BackgroundColor="LightGray"
+                        VerticalOptions="End"
+                        HorizontalOptions="Fill"/>
+                        <Label 
+                    Text="{Binding Order.OrderNumber, StringFormat='Order Id # {0}'}"
+                    FontSize="18"
+                    FontAttributes="Bold"/>
+                        <Label 
+                    Text="{Binding Order.OrderDate, StringFormat='Fecha: {0}'}"
+                    TextColor="Gray"
+                    FontSize="11"/>
+                        <!--Status del documento-->
+                        <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                            <Label Text="Status :" FontSize="16" TextColor="Grey" />
+                            <Border Style="{Binding Order.StatusTexto, Converter={StaticResource StatusToBadgeStyleConverter}}">
+                                <HorizontalStackLayout Spacing="5">
+                                    <Ellipse Fill="#DC2626"
+                                    WidthRequest="7"
+                                    HeightRequest="7"
+                                    VerticalOptions="Center"/>
+                                    <Label Text="{Binding Order.StatusTexto}" 
+                                   TextColor="#991B1B"/>
+                                </HorizontalStackLayout>
+
+
+                            </Border>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+                <!--Items de la Orden -->
+                <HorizontalStackLayout>
+                    <Image Source="package_delivery_logistics_64px.png" 
+                        WidthRequest="32" 
+                        HeightRequest="32"/>
+                    <Label  Text="Items:"  
+                            FontSize="14" 
+                            TextColor="CadetBlue" 
+                            FontAttributes="Bold" 
+                            Margin="10"/>
+                </HorizontalStackLayout>
+
+                <BoxView Grid.ColumnSpan="3" HeightRequest="1" BackgroundColor="LightGray"
+                VerticalOptions="End"
+                HorizontalOptions="Fill"/>
+                <CollectionView 
+            x:Name="CollectionItems"
+            EmptyView="No Data..."
+            ItemsLayout="VerticalList"
+            SelectionMode="Single"
+            ItemsSource="{Binding Order.Items}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:OrderDetails">
+                            <Grid RowSpacing="15" ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width=".7*" />
+                                    <ColumnDefinition Width=".3*" />
+                                </Grid.ColumnDefinitions>
+                                <VerticalStackLayout Grid.Column="0">
+                                    <Label Text="Descripcion del Producto." FontAttributes="Bold"/>
+                                    <Label Grid.Column="0" Text="{Binding productId}" FontSize="10" TextColor="Grey" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout 
+                            Grid.Column="1" 
+                            HorizontalOptions="Center">
+                                    <!--Cantidad-->
+                                    <Border BackgroundColor="Transparent"
+                                    Stroke="#D3D1C7"
+                                    StrokeThickness="1.5"
+                                    Padding="10,4">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="6"/>
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding Cantidad,StringFormat='Cant:{0}'}"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    TextColor="#444441"/>
+                                    </Border>
+                                    <!--Costo-->
+                                    <Label Text="Costo:" FontSize="10"/>
+                                    <Label Text="{Binding Costo,StringFormat='${0}'}" 
+                                   FontSize="10" 
+                                   FontAttributes="Bold"/>
+                                </VerticalStackLayout>
+
+                                <BoxView Grid.ColumnSpan="3" HeightRequest="1" BackgroundColor="LightGray"
+                         VerticalOptions="End"
+                         HorizontalOptions="Fill"
+                    />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <!--Cuadro Resumen -->
+                <Border Stroke="gray"
+                StrokeThickness="0.5"
+                StrokeShape="RoundRectangle 8"
+                Padding="10,10,10,10"
+                Margin="5,10,5,5">
+                    <VerticalStackLayout>
+                        <HorizontalStackLayout>
+                            <Image Source="choice_64px.png" WidthRequest="32" HeightRequest="32"/>
+                            <Label  Text="Resumen :" FontSize="14" 
+                        TextColor="CadetBlue" 
+                        FontAttributes="Bold" 
+                        Margin="10"/>
+                        </HorizontalStackLayout>
+
+                        <BoxView Grid.ColumnSpan="3" HeightRequest="1" BackgroundColor="LightGray"
+                        VerticalOptions="End"
+                        HorizontalOptions="Fill"/>
+                        <VerticalStackLayout Padding="0,15,0,15">
+                            <Label Text="{Binding Order.ItemsNumber,StringFormat='Total Items: {0}'}" FontAttributes="Bold"/>
+                            <Label Text="{Binding Order.TotalCosto,StringFormat='Total Costo: {0}'}" FontAttributes="Bold"  />
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </Border>
+                <!--Menu Acciones -->
+                <ScrollView Orientation="Horizontal">
+                    <HorizontalStackLayout Padding="10,10,10,10" Spacing="10">
+                        <!--Sincronizar Documento-->
+                        <Border BackgroundColor="Transparent"
+        Stroke="#D3D1C7" StrokeThickness="1.5" Padding="16,9">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="8"/>
+                            </Border.StrokeShape>
+                            <HorizontalStackLayout Spacing="7">
+                                <Image Source="upload_document_64px.png" 
+                   WidthRequest="32" 
+                    HeightRequest="32"
+                    VerticalOptions="Center"/>
+                                <Label Text="Sincro" FontSize="13" FontAttributes="Bold"
+                    TextColor="#444441" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+                        <!--Boton de Print-->
+                        <Border BackgroundColor="Transparent"
+    Stroke="#D3D1C7" StrokeThickness="1.5" Padding="16,9">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="8"/>
+                            </Border.StrokeShape>
+                            <HorizontalStackLayout Spacing="7">
+                                <Image Source="print.svg" 
+               WidthRequest="32" 
+               HeightRequest="32"
+                VerticalOptions="Center"/>
+                                <Label Text="Print" FontSize="13" FontAttributes="Bold"
+                TextColor="#444441" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+                        <!--Boton de Donwload-->
+                        <Border BackgroundColor="Transparent"
+        Stroke="#D3D1C7" StrokeThickness="1.5" Padding="16,9">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="8"/>
+                            </Border.StrokeShape>
+                            <HorizontalStackLayout Spacing="7">
+                                <Image Source="file_download.png" 
+                WidthRequest="32" 
+                HeightRequest="32"
+                VerticalOptions="Center"/>
+                                <Label Text="Download" FontSize="13" FontAttributes="Bold"
+                TextColor="#444441" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+
+
+
+                    </HorizontalStackLayout>
+                </ScrollView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+        <!--Activity Indicator -->
+        <VerticalStackLayout 
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding IsLoading}"
+                    ZIndex="100"
+                    BackgroundColor="White">
+
+            <Label  Text="Cargando..."
+                    TextColor="Black"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Center"/>
+            <ActivityIndicator 
+                IsRunning="{Binding IsLoading}"
+                Color="Blue"
+                WidthRequest="50"
+                HeightRequest="50"/>
+            
+            
+            
+        </VerticalStackLayout>
+    </Grid>
+    
+    
+    
+    
+</ContentPage>

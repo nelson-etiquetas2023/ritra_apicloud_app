@@ -1,0 +1,210 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.MainPage"
+             NavigationPage.HasNavigationBar="False"
+             BackgroundColor="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Fila superior: hamburguesa + avatar + datos del usuario (fondo claro) -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto,*"
+              ColumnSpacing="10"
+              Padding="8,10">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#DEEBF8" Offset="0.0" />
+                    <GradientStop Color="#8FB8E8" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
+            <Border Grid.Column="0"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    StrokeShape="RoundRectangle 22"
+                    Stroke="#E0E5EB"
+                    StrokeThickness="1"
+                    BackgroundColor="White">
+                <Label Text="&#x2630;"
+                       FontSize="24"
+                       TextColor="#1D3557"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnToggleFlyout" />
+                    </Label.GestureRecognizers>
+                </Label>
+            </Border>
+            <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                <Border WidthRequest="52"
+                        HeightRequest="52"
+                        StrokeShape="RoundRectangle 26"
+                        Stroke="#D5DCE5"
+                        StrokeThickness="1"
+                        Padding="0"
+                        BackgroundColor="#E8EDF3">
+                    <Image Source="account_50px.png"
+                           WidthRequest="30"
+                           HeightRequest="30"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                    <Label x:Name="LabelHeaderUser"
+                           TextColor="#1D3557"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           LineBreakMode="TailTruncation" />
+                    <Label x:Name="LabelHeaderDevice"
+                           TextColor="#5A6A7A"
+                           FontSize="11"
+                           LineBreakMode="TailTruncation" />
+                    <Label x:Name="LabelHeaderWarehouse"
+                           TextColor="#5A6A7A"
+                           FontSize="11"
+                           LineBreakMode="TailTruncation" />
+                </VerticalStackLayout>
+            </Grid>
+        </Grid>
+
+        <ScrollView Grid.Row="1" BackgroundColor="White">
+            <Grid 
+                RowDefinitions="Auto,Auto,Auto,Auto" 
+                ColumnDefinitions="*,*" 
+                Padding="12" 
+                RowSpacing="10" 
+                ColumnSpacing="10" 
+                Background="White">
+                
+                <!--Compras-->
+                <Border Grid.Row="0" Grid.Column="0"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="buy_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="TapGestureRecognizer_Compras" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Compras" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Products-->
+                <Border Grid.Row="0" Grid.Column="1"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="package_delivery_logistics_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapProducts" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Products" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Carga de Iniciales-->
+                <Border Grid.Row="1" Grid.Column="0"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="warehouse_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapStockInit" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Carga Inicial" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Orders-->
+                <Border Grid.Row="1" Grid.Column="1"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="purchase_order_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapOrdersModule" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Orders" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Codigo QR.-->
+                <Border Grid.Row="2" Grid.Column="0"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="qr_code_50px.png"  WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapScanQrCode" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Codigo QR" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Setting-->
+                <Border Grid.Row="2" Grid.Column="1"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="settings_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapSetting" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Setting" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Sincronizacion data-->
+                <Border Grid.Row="3" Grid.Column="0"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="database_daily_export_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapSincroData" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Sincro Data" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Shopping-->
+                <Border Grid.Row="3" Grid.Column="1"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="buying.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapShopping" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Shopping" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+        </ScrollView>
+    </Grid>
+</ContentPage>

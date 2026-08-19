@@ -88,8 +88,6 @@ namespace API.Services.Inventory
 
             return true;
         }
-
-        
         [HttpGet]
         public async Task<IEnumerable<OrderFisicoHeader>> GetOrdersAsync()
         {

@@ -1,0 +1,40 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+bin/
+obj/
+
+# Build results
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+*.binlog
+*.apk
+*.aab
+*.idsig
+
+# Rider
+.idea/
+*.sln.iml
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nupkg
+
+# EF Core design-time databases
+**/scanpro-design.db
+**/scanpro-design.db-*
+
+# Local databases
+**/*.db
+**/*.db-*
+
+# Logs
+*.log
+*.txt
+!OPTIMIZATION_GUIDE.md

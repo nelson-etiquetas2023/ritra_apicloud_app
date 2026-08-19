@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.CodeQrScan"
+             Title="CodeQrScan">
+    <VerticalStackLayout Padding="10">
+        <Label 
+            Text="Gestion de Compras"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center" />
+
+        <HorizontalStackLayout>
+            <ImageButton Source="cloud_document_50px.png" ></ImageButton>
+            <ImageButton Source="icons8_edit_48.png" ></ImageButton>
+            <ImageButton Source="trash.png" ></ImageButton>
+            <ImageButton Source="lock.png" ></ImageButton>
+        </HorizontalStackLayout>
+        
+        
+        
+    </VerticalStackLayout>
+</ContentPage>

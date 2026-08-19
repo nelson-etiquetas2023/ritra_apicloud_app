@@ -1,0 +1,319 @@
+@page "/enterprise"
+@implements IDisposable
+@inject IEnterprisesService service
+@inject IJSRuntime JS
+@using Shared.Dtos
+
+<div class="d-flex justify-content-between align-items-center">
+    <h1><Icon Name="IconName.Building" Size="IconSize.x1" /> Empresa</h1>
+</div>
+
+@if (!loaded)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100 position-fixed top-0 start-0 w-100">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty" aria-label="Close"></button>
+        </div>
+    }
+
+    <EditForm Model="@enterprise" OnValidSubmit="SaveEnterprise">
+        <DataAnnotationsValidator />
+        <div class="row g-4">
+            <!-- Columna izquierda: datos de la empresa -->
+            <div class="col-md-7">
+                <div class="card mb-4">
+                    <div class="card-header"><strong>Datos de la Empresa</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3 d-flex align-items-center gap-3">
+                            <div id="dropZoneLogo"
+                                 class="enterprise-logo-box @(isLogoDragOver ? "dragover" : "")"
+                                 title="Arrastra y suelta tu logo aquí"
+                                 @onclick="OpenLogoFileDialog"
+                                 @ondragover:preventDefault
+                                 @ondragenter="() => isLogoDragOver = true"
+                                 @ondragleave="() => isLogoDragOver = false"
+                                 @ondrop:preventDefault>
+                                @if (logoPreview == null)
+                                {
+                                    <span class="logo-drop-hint">
+                                        <Icon Name="IconName.Image" Size="IconSize.x4" />
+                                        <small>Arrastra y suelta</small>
+                                    </span>
+                                }
+                                @if (logoPreview != null)
+                                {
+                                    <img src="@logoPreview" alt="Logo" class="enterprise-logo-img" />
+                                }
+                            </div>
+                            <div>
+                                <label class="form-label"><strong>Logo de la Empresa :</strong></label>
+                                <InputFile @ref="logoInput" OnChange="OnLogoSelected" accept="image/*" hidden />
+                                <small class="text-muted">Arrastra y suelta la imagen del logo o haz clic para seleccionarla.</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_codigo"><strong>Código de la Empresa :</strong></label>
+                                <InputText class="form-control" id="txt_codigo" @bind-Value="enterprise.Codigo_Empresa" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_tipo"><strong>Tipo de Empresa :</strong></label>
+                                <InputText class="form-control" id="txt_tipo" @bind-Value="enterprise.Tipo_Empresa" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="txt_nombre"><strong>Nombre de la Empresa :</strong></label>
+                            <InputText class="form-control" id="txt_nombre" @bind-Value="enterprise.Nombre_Empresa" />
+                            <ValidationMessage For="@(() => enterprise.Nombre_Empresa)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_registrofiscal"><strong>Registro Fiscal :</strong></label>
+                                <InputText class="form-control" id="txt_registrofiscal" @bind-Value="enterprise.Registro_Fiscal" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_contacto"><strong>Persona de Contacto :</strong></label>
+                                <InputText class="form-control" id="txt_contacto" @bind-Value="enterprise.Persona_Contacto" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="txt_direccion"><strong>Dirección :</strong></label>
+                            <InputText class="form-control" id="txt_direccion" @bind-Value="enterprise.Direccion" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_telefono"><strong>Teléfono :</strong></label>
+                                <InputText class="form-control" id="txt_telefono" @bind-Value="enterprise.Telefono" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_correo"><strong>Correo :</strong></label>
+                                <InputText class="form-control" id="txt_correo" @bind-Value="enterprise.Correo" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna derecha: ubicación -->
+            <div class="col-md-5">
+                <div class="card mb-4">
+                    <div class="card-header"><strong>Ubicación</strong></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_latitud"><strong>Latitud :</strong></label>
+                                <InputNumber class="form-control" id="txt_latitud" @bind-Value="enterprise.Latitud" @bind:event="oninput" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="txt_longitud"><strong>Longitud :</strong></label>
+                                <InputNumber class="form-control" id="txt_longitud" @bind-Value="enterprise.Longitud" @bind:event="oninput" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            @if (HasValidLocation)
+                            {
+                                <iframe src="@MapUrl" width="100%" height="320" style="border:0;border-radius:8px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            }
+                            else
+                            {
+                                <div style="width:100%;height:320px;border:2px dashed #ccc;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#999;">
+                                    <Icon Name="IconName.Map" Size="IconSize.x5" />
+                                    <small>El mapa de tu ubicación se mostrará aquí.</small>
+                                </div>
+                            }
+                            <div class="mt-2 d-flex gap-2">
+                                <Button Color="ButtonColor.Primary" @onclick="UseMyLocation"><Icon Name="IconName.GeoAlt" /> Usar mi ubicación</Button>
+                                <a href="@MapLink" target="_blank" class="btn btn-sm btn-outline-primary"><Icon Name="IconName.Map" /> Abrir en Google Maps</a>
+                            </div>
+                            <small class="text-muted d-block mt-2">Edita la latitud y longitud para cambiar la ubicación del mapa.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 text-end">
+                    <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private Enterprise enterprise = new();
+    private bool loaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string? logoPreview;
+    private InputFile logoInput = default!;
+
+    private bool isLogoDragOver;
+    private bool logoDropReady;
+    private DotNetObjectReference<Index>? dotNetRef;
+
+    private bool HasValidLocation =>
+        Math.Abs(enterprise.Latitud) > 0 || Math.Abs(enterprise.Longitud) > 0;
+
+    private string MapUrl =>
+        $"https://maps.google.com/maps?q={enterprise.Latitud.ToString(System.Globalization.CultureInfo.InvariantCulture)},{enterprise.Longitud.ToString(System.Globalization.CultureInfo.InvariantCulture)}&z=15&output=embed";
+
+    private string MapLink =>
+        $"https://www.google.com/maps?q={enterprise.Latitud.ToString(System.Globalization.CultureInfo.InvariantCulture)},{enterprise.Longitud.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEnterprise();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (loaded && !logoDropReady)
+        {
+            logoDropReady = true;
+            dotNetRef = DotNetObjectReference.Create(this);
+            JS.InvokeVoidAsync("initLogoDropZone", dotNetRef);
+        }
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task LoadEnterprise()
+    {
+        try
+        {
+            var existing = await service.GetEnterpriseAsync();
+            enterprise = existing ?? new Enterprise();
+            if (enterprise.Logo is { Length: > 0 })
+            {
+                logoPreview = $"data:{enterprise.LogoContentType};base64,{Convert.ToBase64String(enterprise.Logo)}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar los datos de la empresa: {ex.Message}";
+        }
+        finally
+        {
+            loaded = true;
+        }
+    }
+
+    private void OpenLogoFileDialog()
+    {
+        JS.InvokeVoidAsync("eval", "document.querySelector('#dropZoneLogo input[type=file]')?.click()");
+    }
+
+    private async Task OnLogoSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        using var stream = file.OpenReadStream(maxAllowedSize: 5_000_000);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+        enterprise.Logo = ms.ToArray();
+        enterprise.LogoContentType = file.ContentType ?? "image/png";
+        logoPreview = $"data:{enterprise.LogoContentType};base64,{Convert.ToBase64String(enterprise.Logo)}";
+    }
+
+    [JSInvokable]
+    public void OnLogoDropped(string fileName, string contentType, string base64Data)
+    {
+        isLogoDragOver = false;
+        try
+        {
+            enterprise.Logo = Convert.FromBase64String(base64Data);
+            enterprise.LogoContentType = string.IsNullOrEmpty(contentType) ? "image/png" : contentType;
+            logoPreview = $"data:{enterprise.LogoContentType};base64,{Convert.ToBase64String(enterprise.Logo)}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al leer el logo: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnInvalidFileDropped()
+    {
+        isLogoDragOver = false;
+        errorMessage = "El archivo debe ser una imagen.";
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnLocationReceived(double latitud, double longitud)
+    {
+        enterprise.Latitud = latitud;
+        enterprise.Longitud = longitud;
+        StateHasChanged();
+    }
+
+    private void UseMyLocation()
+    {
+        dotNetRef ??= DotNetObjectReference.Create(this);
+        JS.InvokeVoidAsync("getCurrentLocation", dotNetRef);
+    }
+
+    private async Task SaveEnterprise()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            bool success;
+            if (enterprise.enterprise_id > 0)
+                success = await service.UpdateEnterpriseAsync(enterprise.enterprise_id, enterprise);
+            else
+                success = await service.CreateEnterpriseAsync(enterprise);
+
+            if (!success)
+            {
+                errorMessage = "No se pudo guardar los datos de la empresa. Intente de nuevo.";
+                return;
+            }
+
+            await LoadEnterprise();
+            successMessage = "Datos de la empresa guardados correctamente.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar los datos: {ex.Message}";
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

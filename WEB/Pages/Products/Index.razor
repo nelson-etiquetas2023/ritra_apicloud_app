@@ -6,19 +6,18 @@
 @using ClosedXML.Excel
 @using System.IO
 @using System.Text
-@using WEB.Services.Upload
 
 <ModalCreateProducts @ref="ModalCreate" OnProductCreated="LoadProducts" />
 <!--Franja de Titulo y menu -->
-<div class="d-flex justify-content-between align-items-center">
+<div class="d-flex justify-content-between align-items-center mt-0">
     <div d-flex align-items-center>
-        <h1><Icon Name="IconName.Box" Size="IconSize.x1" /> Productos</h1>
+        <h2 class="mb-0"><Icon Name="IconName.Box" Size="IconSize.x2" /> Productos</h2>
     </div>
     <button class="btn btn-primary" type="button" @onclick="CreateProducts">
-        <Icon Name="IconName.Archive" Size="IconSize.x5" /> Crear Producto</button>
+        <Icon Name="IconName.Archive" Size="IconSize.x4" /> Crear Producto</button>
 </div>
 <!-- Franja de importación masiva -->
-<div id="dropZone" class="alert @(isDragOver ? "alert-warning" : "alert-success") d-flex align-items-center justify-content-between p-3 mt-3 mb-4" 
+<div id="dropZone" class="alert @(isDragOver ? "alert-warning" : "alert-success") d-flex align-items-center justify-content-between position-relative p-2 mt-2 mb-2" 
      style="border: 2px dashed @(isDragOver ? "#ffc107" : "#c3e6cb"); background-color: @(isDragOver ? "#fff3cd" : "#d4edda"); color: #155724; cursor: pointer;"
      @ondragover:preventDefault
      @ondragenter="() => isDragOver = true"
@@ -28,12 +27,12 @@
         <Icon Name="@(isDragOver ? IconName.FileEarmarkCheck : IconName.FileEarmarkArrowUp)" Size="IconSize.x3" class="me-3" />
         <div>
             <strong>@(isDragOver ? "Suelta el archivo aquí" : "Importación masiva de productos")</strong>
-            <p class="mb-0 small">Arrastra y suelta tu archivo Excel aquí o haz clic para subir.</p>
+            <p class="mb-0 small">Arrastra y suelta tu archivo Excel aquí para importar.</p>
         </div>
     </div>
-    <div class="d-flex gap-2">
-        <Button Color="ButtonColor.Secondary" @onclick="DownloadTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar Plantilla</Button>
-        <InputFile OnChange="HandleFileImport" class="form-control" accept=".xlsx,.xls" />
+    <img src="/images/upload-excel.png" alt="Nube de descarga" style="height:44px; position:absolute; left:50%; transform:translateX(-50%);" />
+    <div class="d-flex align-items-center gap-2">
+        <Button Color="ButtonColor.Link" @onclick="DownloadTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar Plantilla</Button>
     </div>
 </div>
 
@@ -47,30 +46,7 @@
 </Modal>
 
 
-<!--Menu principal-->
-<nav class="navbar navbar-expand-lg navbar-light bg-light px-3">
-    <div class="container-fluid d-flex justify-content-between align-items-center">
-        
 
-        <form id="formbusqueda" class="d-flex align-items-center gap-2" style="max-width: 400px;">
-            <strong>buscar por filtro:</strong>
-            <div class="d-flex">
-
-                <input id="txt_busqueda" type="text" class="form-control me-2" placeholder="Buscar..." 
-                       @bind-value="searchText"
-                       @bind-value:event="oninput"
-                       @onkeydown="HandleEnterKey" />
-                
-                    <Button Type="ButtonType.Button" 
-                        class="btn btn-primary" 
-                        @onclick="buscar">
-                    <Icon Name="IconName.Search" />
-                </Button>
-            </div>
-        </form>
-
-    </div>
-</nav>
 @if (products == null)
 {
     <div class="d-flex justify-content-center align-items-center vh-100 position-fixed top-0 start-0 w-100">
@@ -79,6 +55,25 @@
 }
 else
 {
+    <!--buscador-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-0">
+        <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+            <form id="formbusqueda" class="d-flex align-items-center gap-2 w-100" @onsubmit="buscar" @onsubmit:preventDefault>
+                <strong class="text-nowrap">buscar por filtro:</strong>
+                <div class="d-flex flex-grow-1">
+                    <input id="txt_busqueda" type="text" class="form-control me-2" placeholder="Buscar..."
+                           @bind-value="searchText"
+                           @bind-value:event="oninput" />
+                    <Button Type="ButtonType.Submit"
+                            class="btn btn-primary">
+                        <Icon Name="IconName.Search" />
+                    </Button>
+                    
+                </div>
+                <strong class="text-nowrap" style="width: 100px;">@products.Count.ToString() Items.</strong>
+            </form>
+        </div>
+    </nav>
     <!--QuickGrid de Productos-->
     <QuickGridProducts 
         productsFiltered="productsFiltered!.AsQueryable()" 
@@ -93,8 +88,7 @@ else
     PaginationState pagination = new PaginationState { ItemsPerPage = 18 };
     private string searchText = "";
     ModalCreateProducts ModalCreate { get; set; } = default!;
-    int pageSize = 15;
-    
+
     private Modal? modalImportResult;
     private string importResultMessage = "";
 
@@ -109,7 +103,6 @@ else
     {
         if (firstRender)
         {
-            JS.InvokeVoidAsync("PreventEnterKey", "formbusqueda");
             dotNetRef = DotNetObjectReference.Create(this);
             JS.InvokeVoidAsync("initProductDropZone", dotNetRef);
         }
@@ -120,12 +113,10 @@ else
         // Lógica para buscar documentos
         if (products == null) return;
 
-        // Filtro vacío => mostrar la lista completa
+        // Filtro vacío => mostrar la lista completa respetando la paginación
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            productsFiltered = products.AsEnumerable();
-            pageSize = products.Count();
-            pagination.ItemsPerPage = 15;
+            productsFiltered = products;
             StateHasChanged();
             return;
         }
@@ -133,17 +124,10 @@ else
         productsFiltered = products.Where(o =>
             o.Product_Type.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             o.Product_Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            o.Unidad.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            o.Unidad.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Codebar.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
-        pageSize = products.Count();
-        pagination.ItemsPerPage = pageSize;
         StateHasChanged();
-    }
-
-    private void HandleEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            buscar();
     }
 
     private async Task LoadProducts()
@@ -311,9 +295,5 @@ else
         }
     }
 
-    private async Task HandleFileImport(InputFileChangeEventArgs e)
-    {
-        await ProcessFile(e.File);
-    }
 }
 

@@ -1,0 +1,142 @@
+@inject ICustomersService service
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modalUpdate" Size="ModalSize.Large">
+    <HeaderTemplate><Icon Name="IconName.PencilSquare" Size="IconSize.x3" />
+        <strong>Modificar Cliente.</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="customerLocal" OnValidSubmit="UpdateCustomer">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="txt_customername"><strong>Nombre del Cliente :</strong></label>
+                    <InputText class="form-control" id="txt_customername" @bind-Value="customerLocal.CustomerName" />
+                    <ValidationMessage For="@(() => customerLocal.CustomerName)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_customercode"><strong>Código del Cliente :</strong></label>
+                    <input class="form-control" id="txt_customercode" value="@customerLocal.CustomerCode" readonly />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_direccion"><strong>Dirección :</strong></label>
+                    <InputText class="form-control" id="txt_direccion" @bind-Value="customerLocal.Direccion" />
+                    <ValidationMessage For="@(() => customerLocal.Direccion)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_registrofiscal"><strong>Registro Fiscal :</strong></label>
+                    <InputText class="form-control" id="txt_registrofiscal" @bind-Value="customerLocal.Registro_Fiscal" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_telefono"><strong>Teléfono :</strong></label>
+                    <InputText class="form-control" id="txt_telefono" @bind-Value="customerLocal.Telefono" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_correo"><strong>Correo :</strong></label>
+                    <InputText class="form-control" id="txt_correo" @bind-Value="customerLocal.Correo" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="txt_email"><strong>Email :</strong></label>
+                    <InputText class="form-control" id="txt_email" @bind-Value="customerLocal.Email" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modalUpdate = default!;
+    private string errorMessage = string.Empty;
+
+    private Customer customerLocal = new();
+
+    [Parameter]
+    public Customer customer { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Customer> OnCustomerUpdate { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task UpdateCustomer()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.UpdateCustomerAsync(customerLocal.customer_id, customerLocal);
+            if (!success)
+            {
+                errorMessage = "No se pudo actualizar el cliente. Intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            await OnCustomerUpdate.InvokeAsync(customerLocal);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar los cambios: {ex.Message}";
+            Console.WriteLine($"Error updating customer: {ex.Message}");
+        }
+
+        await modalUpdate.HideAsync();
+        PreloadService.Hide();
+    }
+
+    public async Task ShowAsyncWithCustomer(int customerId)
+    {
+        errorMessage = string.Empty;
+
+        var loaded = await service.GetCustomerByIdAsync(customerId);
+        if (loaded == null)
+        {
+            Console.WriteLine($"ShowAsyncWithCustomer: Customer {customerId} not found");
+            return;
+        }
+
+        customer = loaded;
+        customerLocal = new Customer
+        {
+            customer_id = loaded.customer_id,
+            CustomerCode = loaded.CustomerCode,
+            CustomerName = loaded.CustomerName,
+            Direccion = loaded.Direccion,
+            Registro_Fiscal = loaded.Registro_Fiscal,
+            Telefono = loaded.Telefono,
+            Correo = loaded.Correo,
+            Email = loaded.Email
+        };
+
+        StateHasChanged();
+        await modalUpdate.ShowAsync();
+    }
+
+    private async Task HideAsync()
+    {
+        await modalUpdate.HideAsync();
+    }
+}

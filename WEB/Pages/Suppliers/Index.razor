@@ -1,0 +1,308 @@
+@page "/suppliers"
+@implements IDisposable
+@inject ISuppliersService service
+@inject IJSRuntime JS
+@using WEB.Pages.Suppliers
+@using ClosedXML.Excel
+@using System.IO
+@using System.Text
+
+<ModalCreateSuppliers @ref="ModalCreate" OnSupplierCreated="LoadSuppliers" />
+<!--Franja de Titulo y menu -->
+<div class="d-flex justify-content-between align-items-center">
+    <div d-flex align-items-center>
+        <h1><Icon Name="IconName.People" Size="IconSize.x1" /> Proveedores</h1>
+    </div>
+    <button class="btn btn-primary" type="button" @onclick="CreateSuppliers">
+        <Icon Name="IconName.PersonPlus" Size="IconSize.x5" /> Crear Proveedor</button>
+</div>
+<!-- Franja de importación masiva -->
+<div id="dropZoneSupplier" class="alert @(isDragOver ? "alert-warning" : "alert-success") d-flex align-items-center justify-content-between p-3 mt-3 mb-4"
+     style="border: 2px dashed @(isDragOver ? "#ffc107" : "#c3e6cb"); background-color: @(isDragOver ? "#fff3cd" : "#d4edda"); color: #155724; cursor: pointer;"
+     @ondragover:preventDefault
+     @ondragenter="() => isDragOver = true"
+     @ondragleave="() => isDragOver = false">
+
+    <div class="d-flex align-items-center">
+        <Icon Name="@(isDragOver ? IconName.FileEarmarkCheck : IconName.FileEarmarkArrowUp)" Size="IconSize.x3" class="me-3" />
+        <div>
+            <strong>@(isDragOver ? "Suelta el archivo aquí" : "Importación masiva de proveedores")</strong>
+            <p class="mb-0 small">Arrastra y suelta tu archivo Excel aquí o haz clic para subir.</p>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <Button Color="ButtonColor.Secondary" @onclick="DownloadTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar Plantilla</Button>
+        <InputFile OnChange="HandleFileImport" class="form-control" accept=".xlsx,.xls" />
+    </div>
+</div>
+
+<Modal @ref="modalImportResult" Title="Resultado de la importación">
+    <BodyTemplate>
+        <pre style="white-space:pre-wrap;font-family:inherit;margin-bottom:0;">@importResultMessage</pre>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseImportModal">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
+
+
+<!--Menu principal-->
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-3">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+
+        <form id="formbusquedasupplier" class="d-flex align-items-center gap-2" style="max-width: 400px;" @onsubmit="buscar" @onsubmit:preventDefault>
+            <strong>buscar por filtro:</strong>
+            <div class="d-flex">
+
+                <input id="txt_busqueda_supplier" type="text" class="form-control me-2" placeholder="Buscar..."
+                       @bind-value="searchText"
+                       @bind-value:event="oninput" />
+
+                <Button Type="ButtonType.Submit"
+                        class="btn btn-primary">
+                    <Icon Name="IconName.Search" />
+                </Button>
+            </div>
+        </form>
+
+    </div>
+</nav>
+@if (suppliers == null)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100 position-fixed top-0 start-0 w-100">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else
+{
+    <!--QuickGrid de Proveedores-->
+    <QuickGridSuppliers
+        suppliersFiltered="suppliersFiltered!.AsQueryable()"
+        pagination="pagination" OnUpdateListSupplier="RefreshListSuppliers" />
+}
+
+
+@code {
+
+    private List<Supplier>? suppliers;
+    IEnumerable<Supplier>? suppliersFiltered { get; set; }
+    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    private string searchText = "";
+    ModalCreateSuppliers ModalCreate { get; set; } = default!;
+
+    private Modal? modalImportResult;
+    private string importResultMessage = "";
+
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuppliers();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            JS.InvokeVoidAsync("initSupplierDropZone", dotNetRef);
+        }
+    }
+
+    private void buscar()
+    {
+        if (suppliers == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            suppliersFiltered = suppliers.AsEnumerable();
+            pagination.ItemsPerPage = 15;
+            StateHasChanged();
+            return;
+        }
+
+        suppliersFiltered = suppliers.Where(o =>
+            o.SupplierCode.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.SupplierName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Ruc.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.ContactName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Phone.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Email.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.City.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            o.Country.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+        pagination.ItemsPerPage = 15;
+        StateHasChanged();
+    }
+
+    private async Task LoadSuppliers()
+    {
+        suppliers = await service.GetSuppliersAsync();
+        suppliersFiltered = suppliers.AsEnumerable();
+        StateHasChanged();
+    }
+
+    private async Task CreateSuppliers()
+    {
+        await ModalCreate.ShowAsync();
+    }
+
+    private async Task RefreshListSuppliers(IQueryable<Supplier> lista)
+    {
+        if (lista.Count() == 0)
+        {
+            await LoadSuppliers();
+            return;
+        }
+
+        suppliers = lista.ToList();
+        suppliersFiltered = lista.AsEnumerable();
+        StateHasChanged();
+    }
+
+    private async Task DownloadTemplate()
+    {
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Proveedores");
+
+        worksheet.Cell(1, 1).Value = "nombre*";
+        worksheet.Cell(1, 2).Value = "ruc";
+        worksheet.Cell(1, 3).Value = "contacto";
+        worksheet.Cell(1, 4).Value = "telefono";
+        worksheet.Cell(1, 5).Value = "email";
+        worksheet.Cell(1, 6).Value = "direccion";
+        worksheet.Cell(1, 7).Value = "ciudad";
+        worksheet.Cell(1, 8).Value = "pais";
+        worksheet.Cell(1, 9).Value = "web";
+        worksheet.Row(1).Style.Font.Bold = true;
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
+        await JS.InvokeVoidAsync("downloadFile", "PlantillaProveedores.xlsx", Convert.ToBase64String(content));
+    }
+
+    private async Task CloseImportModal()
+    {
+        if (modalImportResult != null)
+        {
+            await modalImportResult.HideAsync();
+        }
+    }
+
+    private bool isDragOver;
+    private DotNetObjectReference<Index>? dotNetRef;
+
+    [JSInvokable]
+    public async Task OnFileDropped(string fileName, long fileSize, string contentType, string base64Data)
+    {
+        isDragOver = false;
+        if (!IsValidExcelFile(fileName))
+        {
+            importResultMessage = "El archivo debe ser un Excel (.xlsx o .xls).";
+            if (modalImportResult != null)
+                await modalImportResult.ShowAsync();
+            StateHasChanged();
+            return;
+        }
+        await ProcessFile(new BrowserFile(fileName, fileSize, contentType, base64Data));
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnInvalidFileDropped()
+    {
+        isDragOver = false;
+        importResultMessage = "El archivo debe ser un Excel (.xlsx o .xls).";
+        if (modalImportResult != null)
+            await modalImportResult.ShowAsync();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private static bool IsValidExcelFile(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension is ".xlsx" or ".xls";
+    }
+
+    private async Task ProcessFile(IBrowserFile file)
+    {
+        if (!IsValidExcelFile(file.Name))
+        {
+            importResultMessage = "El archivo debe ser un Excel (.xlsx o .xls).";
+            if (modalImportResult != null)
+                await modalImportResult.ShowAsync();
+            return;
+        }
+
+        PreloadService.Show(SpinnerColor.Dark, "Importando proveedores...");
+
+        try
+        {
+            var result = await service.ImportSuppliersFromExcelAsync(file);
+
+            var sb = new StringBuilder();
+
+            if (!result.Success)
+            {
+                sb.AppendLine("La importación falló y no se guardó ningún cambio.");
+            }
+            else
+            {
+                sb.AppendLine("Importación completada correctamente.");
+            }
+
+            sb.AppendLine($"Proveedores insertados: {result.Inserted}");
+            sb.AppendLine($"Proveedores actualizados: {result.Updated}");
+            sb.AppendLine($"Filas omitidas: {result.Skipped}");
+
+            if (result.Errors.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"Errores ({result.Errors.Count}):");
+                foreach (var error in result.Errors.Take(50))
+                {
+                    sb.AppendLine($"  Fila {error.Row}: {error.Message}");
+                }
+                if (result.Errors.Count > 50)
+                {
+                    sb.AppendLine($"  ... y {result.Errors.Count - 50} error(es) más.");
+                }
+            }
+
+            importResultMessage = sb.ToString();
+
+            await LoadSuppliers();
+            StateHasChanged();
+
+            if (modalImportResult != null)
+            {
+                await modalImportResult.ShowAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            importResultMessage = $"Error en la importación: {ex.Message}";
+            if (modalImportResult != null)
+            {
+                await modalImportResult.ShowAsync();
+            }
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HandleFileImport(InputFileChangeEventArgs e)
+    {
+        await ProcessFile(e.File);
+    }
+}

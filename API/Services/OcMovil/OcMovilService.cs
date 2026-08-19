@@ -10,7 +10,11 @@ namespace API.Services.OcMovil
 
         public async Task<IEnumerable<OrdenCompra>> GetOrdersAsync()
         {
-            var orders = await context.Compra.Include(o => o.Items).ToListAsync();
+            var orders = await context.Compra
+                .Include(o => o.Items)
+                .OrderByDescending(o => o.FechaCreacion)
+                .ThenByDescending(o => o.Numero)
+                .ToListAsync();
             return orders;
         }
 
@@ -26,6 +30,9 @@ namespace API.Services.OcMovil
         {
             if (oc is null) return null;
 
+            if (oc.FechaCreacion == default)
+                oc.FechaCreacion = DateTime.Now;
+
             context.Compra.Add(oc);
             await context.SaveChangesAsync();
             return oc;
@@ -38,9 +45,16 @@ namespace API.Services.OcMovil
 
             if (existingOrder is null) return null;
 
+            //Documento procesado: no se permite modificar.
+            if (existingOrder.Status == 4) return null;
+
             existingOrder.Description = oc.Description;
             existingOrder.Fecha = oc.Fecha;
+            if (oc.FechaCreacion != default)
+                existingOrder.FechaCreacion = oc.FechaCreacion;
             existingOrder.Status = oc.Status;
+            existingOrder.Subtotal = oc.Subtotal;
+            existingOrder.Impuesto = oc.Impuesto;
             existingOrder.Total = oc.Total;
             existingOrder.Sincro = oc.Sincro;
 
@@ -74,6 +88,9 @@ namespace API.Services.OcMovil
             var OrderDeleted = await context.Compra.FindAsync(numero);
 
             if (OrderDeleted is null) return false;
+
+            //Documento procesado: no se permite eliminar.
+            if (OrderDeleted.Status == 4) return false;
 
             context.Compra.Remove(OrderDeleted);
             await context.SaveChangesAsync();

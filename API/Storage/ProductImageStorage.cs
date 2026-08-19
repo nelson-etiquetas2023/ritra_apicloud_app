@@ -9,7 +9,7 @@ public static class ProductImageStorage
         var configuredPath = configuration[ConfigurationKey];
 
         return string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(environment.ContentRootPath, "uploads")
+            ? Path.Combine(environment.ContentRootPath, "ProductImages")
             : Path.GetFullPath(configuredPath);
     }
 }

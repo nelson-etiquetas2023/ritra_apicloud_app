@@ -28,7 +28,7 @@ namespace WEB.Services.Products
             return $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
         }
 
-        public async Task<Product?> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files)
+        public async Task<ServiceResponse<Product>> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files)
         {
             try
             {
@@ -56,22 +56,25 @@ namespace WEB.Services.Products
                 }
 
                 var response = await clientHttp.PostAsync(url, content);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new ServiceResponse<Product> { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                var serviceResponse = await JsonSerializer.DeserializeAsync<ServiceResponse<Product>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"CreateProductWithFilesAsync: server returned {response.StatusCode}");
-                    return null;
+                    var message = serviceResponse?.Message ?? $"El servidor devolvió el estado {(int)response.StatusCode}.";
+                    return new ServiceResponse<Product> { Success = false, Message = message, Data = serviceResponse?.Data };
                 }
 
-                var responseJson = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(responseJson)) return null;
-
-                var created = await JsonSerializer.DeserializeAsync<Product>(new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
-                return created;
+                return serviceResponse ?? new ServiceResponse<Product> { Success = false, Message = "No se pudo crear el producto." };
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating product with files: {ex.Message}");
-                return null;
+                return new ServiceResponse<Product> { Success = false, Message = $"Error al crear el producto: {ex.Message}" };
             }
         }
 
@@ -88,7 +91,7 @@ namespace WEB.Services.Products
                 new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)), jsonOptions);
             return (products ?? []);
         }
-        public async Task<bool> CreateproductAsync(Product product)
+        public async Task<ServiceResponse<Product>> CreateproductAsync(Product product)
         {
             try
             {
@@ -97,14 +100,26 @@ namespace WEB.Services.Products
                 var json = JsonSerializer.Serialize(product, jsonOptions);
                 var jsonContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
-                return response.IsSuccessStatusCode;
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new ServiceResponse<Product> { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                var serviceResponse = await JsonSerializer.DeserializeAsync<ServiceResponse<Product>>(
+                    new MemoryStream(System.Text.Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var message = serviceResponse?.Message ?? $"El servidor devolvió el estado {(int)response.StatusCode}.";
+                    return new ServiceResponse<Product> { Success = false, Message = message, Data = serviceResponse?.Data };
+                }
+
+                return serviceResponse ?? new ServiceResponse<Product> { Success = false, Message = "No se pudo crear el producto." };
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Excepción]: No se pudo conectar con el servidor. Detalle: " +
                     $"{ex.Message}");
-                return false;
-
+                return new ServiceResponse<Product> { Success = false, Message = $"No se pudo conectar con el servidor: {ex.Message}" };
             }
         }
         public async Task<bool> DeleteProductAsync(int id)
@@ -134,15 +149,36 @@ namespace WEB.Services.Products
                 new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)), jsonOptions);
             return product ?? new Product();
         }
-        public async Task<bool> UpdateProductAsync(int id, Product product)
+        public async Task<ServiceResponse<Product>> UpdateProductAsync(int id, Product product)
         {
-            var parametros = new ParametrosUpdateProducts(id, product);
-            var url = $"api/products/updateproducts";
-            var json = JsonSerializer.Serialize(parametros, jsonOptions);
-            var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var clientHttp = HttpFactory.CreateClient("ritrama");
-            var response = await clientHttp.PutAsync(url, jsonContent);
-            return response.IsSuccessStatusCode;
+            try
+            {
+                var parametros = new ParametrosUpdateProducts(id, product);
+                var url = $"api/products/updateproducts";
+                var json = JsonSerializer.Serialize(parametros, jsonOptions);
+                var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
+                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var response = await clientHttp.PutAsync(url, jsonContent);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new ServiceResponse<Product> { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                var serviceResponse = await JsonSerializer.DeserializeAsync<ServiceResponse<Product>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var message = serviceResponse?.Message ?? $"El servidor devolvió el estado {(int)response.StatusCode}.";
+                    return new ServiceResponse<Product> { Success = false, Message = message, Data = serviceResponse?.Data };
+                }
+
+                return serviceResponse ?? new ServiceResponse<Product> { Success = false, Message = "No se pudo actualizar el producto." };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating product: {ex.Message}");
+                return new ServiceResponse<Product> { Success = false, Message = $"Error al actualizar el producto: {ex.Message}" };
+            }
         }
         public async Task<bool> AddProductImageAsync(int productId, MultipartFormDataContent content, int imageIndex)
         {
@@ -199,7 +235,7 @@ namespace WEB.Services.Products
                 return [];
             }
         }
-        public async Task<Product?> CreateProductWithImagesAsync(CreateProductWithImagesRequest request)
+        public async Task<ServiceResponse<Product>> CreateProductWithImagesAsync(CreateProductWithImagesRequest request)
         {
             try
             {
@@ -208,29 +244,25 @@ namespace WEB.Services.Products
                 var json = JsonSerializer.Serialize(request, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new ServiceResponse<Product> { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                var serviceResponse = await JsonSerializer.DeserializeAsync<ServiceResponse<Product>>(
+                    new MemoryStream(System.Text.Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"Error creating product: {response.StatusCode}");
-                    return null;
+                    var message = serviceResponse?.Message ?? $"El servidor devolvió el estado {(int)response.StatusCode}.";
+                    return new ServiceResponse<Product> { Success = false, Message = message, Data = serviceResponse?.Data };
                 }
 
-                var responseJson = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(responseJson))
-                {
-                    Console.WriteLine("Empty response from server");
-                    return null;
-                }
-
-                var product = await JsonSerializer.DeserializeAsync<Product>(
-                    new MemoryStream(System.Text.Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
-
-                return product;
+                return serviceResponse ?? new ServiceResponse<Product> { Success = false, Message = "No se pudo crear el producto." };
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating product with images: {ex.Message}");
-                return null;
+                return new ServiceResponse<Product> { Success = false, Message = $"Error al crear el producto: {ex.Message}" };
             }
         }
         public async Task<int> BulkCreateProductsAsync(List<Product> products)

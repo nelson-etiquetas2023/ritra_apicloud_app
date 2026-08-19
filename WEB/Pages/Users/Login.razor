@@ -1,69 +1,21 @@
 ﻿@page "/user/login"
-@inject IAuthService Authservice
-@inject ILocalStorage localStorage
 @inject NavigationManager navigator
-@inject AuthenticationStateProvider authStateProvider
 
-<Toasts Messages="messages" Class="p-3" AutoHide="true" Delay="1000" Placement="ToastsPlacement.TopCenter" />
-
-<h3 style="margin-bottom:20px;"><Icon Name="IconName.KeyFill" Size="IconSize.x2" /> Login</h3>
-<div class="row">
-    <div class="col-4">
-        <EditForm Model="user" OnValidSubmit="HandleLogin">
-            <DataAnnotationsValidator />
-            <div class="mb-3">
-                <label for="email" class="label-control"><strong>Email:</strong></label>
-                <InputText @bind-Value="user.Email" id="email" class="form-control" placeholder="introduzca el email del usuario" />
-                <ValidationMessage For="@(() => user.Email)" />
-            </div>
-            <div class="mb-3">
-                <label for="password" class="label-control"><strong>Password:</strong></label>
-                <PasswordInput @bind-Value="user.Password" id="password" class="form-control" placeholder="introduza su contraseña" />
-                <ValidationMessage For="@(() => user.Password)" />
-            </div>
-            <div style="margin-bottom:20px;margin-top:20px;">
-                <Button Type="ButtonType.Submit" Color="ButtonColor.Primary"><Icon Name="IconName.ArrowDown" /> Ingresar</Button>
-            </div>
-        </EditForm>
-        <div class="text-danger">
-            <span>@errorMessage</span>
-        </div>
-    </div>
-</div>
-
+<LoginForm OnAuthenticated="HandleAuthenticated" OnLocked="HandleLocked" OnShowRegister="ShowRegister" />
 
 @code {
-    [Inject]
-    protected ToastService toastsService { get; set; } = default!;
-    List<ToastMessage> messages = new();
-
-    private UserLogin user = new UserLogin();
-    private string errorMessage = string.Empty;
-
-    private async void HandleLogin()
+    private async Task HandleAuthenticated()
     {
-        var result = await Authservice.Login(user);
-        if (result.Success)
-        {
-            errorMessage = string.Empty;
-            await localStorage.SetItemAsync("authToken", result.Data);
-            if (!localStorage.StorageAvailable)
-            {
-                toastsService.Notify(new ToastMessage(ToastType.Warning, "Sesión no guardada: el navegador bloqueó el almacenamiento local. La sesión se mantendrá solo en memoria hasta que cierres la pestaña."));
-            }
-            await authStateProvider.GetAuthenticationStateAsync();
-            toastsService.Notify(new ToastMessage(ToastType.Warning, $"login correcto..."));
-            await Task.Delay(2000);
-            navigator.NavigateTo("/");  
-        }
-        else
-        {
-            errorMessage = result.Message!;
-            StateHasChanged();
-            toastsService.Notify(new ToastMessage(ToastType.Danger, errorMessage));
-        }
+        navigator.NavigateTo("/");
+    }
+
+    private void HandleLocked()
+    {
+        navigator.NavigateTo("/", forceLoad: true);
+    }
+
+    private void ShowRegister()
+    {
+        navigator.NavigateTo("/users/userregistration");
     }
 }
-
-
-

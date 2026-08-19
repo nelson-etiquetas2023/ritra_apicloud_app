@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.StockInit.StockInitDetailPage"
+             xmlns:entities="clr-namespace:ScanProMovil.Entities"
+             Title="Detalle Stock Inicial"
+             BackgroundColor="#F5F7FA">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" Padding="12" RowSpacing="6">
+
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+            <Label x:Name="NumeroLabel"
+                   TextColor="#1D3557"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center"
+                   LineBreakMode="TailTruncation" />
+            <Button x:Name="BtnSave"
+                    Grid.Column="2"
+                    Text="Guardar"
+                    BackgroundColor="Green"
+                    TextColor="White"
+                    IsVisible="False"
+                    Clicked="OnSaveClicked" />
+            <ImageButton x:Name="BtnAddLine"
+                         Grid.Column="3"
+                         Source="add.png"
+                         BackgroundColor="Transparent"
+                         WidthRequest="36"
+                         HeightRequest="36"
+                         Clicked="OnAddLineClicked" />
+        </Grid>
+
+        <Border x:Name="SearchRow"
+                Grid.Row="1"
+                Padding="4,0"
+                Stroke="Grey"
+                StrokeThickness="1"
+                Background="White"
+                StrokeShape="RoundRectangle 10">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                <Image Source="search_50px.png"
+                       WidthRequest="20"
+                       HeightRequest="20"
+                       VerticalOptions="Center" />
+                <Entry x:Name="ItemSearchEntry"
+                       Grid.Column="1"
+                       Placeholder="Buscar por código o descripción (o escaneé el producto)..."
+                       TextChanged="OnItemSearchTextChanged"
+                       BackgroundColor="Transparent" />
+            </Grid>
+        </Border>
+
+        <Grid x:Name="ScanRow"
+              Grid.Row="2"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="6"
+              IsVisible="False">
+            <Border Grid.Column="0"
+                    Padding="4,0"
+                    Stroke="Grey"
+                    StrokeThickness="1"
+                    Background="White"
+                    StrokeShape="RoundRectangle 10">
+                <Entry x:Name="ScanEntry"
+                       Placeholder="Escaneé el código de barra..."
+                       TextChanged="OnScanTextChanged"
+                       Completed="OnScanCompleted"
+                       BackgroundColor="Transparent" />
+            </Border>
+            <Button x:Name="BtnAddItem"
+                    Grid.Column="1"
+                    Text="Add"
+                    BackgroundColor="#0D6EFD"
+                    TextColor="White"
+                    Clicked="OnAddItemClicked" />
+        </Grid>
+
+        <Label x:Name="ScanProductLabel"
+               Grid.Row="3"
+               FontSize="13"
+               TextColor="#0D6EFD"
+               IsVisible="False"
+               LineBreakMode="TailTruncation" />
+
+        <Label x:Name="ItemsCountLabel"
+               Grid.Row="4"
+               TextColor="#5A6A7A"
+               FontSize="12"
+               HorizontalOptions="Center"
+               LineBreakMode="TailTruncation" />
+
+        <CollectionView x:Name="ItemsCollection"
+                        Grid.Row="5"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="Sin ítems" TextColor="#5A6A7A"
+                       HorizontalOptions="Center" VerticalOptions="Center" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="entities:StockItem">
+                    <VerticalStackLayout>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="4,10">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="{Binding Product_Name}"
+                                       TextColor="#1D3557"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Product_Code, StringFormat='Código: {0}'}"
+                                       TextColor="#5A6A7A"
+                                       FontSize="12" />
+                                <Label Text="{Binding Ubicacion, StringFormat='Ubicación: {0}'}"
+                                       TextColor="#5A6A7A"
+                                       FontSize="12" />
+                                <Label Text="{Binding Nota, StringFormat='Nota: {0}'}"
+                                       TextColor="#6F42C1"
+                                       FontSize="12"
+                                       LineBreakMode="WordWrap">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Nota}" Value="">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="3" HorizontalOptions="End">
+                                <Label Text="{Binding Cantidad, StringFormat='{0:N0} und'}"
+                                       TextColor="#0D6EFD"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="End" />
+                                <Label Text="{Binding TotalCosto, StringFormat='S/ {0:N2}'}"
+                                       TextColor="#5A6A7A"
+                                       FontSize="12"
+                                       HorizontalOptions="End" />
+                                <HorizontalStackLayout Spacing="10" HorizontalOptions="End">
+<ImageButton Source="edit.png"
+                                                  WidthRequest="12"
+                                                  HeightRequest="12"
+                                                  CommandParameter="{Binding .}"
+                                                  Clicked="OnNoteItemClicked" />
+                                    <ImageButton Source="trash.png"
+                                                  WidthRequest="12"
+                                                  HeightRequest="12"
+                                                  CommandParameter="{Binding .}"
+                                                  Clicked="OnDeleteItemClicked" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView HeightRequest="0.5" Color="#E0E5EB" />
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid x:Name="SavingOverlay"
+              Grid.RowSpan="6"
+              BackgroundColor="Transparent"
+              IsVisible="False">
+            <HorizontalStackLayout HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   Spacing="10">
+                <ActivityIndicator x:Name="SavingIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="Green"
+                                   WidthRequest="42"
+                                   HeightRequest="42" />
+                <Label x:Name="SavingLabel"
+                       Text="Guardando..."
+                       TextColor="Green"
+                       FontSize="16"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

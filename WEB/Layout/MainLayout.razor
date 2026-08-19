@@ -1,4 +1,5 @@
 ﻿@using BlazorBootstrap
+@using System.Security.Claims
 @inherits LayoutComponentBase
 
 <div class="page">
@@ -8,15 +9,23 @@
 
     <main>
         <div class="top-row px-4">
-          <AuthorizeView>
-              <Authorized>
-                  <div class="d-flex justify-content-between">
-                        <div class="me-auto p-2">
-                            <span><strong>@context.User.Identity?.Name</strong></span>
+<AuthorizeView Context="auth">
+                <Authorized>
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div class="d-flex align-items-center me-auto p-2">
+                            @{
+                                var authName = auth.User.Identity?.Name ?? "";
+                                var authEmail = auth.User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+                            }
+                            <img class="user-avatar me-3" src="@GetDefaultAvatar(authName)" alt="Avatar de @authName" title="@authName" />
+                            <div class="d-flex flex-column">
+                                <span class="fw-semibold user-name">@(string.IsNullOrWhiteSpace(authName) ? "Usuario" : authName)</span>
+                                <span class="user-email">@(string.IsNullOrWhiteSpace(authEmail) ? "Sin correo registrado" : authEmail)</span>
+                            </div>
                         </div>
                         <Logout />
-                  </div>
-              </Authorized>
+                    </div>
+                </Authorized>
               <NotAuthorized>
                     <a href="\user\login"><Icon Name="IconName.KeyFill" Size="IconSize.x5" /> Iniciar Sesion</a>
                     <a href="\users\userregistration"><Icon Name="IconName.PersonAdd" Size="IconSize.x5" /> Registrarse</a>
@@ -34,6 +43,37 @@
 {
     public async Task Logout()
     {
-        
+
+    }
+
+    private static string GetDefaultAvatar(string name)
+    {
+        var color = GetAvatarColor(name);
+
+        var svg = $"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>" +
+                  $"<rect width='100' height='100' fill='{color}'/>" +
+                  $"<circle cx='50' cy='36' r='20' fill='rgba(255,255,255,0.92)'/>" +
+                  $"<path d='M20 90c5-20 17-29 30-29s25 9 30 29z' fill='rgba(255,255,255,0.92)'/>" +
+                  $"</svg>";
+
+        return "data:image/svg+xml," + Uri.EscapeDataString(svg);
+    }
+
+    private static string GetAvatarColor(string name)
+    {
+        string[] palette =
+        {
+            "#1b6ec2", "#28a745", "#e83e8c", "#fd7e14",
+            "#6610f2", "#20c997", "#dc3545", "#007bff", "#6f42c1", "#17a2b8"
+        };
+
+        if (string.IsNullOrWhiteSpace(name))
+            return palette[0];
+
+        var hash = 0;
+        foreach (var ch in name)
+            hash += ch;
+
+        return palette[hash % palette.Length];
     }
 }

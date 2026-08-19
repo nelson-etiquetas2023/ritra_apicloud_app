@@ -2,6 +2,8 @@
 
 <Preload LoadingText="Guardando..." />
 
+<ModalEditLineOrdenCompra @ref="modalEditLine" OnOrderUpdated="OnOrderUpdated" />
+
 <Modal @ref="modal" Size="ModalSize.Large">
     <HeaderTemplate>
         <!-- aqui html para  el encabezado-->
@@ -17,7 +19,7 @@
                 <h3>Datos del Proveedor</h3>
                 <p><strong>Proveedor: </strong>@order.Supply_Name</p>
                 <p><strong>Fecha: </strong>@order.Fecha</p>
-                <p><strong>Status: </strong>@order.Status</p>
+                <p><strong>Status: </strong>@order.StatusTexto</p>
             </div>
             <div class="info-box orden">
                 <h3>Detalle de la Orden</h3>
@@ -37,6 +39,7 @@
                         <th>Cantidad</th>
                         <th>Costo</th>
                         <th>Subtotal</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,8 +49,18 @@
                             <td>@item.Product_id</td>
                             <td>@item.Product_name</td>
                             <td>@item.Cantidad</td>
-                            <td>@item.Costo</td>
-                            <td>@item.Subtotal</td>
+                            <td>@($"${item.Costo:N2}")</td>
+                            <td>@($"${item.Subtotal:N2}")</td>
+                            <td>
+                                @if (order.Status != 4 && order.Status != 5)
+                                {
+                                    <Tooltip Title="Editar Producto" Placement="TooltipPlacement.Top">
+                                        <a href="javascript:void(0)" @onclick="() => EditLine(item)" style="cursor: pointer">
+                                            <Icon Name="IconName.GearWide" Size="IconSize.x5" Color="IconColor.Dark" />
+                                        </a>
+                                    </Tooltip>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -60,15 +73,15 @@
         <table>
             <tr>
                 <td class="total-label">SubTotal :</td>
-                <td class="total-value"><strong>@order.Subtotal</strong></td>
+                <td class="total-value"><strong>@($"${order.Subtotal:N2}")</strong></td>
             </tr>
             <tr>
                 <td class="total-label">Impuestos :</td>
-                <td class="total-value"><strong>@order.Impuesto</strong></td>
+                <td class="total-value"><strong>@($"${order.Impuesto:N2}")</strong></td>
             </tr>
             <tr>
                 <td class="total-label total-final">Total General: </td>
-                <td class="total-value total-final"><strong>@order.Total</strong></td>
+                <td class="total-value total-final"><strong>@($"${order.Total:N2}")</strong></td>
             </tr>
         </table>
     </FooterTemplate>
@@ -80,6 +93,7 @@
     public OrdenCompra order { get; set; } = new();
 
     private Modal modal = default!;
+    private ModalEditLineOrdenCompra modalEditLine = default!;
 
     [Inject]
     protected PreloadService PreloadService { get; set; } = default!;
@@ -93,5 +107,16 @@
     public async Task HideAsync()
     {
         await modal.HideAsync();
+    }
+
+    private async Task EditLine(DetalleCompras item)
+    {
+        await modalEditLine.ShowAsync(order, item);
+    }
+
+    private async Task OnOrderUpdated(OrdenCompra updated)
+    {
+        order = updated;
+        await InvokeAsync(StateHasChanged);
     }
 }

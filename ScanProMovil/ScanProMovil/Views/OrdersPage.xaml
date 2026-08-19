@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.OrdersPage"
+             Title="OrdersPage"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels" 
+             x:DataType="vm:OrderViewModel">
+                
+
+    <ScrollView>
+        <VerticalStackLayout>
+            <!--Numero de Orden -->
+            <Entry x:Name="txtOrderNumberEntry" 
+                   Placeholder="Ingrese el numero de orden" 
+                   FontAttributes="Bold" 
+                   Text="{Binding NewOrder.OrderNumber}"/>
+            
+            <DatePicker x:Name="txtOrderDateEntry" 
+                        FontAttributes="Bold" 
+                        Date="{Binding NewOrder.OrderDate}"/>
+            
+            <!--Add Product-->
+            <Border Margin="5" 
+                    Padding="10" 
+                    StrokeShape="RoundRectangle 6" 
+                    StrokeThickness="1">
+                <VerticalStackLayout>
+                    <Label Text="Agregar Productos" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="100,80,80" ColumnSpacing="12">
+                        <Entry x:Name="txtProductIdEntry" Placeholder="id producto" WidthRequest="100" Grid.Column="0" />
+                        <Entry x:Name="txtQuantityEntry" Placeholder="cantidad" WidthRequest="100" Grid.Column="1" />
+                        <Button x:Name="btnAddProduct" Text="Add" Clicked="btn_AddProducts_Clicked" Grid.Column="2" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+                <!--Detalle de la orden-->
+            <Grid ColumnSpacing="0" RowSpacing="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Padding="15" Background="#EEE">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"></ColumnDefinition>
+                        <ColumnDefinition Width="100"></ColumnDefinition>
+                        <ColumnDefinition Width="60"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Label Text="Prod. Id" FontAttributes="Bold" Grid.Column="0" VerticalOptions="Center" ></Label>
+                    <Label Text="Cant." FontAttributes="Bold" Grid.Column="1" VerticalOptions="Center" ></Label>
+                    <Label Text="Action" FontAttributes="Bold" Grid.Column="2" VerticalOptions="Center" ></Label>
+                </Grid>
+                <CollectionView x:Name="ItemsCollection" 
+                            Grid.Row="1" 
+                            SelectionMode="None" 
+                            ItemsSource="{Binding NewOrder.Items}"
+                            ItemsLayout="VerticalList" 
+                            ItemSizingStrategy="MeasureAllItems" 
+                            HeightRequest="280" HorizontalOptions="Fill">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:OrderDetails">
+                            <Grid Padding="15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                    <ColumnDefinition Width="60"></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                <Label Text="{Binding productId}" Grid.Column="0" HorizontalOptions="End" />
+                                <Label Text="{Binding Cantidad}" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="End"/>
+                                <Button x:Name="Btn_DeleteRow" 
+                                            Text="x" 
+                                            Grid.Column="2" 
+                                            WidthRequest="36" 
+                                            HeightRequest="28" 
+                                            HorizontalOptions="End" 
+                                            VerticalOptions="Center"
+                                            Clicked="btn_RemoveProducts_Clicked"
+                                            CommandParameter="{Binding .}"
+                                            />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+            <!--Summary-->
+            <Label Text="Totales:" FontAttributes="Bold" Margin="10"/>
+            <BoxView 
+                HeightRequest="0.5"
+                HorizontalOptions="Fill"
+                Color="LightGray"
+                Margin="0,10"
+                />
+            <Label Text="Numero de Filas: "/>
+            <Label x:Name="TotalRowsEntry" FontAttributes="Bold"/>
+            <Label Text="Total Cantidad : "/>
+            <Label x:Name="TotalCantEntry" FontAttributes="Bold"/>
+
+
+
+            <HorizontalStackLayout 
+                HorizontalOptions="Center"
+                Margin="10">
+
+                <ActivityIndicator 
+                    x:Name="SavingIndicator"
+                    IsRunning="False"
+                    IsVisible="False"
+                    Color="Blue"
+                    WidthRequest="50"
+                    HeightRequest="50">
+                </ActivityIndicator>
+
+                <Label 
+                    x:Name="SavingLabel"
+                    Text="Guardando..."
+                    IsVisible="false"
+                    VerticalOptions="Center"
+                    TextColor="blue"/>
+
+            </HorizontalStackLayout>
+            
+            
+            <HorizontalStackLayout>
+                
+                <Button 
+                    x:Name="Btn_Save_Order"
+                    Text="Guardar"  
+                    Margin="20"
+                    Clicked="Btn_Save_Order_Clicked"
+                    />
+                
+                <Button Text="Cancelar" Margin="20" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+    </ScrollView>
+    
+</ContentPage>

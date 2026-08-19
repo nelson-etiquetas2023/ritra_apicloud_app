@@ -132,6 +132,129 @@
                     </table>
                 </div>
             </div>
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Gestión de ubicaciones</strong>
+                    <Button Color="ButtonColor.Primary" @onclick="NewLocation"><Icon Name="IconName.Plus" /> Nueva ubicación</Button>
+                </div>
+                <div class="card-body">
+                    <input class="form-control mb-3" placeholder="Buscar ubicación (código, zona, pasillo, rack, nivel, posición, almacén)..." @bind="locationSearch" @bind:event="oninput" />
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Almacén</th>
+                                <th>Código</th>
+                                <th>Zona</th>
+                                <th>Pasillo</th>
+                                <th>Rack</th>
+                                <th>Nivel</th>
+                                <th>Pos.</th>
+                                <th>Capacidad</th>
+                                <th>Usado</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var location in FilteredLocations)
+                            {
+                                <tr>
+                                    <td>@location.WarehouseName</td>
+                                    <td>@location.Code</td>
+                                    <td>@location.Zone</td>
+                                    <td>@location.Aisle</td>
+                                    <td>@location.Rack</td>
+                                    <td>@location.Level</td>
+                                    <td>@location.Position</td>
+                                    <td>@location.Capacity</td>
+                                    <td>@location.CurrentCapacity</td>
+                                    <td><span class="badge @(location.IsActive ? "bg-success" : "bg-secondary")">@(location.IsActive ? "Activa" : "Inactiva")</span></td>
+                                    <td class="text-end">
+                                        <Button Color="ButtonColor.Link" @onclick="() => EditLocation(location)">Editar</Button>
+                                        <Button Color="ButtonColor.Link" @onclick="() => ToggleLocation(location)">@(location.IsActive ? "Desactivar" : "Activar")</Button>
+                                        <Button Color="ButtonColor.Link" @onclick="() => DeleteLocation(location)">Eliminar</Button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <Modal @ref="locationModal" Size="ModalSize.Large" Title="@(editingLocation.LocationId == 0 ? "Nueva ubicación" : "Editar ubicación")">
+                <BodyTemplate>
+                    @if (!string.IsNullOrEmpty(locationErrorMessage))
+                    {
+                        <div class="alert alert-danger py-2" role="alert">@locationErrorMessage</div>
+                    }
+                    <EditForm Model="editingLocation" OnValidSubmit="SaveLocation">
+                        <DataAnnotationsValidator />
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Almacén *</label>
+                                <InputSelect class="form-select" @bind-Value="editingLocation.WarehouseId">
+                                    <option value="0">Seleccione almacén...</option>
+                                    @foreach (var warehouse in warehouses)
+                                    {
+                                        <option value="@warehouse.WarehouseId">@warehouse.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Code" />
+                                <ValidationMessage For="@(() => editingLocation.Code)" />
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Código de barras</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Barcode" />
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Tipo de código</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.BarcodeType" placeholder="Code128, Code39, QR..." />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Zona</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Zone" />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Pasillo</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Aisle" />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Rack</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Rack" />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Nivel</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Level" />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Posición</label>
+                                <InputText class="form-control" @bind-Value="editingLocation.Position" />
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Capacidad máxima</label>
+                                <InputNumber class="form-control" @bind-Value="editingLocation.Capacity" />
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Capacidad usada</label>
+                                <InputNumber class="form-control" @bind-Value="editingLocation.CurrentCapacity" />
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Estado</label>
+                                <InputNumber class="form-control" @bind-Value="editingLocation.Status" min="0" max="255" />
+                            </div>
+                            <div class="col-md-6 mb-2"><Switch @bind-Value="editingLocation.AllowMixedProducts" Label="Permite productos mezclados" /></div>
+                            <div class="col-md-6 mb-2"><Switch @bind-Value="editingLocation.IsActive" Label="Activa" /></div>
+                        </div>
+                        <div class="mt-3">
+                            <Button Type="ButtonType.Submit" Color="ButtonColor.Success"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" @onclick="CancelLocation"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+                        </div>
+                    </EditForm>
+                </BodyTemplate>
+            </Modal>
             <div class="col-2"></div>
         </div>
     </div>
@@ -155,6 +278,24 @@
     string unitSearch = "";
     bool showUnitForm;
 
+    List<Warehouse> warehouses = [];
+    List<Location> locations = [];
+    Location editingLocation = new();
+    string locationSearch = "";
+    string locationErrorMessage = "";
+    Modal locationModal = default!;
+
+    IEnumerable<Location> FilteredLocations => locations.Where(l =>
+        string.IsNullOrWhiteSpace(locationSearch) ||
+        l.Code.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Zone.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Aisle.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Rack.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Level.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Position.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        l.Barcode.Contains(locationSearch, StringComparison.OrdinalIgnoreCase) ||
+        (l.WarehouseName ?? string.Empty).Contains(locationSearch, StringComparison.OrdinalIgnoreCase));
+
     IEnumerable<Category> FilteredCategories => categories.Where(c =>
         string.IsNullOrWhiteSpace(categorySearch) ||
         c.Name.Contains(categorySearch, StringComparison.OrdinalIgnoreCase) ||
@@ -170,6 +311,8 @@
         await LoadDataConfig();
         await LoadCategories();
         await LoadUnits();
+        await LoadWarehouses();
+        await LoadLocations();
     }
 
     private async Task LoadCategories() => categories = await service.GetCategoriesAsync();
@@ -254,6 +397,94 @@
         {
             await LoadUnits();
             messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Unidades", Message = "Unidad eliminada." });
+        }
+    }
+
+    private async Task LoadWarehouses() => warehouses = await service.GetWarehousesAsync();
+
+    private async Task LoadLocations() => locations = await service.GetLocationsAsync();
+
+    private async Task NewLocation()
+    {
+        locationErrorMessage = "";
+        editingLocation = new Location { WarehouseId = 0, IsActive = true, Status = 1 };
+        await locationModal.ShowAsync();
+    }
+
+    private async Task EditLocation(Location location)
+    {
+        locationErrorMessage = "";
+        editingLocation = new Location
+        {
+            LocationId = location.LocationId,
+            WarehouseId = location.WarehouseId,
+            Code = location.Code,
+            Barcode = location.Barcode,
+            BarcodeType = location.BarcodeType,
+            Zone = location.Zone,
+            Aisle = location.Aisle,
+            Rack = location.Rack,
+            Level = location.Level,
+            Position = location.Position,
+            Capacity = location.Capacity,
+            CurrentCapacity = location.CurrentCapacity,
+            AllowMixedProducts = location.AllowMixedProducts,
+            Status = location.Status,
+            IsActive = location.IsActive
+        };
+        await locationModal.ShowAsync();
+    }
+
+    private async Task SaveLocation()
+    {
+        locationErrorMessage = "";
+        if (editingLocation.WarehouseId <= 0)
+        {
+            locationErrorMessage = "Debe seleccionar un almacén.";
+            return;
+        }
+
+        var saved = editingLocation.LocationId == 0
+            ? await service.CreateLocationAsync(editingLocation)
+            : await service.UpdateLocationAsync(editingLocation.LocationId, editingLocation);
+
+        if (saved == null)
+        {
+            locationErrorMessage = "No se pudo guardar. Verifica que el código no esté repetido en el almacén.";
+            return;
+        }
+
+        await LoadLocations();
+        await locationModal.HideAsync();
+        messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Ubicaciones", Message = "Ubicación guardada correctamente." });
+    }
+
+    private async Task CancelLocation()
+    {
+        locationErrorMessage = "";
+        await locationModal.HideAsync();
+    }
+
+    private async Task ToggleLocation(Location location)
+    {
+        location.IsActive = !location.IsActive;
+        var saved = await service.UpdateLocationAsync(location.LocationId, location);
+        if (saved == null)
+        {
+            messages.Add(new ToastMessage { Type = ToastType.Danger, Title = "Ubicaciones", Message = "No se pudo actualizar el estado." });
+            return;
+        }
+        await LoadLocations();
+        messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Ubicaciones", Message = "Estado actualizado." });
+    }
+
+    private async Task DeleteLocation(Location location)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la ubicación '{location.Code}'?")) return;
+        if (await service.DeleteLocationAsync(location.LocationId))
+        {
+            await LoadLocations();
+            messages.Add(new ToastMessage { Type = ToastType.Success, Title = "Ubicaciones", Message = "Ubicación eliminada." });
         }
     }
 

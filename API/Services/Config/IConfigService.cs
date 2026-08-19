@@ -14,5 +14,10 @@ namespace API.Services.Config
         Task<ProductUnit?> CreateProductUnitAsync(ProductUnit unit);
         Task<ProductUnit?> UpdateProductUnitAsync(int id, ProductUnit unit);
         Task<bool> DeleteProductUnitAsync(int id);
+        Task<List<Warehouse>> GetWarehousesAsync();
+        Task<List<Location>> GetLocationsAsync();
+        Task<Location?> CreateLocationAsync(Location location);
+        Task<Location?> UpdateLocationAsync(int id, Location location);
+        Task<bool> DeleteLocationAsync(int id);
     }
 }

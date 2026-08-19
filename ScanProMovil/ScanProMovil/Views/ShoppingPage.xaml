@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.ShoppingPage"
+             Title="ShoppingPage"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
+             x:DataType="vm:OrderViewModel">
+
+    <Grid Padding="1"
+          RowDefinitions="Auto,Auto,*">
+        <!--Barra de Acciones-->
+        <ScrollView Grid.Row="0" 
+                    Orientation="Horizontal">
+            <HorizontalStackLayout 
+                Spacing="3">
+                <Button 
+                    x:Name="btnAddOrders"
+                    Text="ADD"       
+                    ImageSource="add.png"
+                    BackgroundColor="DodgerBlue" 
+                    ContentLayout="Top, 2"
+                    TextColor="White" WidthRequest="80"
+                    Clicked="btnAddOrders_Clicked"
+                    />
+
+                <Button 
+                    x:Name="btnDetailsOrders"
+                    Text="INFO"       
+                    ImageSource="document_info.png"
+                    BackgroundColor="DodgerBlue" 
+                    ContentLayout="Top, 2"
+                    TextColor="White" WidthRequest="80"
+                    Clicked="btnDetailsOrders_Clicked" />
+
+                <Button 
+                        x:Name="btnConfig"
+                        Text="CONF"       
+                        ImageSource="gear_24px.png"
+                        BackgroundColor="DodgerBlue" 
+                        ContentLayout="Top, 2"
+                        TextColor="White" WidthRequest="80"
+                        Clicked="btnConfig_Clicked" />
+
+                <Button 
+                    x:Name="btn_sincrOrdenes"
+                    Text="SINC"
+                    ImageSource="uploadcloud.png"
+                    BackgroundColor="DodgerBlue" 
+                    ContentLayout="Top, 2"
+                    TextColor="White" 
+                    WidthRequest="80"
+                    Clicked="btn_sincrOrdenes_Clicked"
+                    />
+                
+                <Button 
+                    Text="DELETE"
+                    x:Name="btnDeleteOrder"
+                    ImageSource="delete.png"
+                    BackgroundColor="DodgerBlue" 
+                    ContentLayout="Top, 2"
+                    TextColor="White"  WidthRequest="80"
+                    Clicked="btnDeleteOrder_Clicked"
+                 />
+                
+                <Button Text="CANCEL"
+                 ImageSource="cancel.png"
+                 BackgroundColor="DodgerBlue" 
+                 ContentLayout="Top, 2"
+                 TextColor="White" WidthRequest="80"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+        <!--Barra de Busqueda -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width=".7*"></ColumnDefinition>
+                <ColumnDefinition Width=".3*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0"
+                Margin="0,5,0,0"
+                Stroke="gray"
+                StrokeThickness="1"
+                Background="White">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10"></RoundRectangle>
+                </Border.StrokeShape>
+                <SearchBar 
+                    Text="{Binding SearchText}"
+                    Placeholder="Buscar Ordenes..." 
+                    FontAttributes="Bold"/>
+            </Border>
+            <!--Total de Ordenes--> 
+            <Label Text="{Binding TotalOrders, StringFormat='{0} Items'}" 
+                Grid.Column="1" 
+                FontSize="10"
+                TextColor="White"
+                FontAttributes="Bold" VerticalTextAlignment="Center" 
+                HorizontalOptions="Center" Background="Black" 
+                Margin="0,5,0,5" Padding="20,0,20,0"/>
+
+        </Grid>
+        <!--Lista de Ordenes -->
+        <CollectionView Grid.Row="2"
+            x:Name="CvOrdenes"
+            EmptyView="No Data..."
+            ItemsLayout="VerticalList"
+            SelectionMode="Single"
+            ItemsSource="{Binding Ordenes}"
+            SelectedItem="{Binding SelectedOrder, Mode=TwoWay}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Order">
+                    <Border Margin="1" 
+                    Stroke="gray"
+                    StrokeThickness="1">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"></RoundRectangle>
+                        </Border.StrokeShape>
+                        <!--layuot de la tarjeta-->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width=".2*" />
+                                <ColumnDefinition Width=".5*" />
+                                <ColumnDefinition Width=".3*" />
+                            </Grid.ColumnDefinitions>
+                            <!--Seccion de la Foto -->
+                            <HorizontalStackLayout Grid.Column="0">
+                                <Image Source="downloads.png"  />
+                            </HorizontalStackLayout>
+                            <!--Seccion del medio Numero-fecha-tatus -->
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="{Binding OrderNumber}" 
+                                       FontAttributes="Bold" 
+                                       FontSize="25"/>
+                                <Label Text="{Binding OrderDate, StringFormat='Fecha: {0:dd-MM-yyyy}'}" />
+                                <HorizontalStackLayout>
+                                    <Label Text="Status: " FontAttributes="Bold" FontSize="15" />
+                                    <Border 
+                                        WidthRequest="90"
+                                        Padding="5,5,5,5"
+                                        BackgroundColor="{Binding BorderColor}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="10"></RoundRectangle>
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding StatusTexto}" 
+                                       HorizontalOptions="Center" FontSize="10" />
+                                    </Border>
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                            <!-- Ultima seccion de total productos scaneados-->
+                            <VerticalStackLayout Grid.Column="2" Padding="10,20,0,0" Spacing="8">
+                                <Label Text="{Binding ItemsNumber, StringFormat='{0} Items.'}" FontSize="12" FontAttributes="Bold"/>
+                                <VerticalStackLayout>
+                                    <Label Text="Total Costo: " FontSize="10"/>
+                                    <Label Text="{Binding TotalCosto, StringFormat='{0:N2}$'}" FontAttributes="Bold" FontSize="12" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        
+        <!--Activity Indicator -->
+        <Grid
+            Grid.RowSpan="3"
+            IsVisible="{Binding IsLoading}"
+            BackgroundColor="#80000000"
+            ZIndex="100"
+            >
+
+            <VerticalStackLayout 
+                HorizontalOptions="Center" 
+                VerticalOptions="Center">
+                
+                <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                   WidthRequest="60" 
+                                   HeightRequest="60"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   />
+
+                <Label Text="Cargando órdenes..."
+                       TextColor="White"/>
+
+            </VerticalStackLayout>
+            
+            
+        </Grid>
+        
+        
+    </Grid>
+</ContentPage>

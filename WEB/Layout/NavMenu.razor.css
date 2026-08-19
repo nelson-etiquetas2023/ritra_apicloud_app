@@ -70,6 +70,35 @@
         color: white;
     }
 
+.version-divider {
+    margin: 1rem 1rem 0.5rem 1rem;
+    border-top: 1px solid #d6d5d5;
+}
+
+.version-section {
+    padding-bottom: 1rem;
+    user-select: none;
+}
+
+.version-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #28BB5B;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.version-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: #444444;
+    padding: 0.15rem 0;
+    word-break: break-word;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;

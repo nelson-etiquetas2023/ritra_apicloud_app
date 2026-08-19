@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.SqliteCrudPage"
+             Title="SqliteCrudPage"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels">
+
+    <ContentPage.BindingContext>
+        <vm:UsersViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            <Entry x:Name="EntryUserName" 
+                   Placeholder="Enter name user..." 
+                   FontSize="18" 
+                   FontAttributes="Bold"
+                   Text="{Binding EntryNameUser}"/>
+            <Button Text="Guardar Usuario"  
+                    Command="{Binding InsertUsersCommand}"
+                    CommandParameter="{Binding Text, Source={x:Reference EntryUserName}}"/>
+            <Button Text="Cargar Usuario" Command="{Binding GetUsersFullCommand}" />
+            <CollectionView ItemsSource="{Binding Users}" 
+                            HeightRequest="300" 
+                            SelectionMode="Single">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="Gray">
+                            <HorizontalStackLayout Margin="20,0,20,0">
+                                <Label Text="{Binding UserId}" FontSize="18" FontAttributes="Bold" WidthRequest="30" 
+                                       Margin="10,0,10,0" />
+                                <Label Text="{Binding UserName}" FontSize="18" FontAttributes="Bold" />
+                            </HorizontalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+    
+    
+    
+    
+    
+    
+      
+    
+</ContentPage>

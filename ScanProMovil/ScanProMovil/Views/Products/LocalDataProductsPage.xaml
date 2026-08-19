@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Products.LocalDataProductsPage"
+             Title="Products Local"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             xmlns:vm="clr-namespace:ScanProMovil.ViewModels.Products"
+             x:DataType="vm:ProductsLocalViewModels">
+
+    <Grid RowDefinitions="Auto,*" >
+        <!--Barra de Busqueda-->
+        <VerticalStackLayout Grid.Row="0">
+            <HorizontalStackLayout >
+                <Border 
+                    Margin="5,5,5,5"
+                    Stroke="gray"
+                    StrokeThickness="1"
+                    Background="White">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"></RoundRectangle>
+                    </Border.StrokeShape>
+                    <!--**Entry de Escanear Productos**-->
+                    <Entry 
+                        x:Name="SearchEntry"
+                        Text="{Binding SearchText}"
+                        Placeholder="Buscar Productos..." 
+                        FontAttributes="Bold" 
+                        WidthRequest="220"
+                        HeightRequest="50"
+                        TextChanged="searchEntry_TextChanged"
+                        Completed="searchEntry_Completed"/>
+                </Border>
+                <Button 
+                    Text="Reload" 
+                    HeightRequest="50"
+                    Clicked="ReloadProducts"/>
+            </HorizontalStackLayout>
+            <Label Text="{Binding TotalProducts,StringFormat='Total de Productos: {0}'}" FontAttributes="Bold"/>
+        </VerticalStackLayout>
+        <!--List de Productos -->
+        <CollectionView 
+            Grid.Row="1"
+            x:Name="cv_localProducts"
+            EmptyView="No Data..."
+            ItemsLayout="VerticalList"
+            ItemsSource="{Binding Productos}"
+            SelectionMode="Single"
+            SelectedItem="{Binding SelectedProduct, Mode=TwoWay}" >
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Product">
+                    <Grid 
+                        Margin="0,1,0,2" 
+                        BackgroundColor="LightGray" 
+                        ColumnSpacing="3" 
+                        >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width=".2*"/>
+                            <ColumnDefinition Width=".8*"/>
+                            <ColumnDefinition Width=".2*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="Code:" FontAttributes="Bold" FontSize="10"/>
+                            <Label Text="{Binding product_code}" FontSize="10" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1">
+                            <Label Text="{Binding Product_Name, StringFormat='Nombre:  {0}'}"  
+                       FontAttributes="Bold" Margin="0,0,0,5" />
+                            <Label Text="{Binding Costo, StringFormat='Costo: {0}'}" FontSize="10" />
+                            <Label Text="{Binding CodeBar, StringFormat='Codigo de Barra: {0}'}" FontSize="10" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" VerticalOptions="Center">
+                            <Image Source="gear_24px.png" 
+                       WidthRequest="50" 
+                       HeightRequest="50" />
+                        </VerticalStackLayout>
+      
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <!--ActivityIndicator-->
+        <Grid 
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            ZIndex="999"
+            IsVisible="{Binding IsBusy}"
+            BackgroundColor="#60000000">
+            <VerticalStackLayout 
+                HorizontalOptions="Center"
+                VerticalOptions="Center">
+                <ActivityIndicator 
+                    IsRunning="{Binding IsBusy}"
+                    Color="DodgerBlue"
+                    WidthRequest="60"
+                     HeightRequest="60">
+                </ActivityIndicator>
+                <Label 
+           Text="Cargando Productos..."
+           TextColor="white"
+           FontAttributes="Bold" />
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

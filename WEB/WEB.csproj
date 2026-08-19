@@ -5,7 +5,32 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+
+    <Version>1.0.0</Version>
+    <BuildNumber>$([System.DateTime]::Now.ToString('yyyyMMddHHmmss'))</BuildNumber>
+    <BuildDate>$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss'))</BuildDate>
   </PropertyGroup>
+
+  <!-- Genera el archivo BuildInfo.g.cs en cada compilación con la versión, build y fecha/hora -->
+  <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <_BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</_BuildInfoFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <Compile Include="$(_BuildInfoFile)" />
+      <_BuildInfoLine Include="// &lt;auto-generated&gt;This file is regenerated on every build.&lt;/auto-generated&gt;" />
+      <_BuildInfoLine Include="namespace WEB.Services.Versioning" />
+      <_BuildInfoLine Include="{" />
+      <_BuildInfoLine Include="    public static class BuildInfo" />
+      <_BuildInfoLine Include="    {" />
+      <_BuildInfoLine Include="        public const string Version = &quot;$(Version)&quot;%3B" />
+      <_BuildInfoLine Include="        public const string BuildNumber = &quot;$(BuildNumber)&quot;%3B" />
+      <_BuildInfoLine Include="        public const string BuildDate = &quot;$(BuildDate)&quot;%3B" />
+      <_BuildInfoLine Include="    }" />
+      <_BuildInfoLine Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_BuildInfoFile)" Overwrite="true" Lines="@(_BuildInfoLine)" />
+  </Target>
 
   <ItemGroup>
     <None Include="wwwroot\images\escanner-inventario.webp" />
@@ -14,11 +39,11 @@
   <ItemGroup>
     <PackageReference Include="Blazor.Bootstrap" Version="3.5.0" />
     <PackageReference Include="ClosedXML" Version="0.105.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.11" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />
   </ItemGroup>
 
 

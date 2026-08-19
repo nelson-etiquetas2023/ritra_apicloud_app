@@ -13,6 +13,7 @@ namespace Shared.Dtos.Compras
         public int Cantidad { get; set; }
         public decimal Costo { get; set; }
         public decimal Subtotal { get; set; }
+        public bool Procesado { get; set; } //true si la linea ya incremento el inventario
         [JsonIgnore]
         public OrdenCompra? Order { get; set; }
     }

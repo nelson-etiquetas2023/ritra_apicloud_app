@@ -1,0 +1,219 @@
+@implements IDisposable
+@inject ILocalStorage localStorage
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
+@inject IAuthService AuthService
+
+@if (_state == GateState.Checking)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <Spinner Size="SpinnerSize.Large" />
+        <strong style="margin-left:10px;">Cargando sistema...</strong>
+    </div>
+}
+else if (_state == GateState.Locked)
+{
+    <div class="d-flex flex-column align-items-center justify-content-center vh-100 text-center px-3" style="background-color:#212529; color:#f8f9fa;">
+        <Icon Name="IconName.ShieldLockFill" Size="IconSize.x5" Color="IconColor.Danger" />
+        <h1 class="mt-3">SISTEMA BLOQUEADO</h1>
+        <p class="lead">Se superaron los 5 intentos de inicio de sesión permitidos.</p>
+        <p class="text-secondary">La aplicación intentará cerrarse. Si no se cierra automáticamente, recargue el navegador; el sistema continuará bloqueado.</p>
+    </div>
+}
+else if (_state == GateState.Login)
+{
+    if (_showRegister)
+    {
+        <div class="d-flex align-items-center justify-content-center vh-100 bg-light">
+            <div class="card shadow-sm p-4" style="width: 420px;">
+                <h3 class="text-center mb-3"><Icon Name="IconName.PersonPlus" Size="IconSize.x2" /> Registrar Usuario</h3>
+                <EditForm Model="registerUser" OnValidSubmit="RegisterUsers">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Nombre completo:</strong></label>
+                        <InputText @bind-Value="registerUser.UserName" class="form-control" placeholder="introduzca el nombre del usuario" />
+                        <ValidationMessage For="@(() => registerUser.UserName)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Email:</strong></label>
+                        <InputText @bind-Value="registerUser.Email" class="form-control" placeholder="introduzca el email del usuario" />
+                        <ValidationMessage For="@(() => registerUser.Email)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Password:</strong></label>
+                        <PasswordInput @bind-Value="registerUser.Password" class="form-control" placeholder="introduza su contraseña" />
+                        <ValidationMessage For="@(() => registerUser.Password)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Confirmar Contraseña:</strong></label>
+                        <PasswordInput @bind-Value="registerUser.ConfirmPassword" class="form-control" placeholder="confirme, por favor" />
+                        <ValidationMessage For="@(() => registerUser.ConfirmPassword)" />
+                    </div>
+                    <div class="d-grid gap-2">
+                        <Button Type="ButtonType.Submit" Color="ButtonColor.Primary"><Icon Name="IconName.FloppyFill" /> Registrar</Button>
+                        <Button Color="ButtonColor.Secondary" @onclick="ShowLogin"><Icon Name="IconName.XCircle" /> Volver al Login</Button>
+                    </div>
+                    <div class="text-muted small mt-2">
+                        El nuevo usuario se creará con rol <strong>User</strong>. Contacte al administrador para cambiar su rol.
+                    </div>
+                </EditForm>
+                <div class="text-danger mt-2">
+                    <span>@registerMessage</span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <LoginForm OnAuthenticated="HandleAuthenticated" OnLocked="HandleLocked" OnShowRegister="ShowRegister" />
+    }
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private enum GateState { Checking, Locked, Login, Ready }
+    private GateState _state = GateState.Checking;
+    private bool _showRegister = false;
+
+    private readonly UserRegister registerUser = new() { Role = "User" };
+    private string registerMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        AuthProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _state = GateState.Checking;
+        StateHasChanged();
+
+        var locked = await localStorage.GetItemAsync<bool>("systemLocked");
+        var token = await localStorage.GetItemAsync<string>("authToken");
+
+        if (locked)
+        {
+            _state = GateState.Locked;
+            await CloseSystemAsync();
+        }
+        else if (!string.IsNullOrWhiteSpace(token))
+        {
+            _state = GateState.Ready;
+        }
+        else
+        {
+            _state = GateState.Login;
+        }
+
+        StateHasChanged();
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        await InvokeAsync(async () =>
+        {
+            var state = await task;
+            var authenticated = state.User.Identity?.IsAuthenticated == true;
+
+            if (authenticated)
+            {
+                if (_state == GateState.Login)
+                {
+                    _state = GateState.Ready;
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                var locked = await localStorage.GetItemAsync<bool>("systemLocked");
+
+                if (_state == GateState.Ready && !locked)
+                {
+                    _state = GateState.Login;
+                    StateHasChanged();
+                }
+                else if (locked && _state != GateState.Locked)
+                {
+                    _state = GateState.Locked;
+                    StateHasChanged();
+                    await CloseSystemAsync();
+                }
+            }
+        });
+    }
+
+    private async Task HandleAuthenticated()
+    {
+        _state = GateState.Ready;
+        StateHasChanged();
+
+        await AuthProvider.GetAuthenticationStateAsync();
+        StateHasChanged();
+    }
+
+    private async Task HandleLocked()
+    {
+        _state = GateState.Locked;
+        StateHasChanged();
+        await CloseSystemAsync();
+    }
+
+    private async Task CloseSystemAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("closeSystem");
+        }
+        catch
+        {
+        }
+    }
+
+    private void ShowRegister()
+    {
+        registerMessage = string.Empty;
+        _showRegister = true;
+        StateHasChanged();
+    }
+
+    private void ShowLogin()
+    {
+        _showRegister = false;
+        StateHasChanged();
+    }
+
+    private async Task RegisterUsers()
+    {
+        try
+        {
+            var result = await AuthService.Register(registerUser);
+            if (result.Success)
+            {
+                registerMessage = "Usuario creado. Ahora puede iniciar sesión.";
+                _showRegister = false;
+            }
+            else
+            {
+                registerMessage = result.Message ?? "No se pudo crear el usuario.";
+            }
+        }
+        catch (Exception ex)
+        {
+            registerMessage = "No se pudo contactar el servidor.";
+            Console.WriteLine(ex.Message);
+        }
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        AuthProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}

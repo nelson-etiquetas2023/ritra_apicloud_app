@@ -1,0 +1,238 @@
+@inject IAuthService Authservice
+@inject ILocalStorage localStorage
+@inject AuthenticationStateProvider AuthProvider
+
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="company-logo">
+                    <div class="logo-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 21V7a1 1 0 0 1 .293-.707l3-3A1 1 0 0 1 8 3h4a1 1 0 0 1 .707.293l3 3L16 6.293"></path>
+                            <path d="M20 21V9a1 1 0 0 0-1-1h-3"></path>
+                            <path d="M14 21v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h2>Bienvenido</h2>
+                <p>Inicie sesión en su cuenta corporativa</p>
+            </div>
+
+            @if (AttemptsRemaining > 0)
+            {
+                <EditForm Model="user" OnValidSubmit="HandleLogin" class="login-form">
+                    <DataAnnotationsValidator />
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="error-message show">@errorMessage</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(sessionWarning))
+                    {
+                        <div class="error-message show" style="color:#92400e; border-left-color:#f59e0b; background:rgba(251,191,36,0.12);">@sessionWarning</div>
+                    }
+
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <InputText @bind-Value="user.Email" id="email" type="email" class="form-input" autocomplete="email" />
+                            <label for="email" class="@(HasEmail ? "floated" : "")">Email corporativo</label>
+                            <span class="input-border"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="input-wrapper password-wrapper">
+                            <InputText @bind-Value="user.Password" id="password" type="@PasswordType" class="form-input" autocomplete="current-password" />
+                            <label for="password" class="@(HasPassword ? "floated" : "")">Contraseña</label>
+                            <button type="button" class="password-toggle" aria-label="Mostrar u ocultar contraseña" @onclick="TogglePassword">
+                                <span class="toggle-icon @(_showPassword ? "show-password" : "")"></span>
+                            </button>
+                            <span class="input-border"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-options">
+                        <div class="remember-wrapper">
+                            <input type="checkbox" id="remember" @bind="_remember" />
+                            <label for="remember" class="checkbox-label">
+                                <span class="checkbox-custom"></span>
+                                Mantener sesión iniciada
+                            </label>
+                        </div>
+                        <a href="#" class="forgot-password" @onclick="ShowResetHint">Restablecer contraseña</a>
+                    </div>
+
+                    <button type="submit" class="login-btn @(_isBusy ? "loading" : "")" disabled="@_isBusy">
+                        <span class="btn-text">Ingresar</span>
+                        <span class="btn-loader"></span>
+                    </button>
+                </EditForm>
+
+                <div class="divider">
+                    <span>o ingrese con</span>
+                </div>
+
+                @if (OnShowRegister.HasDelegate)
+                {
+                    <div class="sso-options">
+                        <button type="button" class="sso-btn register-btn" @onclick="ShowRegister">
+                            <span class="sso-icon register-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="8.5" cy="7" r="4"></circle>
+                                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                                </svg>
+                            </span>
+                            <span>Registrar nuevo usuario</span>
+                        </button>
+                    </div>
+                }
+
+                <div class="corp-attempts">
+                    Intentos restantes: <strong>@AttemptsRemaining de @MaxAttempts</strong>
+                </div>
+            }
+            else
+            {
+                <div class="corp-locked">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <h3>Sistema bloqueado</h3>
+                    <p>Se superaron los 5 intentos permitidos.</p>
+                </div>
+            }
+
+            <div class="footer-links">
+                <a href="#" class="footer-link">Política de Privacidad</a>
+                <span class="separator">•</span>
+                <a href="#" class="footer-link">Términos de Servicio</a>
+                <span class="separator">•</span>
+                <a href="#" class="footer-link">Soporte</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnAuthenticated { get; set; }
+
+    [Parameter]
+    public EventCallback OnLocked { get; set; }
+
+    [Parameter]
+    public EventCallback OnShowRegister { get; set; }
+
+    private const int MaxAttempts = 5;
+
+    private UserLogin user = new();
+    private int AttemptsRemaining = MaxAttempts;
+    private string errorMessage = string.Empty;
+    private string sessionWarning = string.Empty;
+    private bool _showPassword = false;
+    private bool _isBusy = false;
+    private bool _remember = false;
+
+    private string PasswordType => _showPassword ? "text" : "password";
+    private bool HasEmail => !string.IsNullOrWhiteSpace(user.Email);
+    private bool HasPassword => !string.IsNullOrWhiteSpace(user.Password);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var failed = await localStorage.GetItemAsync<int>("loginAttempts");
+        if (failed > MaxAttempts) failed = MaxAttempts;
+
+        AttemptsRemaining = MaxAttempts - failed;
+
+        if (AttemptsRemaining <= 0)
+        {
+            await localStorage.SetItemAsync("systemLocked", true);
+            await OnLocked.InvokeAsync();
+        }
+    }
+
+    private void TogglePassword()
+    {
+        _showPassword = !_showPassword;
+    }
+
+    private void ShowRegister()
+    {
+        if (OnShowRegister.HasDelegate)
+            OnShowRegister.InvokeAsync();
+    }
+
+    private void ShowResetHint(MouseEventArgs e)
+    {
+        errorMessage = "Contacte al administrador para restablecer su contraseña.";
+        StateHasChanged();
+    }
+
+    private async void HandleLogin()
+    {
+        if (_isBusy) return;
+
+        _isBusy = true;
+        errorMessage = string.Empty;
+        sessionWarning = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Authservice.Login(user);
+
+            if (result.Success)
+            {
+                errorMessage = string.Empty;
+                var token = result.Data;
+                if (_remember)
+                {
+                    await localStorage.SetItemAsync("rememberedEmail", user.Email);
+                }
+                else
+                {
+                    await localStorage.RemoveItemAsync("rememberedEmail");
+                }
+                user = new();
+                await localStorage.SetItemAsync("authToken", token);
+                await localStorage.SetItemAsync("loginAttempts", 0);
+                await AuthProvider.GetAuthenticationStateAsync();
+
+                if (!localStorage.StorageAvailable)
+                {
+                    sessionWarning = "Sesión no guardada: el navegador bloqueó el almacenamiento local. La sesión se mantendrá solo en memoria.";
+                }
+
+                await OnAuthenticated.InvokeAsync();
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Credenciales incorrectas.";
+                AttemptsRemaining--;
+                await localStorage.SetItemAsync("loginAttempts", MaxAttempts - AttemptsRemaining);
+
+                if (AttemptsRemaining <= 0)
+                {
+                    await localStorage.SetItemAsync("systemLocked", true);
+                    await OnLocked.InvokeAsync();
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "No se pudo contactar el servidor. Intente nuevamente.";
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            _isBusy = false;
+            StateHasChanged();
+        }
+    }
+}

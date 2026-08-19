@@ -1,0 +1,109 @@
+@inject IOrdenCompraService servicio
+@using Shared.Dtos.Compras
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <Icon Name="IconName.GearWide" Size="IconSize.x3" /><strong> Editar Producto</strong>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <EditForm Model="itemLocal" OnValidSubmit="SaveLine">
+            <div class="mb-3">
+                <label><strong>Numero del Documento :</strong></label>
+                <input class="form-control" value="@order.Numero" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_productname"><strong>Nombre del Producto :</strong></label>
+                <InputText class="form-control" id="txt_productname" @bind-Value="itemLocal.Product_name" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="txt_cantidad"><strong>Cantidad :</strong></label>
+                    <InputNumber class="form-control" id="txt_cantidad" @bind-Value="itemLocal.Cantidad" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="txt_costo"><strong>Costo :</strong></label>
+                    <InputNumber class="form-control" id="txt_costo" @bind-Value="itemLocal.Costo" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="txt_subtotal"><strong>Subtotal :</strong></label>
+                    <input class="form-control" id="txt_subtotal" value="@(itemLocal.Cantidad * itemLocal.Costo)" readonly />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync" class="btn-cancel"><Icon Name="IconName.FileTypeDoc" />Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modal = default!;
+    private DetalleCompras itemLocal = new();
+    private OrdenCompra order = new();
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<OrdenCompra> OnOrderUpdated { get; set; }
+
+    public async Task ShowAsync(OrdenCompra oc, DetalleCompras item)
+    {
+        order = oc;
+        itemLocal = new DetalleCompras
+        {
+            Id = item.Id,
+            Numero = item.Numero,
+            Product_id = item.Product_id,
+            Product_name = item.Product_name,
+            Cantidad = item.Cantidad,
+            Costo = item.Costo,
+            Subtotal = item.Subtotal
+        };
+        await modal.ShowAsync();
+    }
+
+    private async Task SaveLine()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+
+        try
+        {
+            itemLocal.Subtotal = itemLocal.Cantidad * itemLocal.Costo;
+
+            var items = order.Items.ToList();
+            var index = items.FindIndex(i => i.Id == itemLocal.Id);
+            if (index >= 0)
+                items[index] = itemLocal;
+
+            order.Items = items;
+            order.Subtotal = items.Sum(i => (double)(i.Cantidad * i.Costo));
+            order.Total = order.Subtotal + order.Impuesto;
+
+            var success = await servicio.UpdateOrderAsync(order.Numero, order);
+            if (!success)
+            {
+                Console.WriteLine("Error al actualizar la orden en el servidor");
+            }
+
+            await OnOrderUpdated.InvokeAsync(order);
+            await modal.HideAsync();
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

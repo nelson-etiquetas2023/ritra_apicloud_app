@@ -1,17 +1,83 @@
 ﻿using Microsoft.JSInterop;
 using System.Text.Json;
 
-
 namespace WEB.Services.LocalStorage
 {
-    public class LocalStorage(IJSRuntime JS) : ILocalStorage
+    public enum StorageMode
     {
-        public IJSRuntime JS { get; set; } = JS;
+        Local,
+        Session
+    }
+
+    public class LocalStorage : ILocalStorage
+    {
+        private readonly IJSRuntime JS;
 
         private readonly Dictionary<string, string> _memory = new();
         private bool _storageAvailable = true;
 
+        private readonly StorageMode _mode;
+
         public bool StorageAvailable => _storageAvailable;
+
+        public LocalStorage(IJSRuntime JS, StorageMode mode = StorageMode.Local)
+        {
+            this.JS = JS;
+            _mode = mode;
+        }
+
+        private string GetStorageFunctionPrefix()
+        {
+            // Siempre usamos setItem/getItem/deleteItem (definidos en index.html apuntando a sessionStorage)
+            return "Item";
+        }
+
+        private async Task<bool> SetItemJsonAsync(string key, string json)
+        {
+            string funcName = $"set{GetStorageFunctionPrefix()}Item";
+            try
+            {
+                var result = await JS.InvokeAsync<bool>(funcName, key, json);
+                return result;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task<string?> GetItemJsonAsync(string key)
+        {
+            string funcName = $"get{GetStorageFunctionPrefix()}Item";
+            try
+            {
+                return await JS.InvokeAsync<string>(funcName, key);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task DeleteItemJsonAsync(string key)
+        {
+            string funcName = $"delete{GetStorageFunctionPrefix()}Item";
+            try
+            {
+                await JS.InvokeVoidAsync(funcName, key);
+            }
+            catch { }
+        }
+
+        private async Task ClearStorageJsonAsync()
+        {
+            string funcName = $"clear{GetStorageFunctionPrefix()}Storage";
+            try
+            {
+                await JS.InvokeVoidAsync(funcName);
+            }
+            catch { }
+        }
 
         public async Task SetItemAsync<T>(string key, T value)
         {
@@ -20,7 +86,7 @@ namespace WEB.Services.LocalStorage
             bool saved;
             try
             {
-                saved = await JS.InvokeAsync<bool>("setItem", key, json);
+                saved = await SetItemJsonAsync(key, json);
             }
             catch
             {
@@ -43,12 +109,9 @@ namespace WEB.Services.LocalStorage
             string? json = null;
             try
             {
-                json = await JS.InvokeAsync<string>("getItem", key);
+                json = await GetItemJsonAsync(key);
             }
-            catch
-            {
-                json = null;
-            }
+            catch { }
 
             if (string.IsNullOrEmpty(json))
                 _memory.TryGetValue(key, out json);
@@ -61,28 +124,22 @@ namespace WEB.Services.LocalStorage
 
         public async Task RemoveItemAsync(string key)
         {
-            _memory.Remove(key);
             try
             {
-                await JS.InvokeVoidAsync("deleteItem", key);
+                await DeleteItemJsonAsync(key);
+                _memory.Remove(key);
             }
-            catch
-            {
-                // Sin acceso al almacenamiento, solo se limpia la memoria.
-            }
+            catch { }
         }
 
         public async Task ClearAsync()
         {
-            _memory.Clear();
             try
             {
-                await JS.InvokeVoidAsync("clearStorage");
+                await ClearStorageJsonAsync();
             }
-            catch
-            {
-                // Sin acceso al almacenamiento.
-            }
+            catch { }
+            _memory.Clear();
         }
     }
 }
