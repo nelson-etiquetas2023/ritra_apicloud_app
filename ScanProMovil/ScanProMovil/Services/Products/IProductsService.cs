@@ -14,5 +14,6 @@ namespace ScanProMovil.Services.Products
         public Task<bool> UpdateProducts(int productid, Product producto);
         public bool DeleteProducts(string productid);
         public Task<bool> SaveLocalProducts(List<Product> products);
+        public Task<bool> UpdateProductLocal(Product producto);
     }
 }

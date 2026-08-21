@@ -58,6 +58,12 @@ END");
             return max;
         }
 
+        public async Task<string> GetNextNumAsync()
+        {
+            var max = await GetMaxSupplierCodeNumberAsync();
+            return FormatSupplierCode(max + 1);
+        }
+
         public async Task<List<Supplier>> GetSuppliersAsync()
         {
             await EnsureSuppliersTableAsync();

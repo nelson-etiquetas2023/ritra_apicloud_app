@@ -1,4 +1,5 @@
 @inject ISuppliersService service
+@inject ToastService ToastService
 @using Shared.Dtos
 
 <Preload LoadingText="Guardando..." />
@@ -25,7 +26,7 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="txt_ruc"><strong>RUC / Registro Fiscal :</strong></label>
+                    <label for="txt_ruc"><strong>RNC :</strong></label>
                     <InputText class="form-control" id="txt_ruc" @bind-Value="supplierLocal.Ruc" />
                 </div>
 
@@ -108,6 +109,7 @@
                 return;
             }
 
+            ToastService.Notify(new(ToastType.Success, $"Proveedor {supplierLocal.SupplierCode} actualizado correctamente."));
             await OnSupplierUpdate.InvokeAsync(supplierLocal);
         }
         catch (Exception ex)

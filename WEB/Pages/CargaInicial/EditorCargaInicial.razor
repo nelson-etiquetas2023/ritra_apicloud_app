@@ -1,0 +1,771 @@
+@implements IDisposable
+@inject ICargasInicialesService service
+@inject IProductsService productosService
+@inject IJSRuntime JS
+@using Shared.Dtos.CargasIniciales
+@using WEB.Services.Products
+
+@if (inicial != null)
+{
+    <div class="mb-2 d-flex gap-2 justify-content-end">
+        <Button Color="ButtonColor.Success" @onclick="SaveDocument"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+    </div>
+
+    <!-- Zona 1: Dropzone de drag & drop -->
+    <div id="dropZone" class="alert @(isDragOver ? "alert-warning" : "alert-success") d-flex align-items-center justify-content-between p-3 mt-1 mb-3"
+         style="border: 2px dashed @(isDragOver ? "#ffc107" : "#c3e6cb"); background-color: @(isDragOver ? "#fff3cd" : "#d4edda"); color: #155724; cursor: pointer;"
+         @ondragover:preventDefault
+         @ondragenter="() => isDragOver = true"
+         @ondragleave="() => isDragOver = false">
+
+        <div class="d-flex align-items-center">
+            <Icon Name="@(isDragOver ? IconName.FileEarmarkCheck : IconName.FileEarmarkArrowUp)" Size="IconSize.x3" class="me-3" />
+            <div>
+                <strong>@(isDragOver ? "Suelta el archivo aquí" : "Carga inicial desde Excel")</strong>
+                <p class="mb-0 small">Arrastra y suelta tu archivo Excel aquí. Columnas: product_code, product_name, cantidad, ubicacion, costo, categoria, unidad, nota.</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <Button Color="ButtonColor.Secondary" @onclick="DownloadTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar Plantilla</Button>
+        </div>
+    </div>
+
+    @if (isImporting)
+    {
+        <div class="alert alert-info">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span><Spinner Size="SpinnerSize.Small" /> Importando archivo, espere...</span>
+                <strong>@importProgress%</strong>
+            </div>
+            <div class="progress" style="height: 12px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                     style="width: @importProgress%;" aria-valuenow="@importProgress" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    }
+
+    <!-- Zona 2: Header del documento -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            <Icon Name="IconName.FileTypeDoc" /> Datos del Documento
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Número:</strong></label>
+                    <input type="text" class="form-control" @bind="inicial.Numero" readonly />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Fecha y Hora de Creación:</strong></label>
+                    <input type="text" class="form-control" value="@inicial.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss")" readonly />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Comentario:</strong></label>
+                    <input type="text" class="form-control" @bind="inicial.Comentario" placeholder="Comentario de la carga..." />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zona 3: Grid de detalle -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><Icon Name="IconName.List" /> Detalle (@inicial.Detalles.Count)</span>
+            <Button Color="ButtonColor.Primary" @onclick="OpenProductModal"><Icon Name="IconName.Plus" /> Agregar Línea</Button>
+        </div>
+        <div class="card-body">
+
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="input-group input-group-sm" style="max-width: 400px;">
+                    <span class="input-group-text"><Icon Name="IconName.Search" /></span>
+<input type="text" class="form-control" placeholder="Buscar por código, nombre, ubicación, categoría..."
+                       @bind="detalleSearch" @bind:event="oninput" @bind:after="() => RefreshGrid()" />
+                </div>
+                <span class="text-muted small ms-auto">@gridDetalles.Count de @inicial.Detalles.Count líneas</span>
+            </div>
+
+            @if (editingDetail)
+            {
+                <div class="card mb-3 border-primary">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small"><strong>Código:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.ProductCode" placeholder="product_code" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small"><strong>Nombre:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.ProductName" placeholder="product_name" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small"><strong>Cant. Teórica:</strong></label>
+                                <input type="number" class="form-control form-control-sm" @bind="detailEdit.Cantidad" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small"><strong>Ubicación:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Ubicacion" placeholder="ubicacion" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small"><strong>Costo:</strong></label>
+                                <input type="number" class="form-control form-control-sm" step="0.01" @bind="detailEdit.Costo" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small"><strong>Categoría:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Categoria" placeholder="categoria" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small"><strong>Unidad:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Unidad" placeholder="unidad" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small"><strong>Nota:</strong></label>
+                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Nota" placeholder="nota" />
+                            </div>
+                            <div class="col-12 d-flex gap-2 mt-2">
+                                <Button Color="ButtonColor.Success" @onclick="SaveDetail"><Icon Name="IconName.Check" /> Guardar Línea</Button>
+                                <Button Color="ButtonColor.Secondary" @onclick="CancelDetail"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered table-striped align-middle" style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Cant. Teórica</th>
+                            <th>Cant. Física</th>
+                            <th>Diferencia</th>
+                            <th>Ubicación</th>
+                            <th>Costo</th>
+                            <th>Subtotal</th>
+                            <th>Categoría</th>
+                            <th>Unidad</th>
+                            <th>Nota</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in paginaDetalles)
+                        {
+                            <tr>
+                                <td>@d.ProductCode</td>
+                                <td>@d.ProductName</td>
+                                <td>@d.Cantidad</td>
+                                <td>@d.CantidadFisica</td>
+                                <td>
+                                    <Badge Color="@(d.Diferencia == 0 ? BadgeColor.Success : BadgeColor.Danger)" VisuallyHiddenText="Diferencia">
+                                        @(d.Diferencia > 0 ? "+" : "")@d.Diferencia
+                                    </Badge>
+                                </td>
+                                <td>@d.Ubicacion</td>
+                                <td>@d.Costo.ToString("N2")</td>
+                                <td>@((d.Cantidad * d.Costo).ToString("N2"))</td>
+                                <td>@d.Categoria</td>
+                                <td>@d.Unidad</td>
+                                <td @onclick="() => StartNotaEdit(d.Id)" style="cursor:pointer" title="Editar nota">
+                                    @if (notaEditId == d.Id)
+                                    {
+                                        <input type="text" class="form-control form-control-sm" @bind="d.Nota" @onblur="StopNotaEdit" @onkeydown="@(e => HandleNotaKey(e))" @onclick:stopPropagation="true" />
+                                    }
+                                    else
+                                    {
+                                        <span>@(string.IsNullOrWhiteSpace(d.Nota) ? "..." : d.Nota)</span>
+                                    }
+                                </td>
+                                <td class="text-nowrap">
+                                    <a @onclick="() => StartEditDetail(d)" style="cursor:pointer" title="Editar línea">
+                                        <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                                    </a>
+                                    <a @onclick="() => DeleteDetail(d)" style="cursor:pointer;margin-left:10px;" title="Eliminar línea">
+                                        <Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Danger" />
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                        @if (paginaDetalles.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="12" class="text-center text-muted py-4">
+                                    <Icon Name="IconName.Inbox" /> No hay líneas que coincidan.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold table-light">
+                            <td colspan="2" class="text-end">Totales:</td>
+                            <td>@gridDetalles.Sum(d => d.Cantidad).ToString("N0")</td>
+                            <td>@gridDetalles.Sum(d => d.CantidadFisica).ToString("N0")</td>
+                            <td>
+                                <span class="@(gridDetalles.Sum(d => d.Diferencia) == 0 ? "text-success" : "text-danger")">
+                                    @((gridDetalles.Sum(d => d.Diferencia) > 0 ? "+" : "") + gridDetalles.Sum(d => d.Diferencia).ToString("N0"))
+                                </span>
+                            </td>
+                            <td colspan="2" class="text-end">Subtotal:</td>
+                            <td class="text-primary text-end">@($"${gridDetalles.Sum(d => d.Cantidad * d.Costo):N2}")</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="mt-2 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">Página @(paginaActual + 1) de @totalPaginas</span>
+                <div class="d-flex gap-2">
+                    <Button Color="ButtonColor.Secondary" IsDisabled="@(paginaActual <= 0)" @onclick="() => IrPagina(paginaActual - 1)"><Icon Name="IconName.ChevronLeft" /></Button>
+                    <Button Color="ButtonColor.Secondary" IsDisabled="@(paginaActual >= totalPaginas - 1)" @onclick="() => IrPagina(paginaActual + 1)"><Icon Name="IconName.ChevronRight" /></Button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zona 4: Resumen -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <Icon Name="IconName.Calculator" /> Resumen
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">Total de Ítems</div>
+                        <div class="h4 mb-0">@inicial.Detalles.Count</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">Cantidad Teórica (Excel)</div>
+                        <div class="h4 mb-0">@inicial.Detalles.Sum(d => d.Cantidad).ToString("N0")</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">Cantidad Física</div>
+                        <div class="h4 mb-0">@inicial.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3" style="background-color:@(inicial.Detalles.Sum(d => d.Diferencia) == 0 ? "#f8f9fa" : "#fdf1f1");">
+                        <div class="text-muted small">Diferencia Total</div>
+                        <div class="h4 mb-0 @(inicial.Detalles.Sum(d => d.Diferencia) == 0 ? "text-success" : "text-danger")">@((inicial.Detalles.Sum(d => d.Diferencia) > 0 ? "+" : "") + inicial.Detalles.Sum(d => d.Diferencia).ToString("N0"))</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3" style="background-color:#e8f4fd;">
+                        <div class="text-muted small">Total General</div>
+                        <div class="h4 mb-0 text-primary">@($"${inicial.Detalles.Sum(d => d.Cantidad * d.Costo):N2}")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <Modal @ref="modalProductos" Title="Seleccionar Producto" Size="ModalSize.Large">
+        <BodyTemplate>
+            <div class="mb-2 d-flex align-items-center gap-2">
+                <Icon Name="IconName.Search" />
+                <input type="text" class="form-control" placeholder="Buscar por código o nombre de producto..."
+                       @bind="productSearch" @bind:event="oninput" @bind:after="BuscarProductos" />
+            </div>
+            @if (productosFiltrados == null)
+            {
+                <div class="d-flex justify-content-center align-items-center p-4">
+                    <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando productos...</strong>
+                </div>
+            }
+            else if (productosFiltrados.Count() == 0)
+            {
+                <div class="text-center py-4">
+                    <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay productos que coincidan.</h6>
+                </div>
+            }
+            else
+            {
+                <div style="max-height:400px; overflow-y:auto;">
+                    <table class="table table-hover table-bordered table-striped" style="font-size:0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre del Producto</th>
+                                <th>Categoría</th>
+                                <th>Unidad</th>
+                                <th>Costo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var producto in productosFiltrados.Take(200))
+                            {
+                                <tr style="cursor:pointer;" @onclick="() => AddProductToDetail(producto)">
+                                    <td><strong>@producto.Product_Code</strong></td>
+                                    <td>@producto.Product_Name</td>
+                                    <td>@producto.Product_Type</td>
+                                    <td>@producto.Unidad</td>
+                                    <td>@($"${producto.Costo:N2}")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </BodyTemplate>
+        <FooterTemplate>
+            <Button Color="ButtonColor.Secondary" @onclick="CloseProductModal">Cerrar</Button>
+        </FooterTemplate>
+    </Modal>
+
+    <Modal @ref="modalImportResult" Title="Resultado de la importación">
+        <BodyTemplate>
+            <pre style="white-space:pre-wrap;font-family:inherit;margin-bottom:0;">@importResultMessage</pre>
+        </BodyTemplate>
+        <FooterTemplate>
+            <Button Color="ButtonColor.Primary" @onclick="CloseImportModal">Cerrar</Button>
+        </FooterTemplate>
+    </Modal>
+}
+
+@code {
+    [Parameter] public Inicial? Inicial { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Inicial? inicial;
+
+    private const int PageSize = 10;
+    private List<DetalleInicial> gridDetalles = [];
+    private List<DetalleInicial> paginaDetalles => gridDetalles.Skip(paginaActual * PageSize).Take(PageSize).ToList();
+    private int paginaActual = 0;
+    private int totalPaginas => Math.Max(1, (int)Math.Ceiling(gridDetalles.Count / (double)PageSize));
+
+    private void IrPagina(int pagina)
+    {
+        paginaActual = Math.Clamp(pagina, 0, totalPaginas - 1);
+        StateHasChanged();
+    }
+
+    private string detalleSearch = "";
+
+    private List<DetalleInicial> FiltrarDetalles()
+    {
+        if (inicial == null || inicial.Detalles.Count == 0)
+            return [];
+
+        if (string.IsNullOrWhiteSpace(detalleSearch))
+            return inicial.Detalles.ToList();
+
+        return inicial.Detalles.Where(d =>
+            (d.ProductCode != null && d.ProductCode.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (d.ProductName != null && d.ProductName.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (d.Ubicacion != null && d.Ubicacion.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (d.Categoria != null && d.Categoria.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (d.Unidad != null && d.Unidad.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)) ||
+            (d.Nota != null && d.Nota.Contains(detalleSearch, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private void RefreshGrid()
+    {
+        gridDetalles = FiltrarDetalles();
+        if (paginaActual >= totalPaginas)
+            paginaActual = totalPaginas - 1;
+        if (paginaActual < 0)
+            paginaActual = 0;
+        StateHasChanged();
+    }
+
+    private bool editingDetail;
+    private DetalleInicial detailEdit = new();
+    private int? notaEditId;
+
+    private void StartNotaEdit(int id)
+    {
+        notaEditId = id;
+        StateHasChanged();
+    }
+
+    private void StopNotaEdit()
+    {
+        notaEditId = null;
+        StateHasChanged();
+    }
+
+    private void HandleNotaKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "Escape")
+        {
+            notaEditId = null;
+            StateHasChanged();
+        }
+    }
+
+    private bool isDragOver;
+    private bool isImporting;
+    private int importProgress;
+    private CancellationTokenSource? importProgressCts;
+    private DotNetObjectReference<EditorCargaInicial>? dotNetRef;
+
+    private Modal? modalImportResult;
+    private string importResultMessage = "";
+
+    private Modal? modalProductos;
+    private List<Shared.Dtos.Product>? productos;
+    private IEnumerable<Shared.Dtos.Product>? productosFiltrados;
+    private string productSearch = "";
+
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        inicial = Inicial ?? new Inicial
+        {
+            Numero = "Nuevo",
+            FechaCreacion = DateTime.Now,
+            Detalles = []
+        };
+        editingDetail = false;
+        RefreshGrid();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initCargaInicialDropZone", dotNetRef);
+        }
+    }
+
+    private async Task SaveDocument()
+    {
+        PreloadService.Show(SpinnerColor.Dark, "Guardando...");
+        try
+        {
+            CargaInicialSaveResult result;
+            if (inicial!.Id > 0)
+                result = await service.UpdateAsync(inicial.Id, inicial);
+            else
+                result = await service.CreateAsync(inicial);
+
+            if (result.Success)
+            {
+                await OnSaved.InvokeAsync();
+            }
+            else
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine(result.Message);
+                if (result.Errors.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine($"Errores ({result.Errors.Count}):");
+                    foreach (var error in result.Errors.Take(50))
+                        sb.AppendLine($"  {error.Message}");
+                }
+                importResultMessage = sb.ToString();
+                if (modalImportResult != null)
+                    await modalImportResult.ShowAsync();
+            }
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task OpenProductModal()
+    {
+        productos = null;
+        productosFiltrados = null;
+        productSearch = "";
+        productos = await productosService.GetProductAsync();
+        BuscarProductos();
+        if (modalProductos != null)
+            await modalProductos.ShowAsync();
+        StateHasChanged();
+    }
+
+    private async Task CloseProductModal()
+    {
+        if (modalProductos != null)
+            await modalProductos.HideAsync();
+    }
+
+    private void BuscarProductos()
+    {
+        if (productos == null)
+        {
+            productosFiltrados = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(productSearch))
+        {
+            productosFiltrados = productos.OrderBy(p => p.Product_Code);
+        }
+        else
+        {
+            productosFiltrados = productos.Where(p =>
+                (p.Product_Code != null && p.Product_Code.Contains(productSearch, StringComparison.OrdinalIgnoreCase)) ||
+                (p.Product_Name != null && p.Product_Name.Contains(productSearch, StringComparison.OrdinalIgnoreCase)) ||
+                (p.Codebar != null && p.Codebar.Contains(productSearch, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(p => p.Product_Code);
+        }
+    }
+
+    private async Task AddProductToDetail(Shared.Dtos.Product producto)
+    {
+        var codigo = !string.IsNullOrWhiteSpace(producto.Product_Code) ? producto.Product_Code : producto.Codebar;
+
+        var existente = inicial!.Detalles.FirstOrDefault(d =>
+            d.ProductCode.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+        if (existente != null)
+        {
+            await CloseProductModal();
+            await StartEditDetail(existente);
+            return;
+        }
+
+        var nuevo = new DetalleInicial
+        {
+            Id = inicial.Detalles.Count == 0 ? -1 : inicial.Detalles.Min(d => d.Id) - 1,
+            ProductCode = codigo,
+            ProductName = producto.Product_Name,
+            Cantidad = 0,
+            CantidadFisica = 0,
+            Ubicacion = "",
+            Costo = producto.Costo,
+            Categoria = producto.Product_Type,
+            Unidad = producto.Unidad,
+            Nota = ""
+        };
+        inicial.Detalles.Add(nuevo);
+        RefreshGrid();
+        await CloseProductModal();
+        await StartEditDetail(nuevo);
+    }
+
+    private async Task StartEditDetail(DetalleInicial d)
+    {
+        detailEdit = new DetalleInicial
+        {
+            Id = d.Id,
+            ProductCode = d.ProductCode,
+            ProductName = d.ProductName,
+            Cantidad = d.Cantidad,
+            CantidadFisica = d.CantidadFisica,
+            Ubicacion = d.Ubicacion,
+            Costo = d.Costo,
+            Categoria = d.Categoria,
+            Unidad = d.Unidad,
+            Nota = d.Nota
+        };
+        editingDetail = true;
+        StateHasChanged();
+    }
+
+    private void SaveDetail()
+    {
+        var existing = inicial!.Detalles.FirstOrDefault(x => x.Id == detailEdit.Id && detailEdit.Id != 0);
+        if (existing != null)
+        {
+            existing.ProductCode = detailEdit.ProductCode;
+            existing.ProductName = detailEdit.ProductName;
+            existing.Cantidad = detailEdit.Cantidad;
+            existing.CantidadFisica = detailEdit.CantidadFisica;
+            existing.Ubicacion = detailEdit.Ubicacion;
+            existing.Costo = detailEdit.Costo;
+            existing.Categoria = detailEdit.Categoria;
+            existing.Unidad = detailEdit.Unidad;
+            existing.Nota = detailEdit.Nota;
+        }
+        else
+        {
+            detailEdit.Id = inicial.Detalles.Count == 0 ? -1 : inicial.Detalles.Min(d => d.Id) - 1;
+            inicial.Detalles.Add(detailEdit);
+        }
+
+        editingDetail = false;
+        RefreshGrid();
+    }
+
+    private void DeleteDetail(DetalleInicial d)
+    {
+        inicial!.Detalles.Remove(d);
+        RefreshGrid();
+    }
+
+    private void CancelDetail()
+    {
+        editingDetail = false;
+    }
+
+    private async Task DownloadTemplate()
+    {
+        var bytes = await service.DownloadTemplateAsync();
+        await JS.InvokeVoidAsync("downloadFile", "PlantillaCargaInicial.xlsx", Convert.ToBase64String(bytes));
+    }
+
+    private async Task CloseImportModal()
+    {
+        if (modalImportResult != null)
+            await modalImportResult.HideAsync();
+    }
+
+    public void Dispose()
+    {
+        StopImportProgress();
+        dotNetRef?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    [JSInvokable]
+    public async Task OnFileDropped(string fileName, long fileSize, string contentType, string base64Data)
+    {
+        isDragOver = false;
+        if (!IsValidExcelFile(fileName))
+        {
+            await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
+            return;
+        }
+        await ProcessFile(new BrowserFile(fileName, fileSize, contentType, base64Data));
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnInvalidFileDropped()
+    {
+        isDragOver = false;
+        await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
+    }
+
+    private static bool IsValidExcelFile(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension is ".xlsx" or ".xls";
+    }
+
+    private async Task ProcessFile(IBrowserFile file)
+    {
+        if (!IsValidExcelFile(file.Name))
+        {
+            await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
+            return;
+        }
+
+        PreloadService.Show(SpinnerColor.Dark, "Importando carga inicial...");
+        isImporting = true;
+        importProgress = 0;
+        StartImportProgress();
+
+        try
+        {
+            var result = await service.ImportAsync(file);
+
+            importProgress = 100;
+            await Task.Delay(200);
+
+            var sb = new System.Text.StringBuilder();
+            if (!result.Success)
+                sb.AppendLine("La importación falló y no se guardó ningún cambio.");
+            else
+                sb.AppendLine("Importación completada correctamente.");
+
+            sb.AppendLine($"Líneas insertadas: {result.Inserted}");
+            sb.AppendLine($"Filas omitidas: {result.Skipped}");
+
+            if (result.Errors.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"Errores ({result.Errors.Count}):");
+                foreach (var error in result.Errors.Take(50))
+                    sb.AppendLine($"  Fila {error.Row}: {error.Message}");
+                if (result.Errors.Count > 50)
+                    sb.AppendLine($"  ... y {result.Errors.Count - 50} error(es) más.");
+            }
+
+            var contados = 0;
+            foreach (var detalle in result.Detalles)
+            {
+                var existente = inicial!.Detalles.FirstOrDefault(d =>
+                    d.ProductCode.Equals(detalle.ProductCode, StringComparison.OrdinalIgnoreCase));
+
+                if (existente != null)
+                {
+                    existente.Cantidad = detalle.Cantidad;
+                    existente.Ubicacion = detalle.Ubicacion;
+                    existente.Costo = detalle.Costo;
+                    existente.Categoria = detalle.Categoria;
+                    existente.Unidad = detalle.Unidad;
+                    existente.Nota = detalle.Nota;
+                }
+                else
+                {
+                    detalle.Id = inicial.Detalles.Count == 0 ? -1 : inicial.Detalles.Min(d => d.Id) - 1;
+                    inicial.Detalles.Add(detalle);
+                }
+                contados++;
+            }
+            if (contados > 0)
+                sb.AppendLine();
+            sb.AppendLine($"Se agregaron/actualizaron {contados} líneas en el detalle.");
+
+            importResultMessage = sb.ToString();
+
+            RefreshGrid();
+
+            if (modalImportResult != null)
+                await modalImportResult.ShowAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await ShowImportResult($"Error en la importación: {ex.Message}");
+        }
+        finally
+        {
+            StopImportProgress();
+            isImporting = false;
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task ShowImportResult(string message)
+    {
+        importResultMessage = message;
+        if (modalImportResult != null)
+            await modalImportResult.ShowAsync();
+        StateHasChanged();
+    }
+
+    private void StartImportProgress()
+    {
+        StopImportProgress();
+        importProgressCts = new CancellationTokenSource();
+        _ = SimulateImportProgressAsync(importProgressCts.Token);
+    }
+
+    private void StopImportProgress()
+    {
+        importProgressCts?.Cancel();
+        importProgressCts?.Dispose();
+        importProgressCts = null;
+    }
+
+    private async Task SimulateImportProgressAsync(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested && importProgress < 95)
+            {
+                await Task.Delay(150, token);
+                importProgress = Math.Min(importProgress + Random.Shared.Next(3, 9), 95);
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+}

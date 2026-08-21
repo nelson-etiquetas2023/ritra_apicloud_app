@@ -3,8 +3,6 @@
 @using WEB.Services.Inventario
 @using Shared.Dtos.Compras
 
-<Preload LoadingText="Procesando..." />
-
 <Modal @ref="modal" Size="ModalSize.Large">
     <HeaderTemplate>
         <Icon Name="IconName.BoxArrowDown" Size="IconSize.x3" /><strong> Procesar Documento @order.Numero</strong>
@@ -60,9 +58,9 @@
                                     <span class="text-secondary">—</span>
                                 }
                             }
-                            else if (Procesando && i <= RowProcesando)
+                            else if (Procesando && i == RowProcesando)
                             {
-                                <Spinner Size="SpinnerSize.Small" /> <span class="ms-1 text-secondary">Procesando...</span>
+                                <span class="three-dots-loader"><span></span><span></span><span></span></span>
                             }
                             else
                             {
@@ -85,7 +83,7 @@
     </BodyTemplate>
 
     <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="Procesar" Disabled="@Procesando">
+        <Button Color="ButtonColor.Primary" @onclick="Procesar" Disabled="@(Procesando || order.Status == 4)">
             <Icon Name="IconName.BoxArrowDown" /> @(order.Status == 5 ? "Re-procesar" : "Procesar")
         </Button>
         <Button Color="ButtonColor.Secondary" @onclick="HideAsync" Disabled="@Procesando">
@@ -126,6 +124,7 @@
         StateHasChanged();
 
         var animacion = AnimarFilasAsync(cts.Token);
+        await Task.Delay(2000);
         var resultado = await inventarioService.ProcesarOrdenAsync(order.Numero);
 
         cts.Cancel();

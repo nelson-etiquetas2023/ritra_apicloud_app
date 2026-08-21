@@ -125,6 +125,17 @@
                                 </Label>
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="1" Spacing="3" HorizontalOptions="End">
+                                <Label Text="✓"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="#16A34A"
+                                       IsVisible="False">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Enviado}" Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
                                 <Label Text="{Binding Cantidad, StringFormat='{0:N0} und'}"
                                        TextColor="#0D6EFD"
                                        FontSize="14"

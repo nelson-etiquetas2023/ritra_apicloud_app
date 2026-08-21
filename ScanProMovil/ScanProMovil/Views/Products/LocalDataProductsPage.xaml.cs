@@ -21,6 +21,15 @@ public partial class LocalDataProductsPage : ContentPage
         SearchEntry.Focus();
     }
 
+    private async void OnProductSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_vm.SelectedProduct is null) return;
+
+        var product = _vm.SelectedProduct;
+        _vm.SelectedProduct = null;
+        await Navigation.PushAsync(new ProductDetails(product));
+    }
+
     private async void ReloadProducts(object? sender, EventArgs? e)
     {
         await _vm.GetProductLocal();

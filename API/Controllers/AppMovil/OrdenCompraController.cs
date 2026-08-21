@@ -48,14 +48,28 @@ namespace API.Controllers.AppMovil
 
         [HttpDelete]
         [Route("deleteorder/{Id}")]
-        public async Task<IActionResult> DeleteOrderAsync(string Id) 
+        public async Task<IActionResult> DeleteOrderAsync(string Id)
         {
             var OrderDeleted = await Service.DeleteOrderAsync(Id);
             if(!OrderDeleted) return NotFound($"Orden {Id} no encontrada");
-            return Ok(OrderDeleted);    
+            return Ok(OrderDeleted);
         }
 
+        [HttpGet]
+        [Route("getnextnum")]
+        public async Task<IActionResult> GetNextNum()
+        {
+            var next = await Service.GetNextNumAsync();
+            return Ok(new { numero = next });
+        }
 
-
+        [HttpPost]
+        [Route("anular/{numero}")]
+        public async Task<IActionResult> Anular(string numero)
+        {
+            var ok = await Service.AnularOrderAsync(numero);
+            if (!ok) return Conflict($"La orden {numero} no existe, ya fue procesada o ya está anulada.");
+            return Ok(new { message = $"La orden {numero} fue anulada." });
+        }
     }
 }

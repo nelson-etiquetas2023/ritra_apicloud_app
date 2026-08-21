@@ -14,5 +14,6 @@ namespace ScanProMovil.Entities
         public double TotalCosto { get; set; } = 0;
         public string Ubicacion { get; set; } = null!;
         public string Nota { get; set; } = string.Empty;
+        public bool Enviado { get; set; }
     }
 }

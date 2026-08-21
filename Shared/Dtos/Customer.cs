@@ -17,11 +17,11 @@ namespace Shared.Dtos
         [Required(ErrorMessage = "la direccion es obligatoria...")]
         public string Direccion { get; set; } = "";
 
-        public string Registro_Fiscal { get; set; } = "";
+        public string RNC { get; set; } = "";
+
+        public string Contacto { get; set; } = "";
 
         public string Telefono { get; set; } = "";
-
-        public string Correo { get; set; } = "";
 
         public string Email { get; set; } = "";
     }

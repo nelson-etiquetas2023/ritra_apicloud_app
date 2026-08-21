@@ -32,17 +32,19 @@ namespace API.Controllers
         public async Task<IActionResult> CreateAsync([FromBody] Inicial inicial)
         {
             if (inicial == null) return BadRequest("Datos inválidos");
-            var created = await _service.CreateAsync(inicial);
-            return CreatedAtAction(nameof(GetByIdAsync), new { id = created.Id }, created);
+            var result = await _service.CreateAsync(inicial);
+            return Ok(result);
         }
 
         [HttpPut]
         [Route("update/{id}")]
         public async Task<IActionResult> UpdateAsync(int id, [FromBody] Inicial inicial)
         {
-            var updated = await _service.UpdateAsync(id, inicial);
-            if (updated == null) return NotFound($"Carga inicial {id} no encontrada");
-            return Ok(updated);
+            if (inicial == null) return BadRequest("Datos inválidos");
+            var result = await _service.UpdateAsync(id, inicial);
+            if (!result.Success && result.Data == null)
+                return Ok(result);
+            return Ok(result);
         }
 
         [HttpDelete]
@@ -90,6 +92,22 @@ namespace API.Controllers
         {
             var documentos = await _service.GetDocumentsInitialsInventoryAsync();
             return Ok(documentos);
+        }
+
+        [HttpGet]
+        [Route("getnextnum")]
+        public async Task<IActionResult> GetNextNumAsync()
+        {
+            var next = await _service.GetNextNumAsync();
+            return Ok(new { numero = next });
+        }
+
+        [HttpPost]
+        [Route("procesar/{id}")]
+        public async Task<IActionResult> ProcesarAsync(int id)
+        {
+            var result = await _service.ProcesarInicialAsync(id);
+            return Ok(result);
         }
 
         [HttpGet]

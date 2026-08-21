@@ -8,21 +8,18 @@
     <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="8">
 
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <VerticalStackLayout Spacing="2">
-                <Label x:Name="NumeroLabel"
-                       TextColor="#1D3557"
-                       FontSize="22"
-                       FontAttributes="Bold"
-                       LineBreakMode="TailTruncation" />
-                <Label Text="Nuevo documento de stock inicial"
-                       TextColor="#5A6A7A"
-                       FontSize="13" />
-            </VerticalStackLayout>
+            <Label x:Name="NumeroLabel"
+                   TextColor="#1D3557"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   LineBreakMode="TailTruncation"
+                   VerticalOptions="Center" />
             <Button x:Name="BtnSave"
                     Grid.Column="1"
                     Text="Guardar"
                     BackgroundColor="Green"
                     TextColor="White"
+                    HeightRequest="36"
                     Clicked="OnSaveClicked" />
         </Grid>
 

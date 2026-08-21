@@ -11,5 +11,6 @@ namespace WEB.Services.Customers
         Task<bool> UpdateCustomerAsync(int id, Customer customer);
         Task<bool> DeleteCustomerAsync(int id);
         Task<CustomerImportResult> ImportCustomersFromExcelAsync(IBrowserFile file);
+        Task<string> GetNextNumAsync();
     }
 }

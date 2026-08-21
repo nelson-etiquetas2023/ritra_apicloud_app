@@ -142,3 +142,96 @@ code {
     color: #6c757d;
     line-height: 1.2;
 }
+
+.three-dots-loader {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.three-dots-loader span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #6c757d;
+    animation: three-dots-bounce 1.2s infinite ease-in-out;
+}
+
+.three-dots-loader span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.three-dots-loader span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes three-dots-bounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-8px);
+    }
+}
+/* ===== Submenu Inventario (sidebar, acordeon) ===== */
+.nav-item.has-submenu .submenu-caret {
+    transition: transform 0.2s ease;
+    opacity: 0.7;
+}
+.nav-item.has-submenu:hover .submenu-caret {
+    transform: rotate(90deg);
+}
+.nav-item.has-submenu .submenu-caret {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    color: inherit;
+    transition: transform 0.2s ease;
+}
+.nav-item.has-submenu:hover .submenu-caret,
+.nav-item.has-submenu .submenu-caret.submenu-caret-open {
+    transform: rotate(90deg);
+}
+.nav-item.has-submenu .submenu {
+    display: none;
+    flex-direction: column;
+    padding: 0.25rem 0 0.5rem 2.2rem;
+    border-left: 2px solid #28BB5B;
+}
+.nav-item.has-submenu:hover .submenu,
+.nav-item.has-submenu:focus-within .submenu,
+.nav-item.has-submenu .submenu.submenu-open {
+    display: flex;
+}
+.nav-item.has-submenu .submenu a.submenu-link {
+    color: #000000;
+    border-radius: 4px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    padding-left: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-item.has-submenu .submenu a.submenu-link:hover {
+    background-color: #22b956;
+    color: white;
+}
+.nav-item.has-submenu .submenu a.submenu-link.active {
+    color: #147a3d;
+    background-color: rgba(40, 187, 91, 0.18);
+}
+.nav-item.has-submenu .submenu a.submenu-link.active:hover {
+    color: #ffffff;
+    background-color: #22b956;
+}
+
+/* Icono personalizado en menu (ej. Carga de Iniciales) */
+.menu-icon-img {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.75rem;
+    object-fit: contain;
+    display: inline-block;
+}

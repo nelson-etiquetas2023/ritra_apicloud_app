@@ -45,7 +45,8 @@
             ItemsLayout="VerticalList"
             ItemsSource="{Binding Productos}"
             SelectionMode="Single"
-            SelectedItem="{Binding SelectedProduct, Mode=TwoWay}" >
+            SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
+            SelectionChanged="OnProductSelected" >
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Product">
                     <Grid 

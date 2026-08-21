@@ -13,7 +13,9 @@ namespace Shared.Dtos.Compras
         public int Cantidad { get; set; }
         public decimal Costo { get; set; }
         public decimal Subtotal { get; set; }
+        public string Comentario { get; set; } = "";
         public bool Procesado { get; set; } //true si la linea ya incremento el inventario
+        public DateTime? FechaProcesado { get; set; } //cuando se proceso la linea
         [JsonIgnore]
         public OrdenCompra? Order { get; set; }
     }

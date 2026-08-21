@@ -1,0 +1,594 @@
+@page "/pedidoventa/nueva"
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject IVentasService VentaService
+@inject ICustomersService CustomersService
+@inject IProductsService ProductsService
+@inject IAlmacenesService AlmacenesService
+@inject IVendedoresService VendedoresService
+@using WEB.Pages.Customers
+@using WEB.Pages.Vendedores
+
+<ModalCreateCustomers @ref="modalNuevoCliente" OnCustomerCreated="OnClienteCreado" />
+<ModalCreateVendedor @ref="modalNuevoVendedor" OnVendedorCreated="OnVendedorCreado" />
+@using WEB.Pages.PedidoVenta
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h3 class="mb-0"><Icon Name="IconName.Cart4" Size="IconSize.x2" /> Nuevo Pedido de Venta</h3>
+    <Button Color="ButtonColor.Secondary" @onclick="Cancelar"><Icon Name="IconName.ArrowLeft" /> Volver</Button>
+</div>
+
+<div class="row mt-2">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Documento</div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Número</label>
+                    <input type="text" class="form-control" value="@(string.IsNullOrEmpty(pv.Numero) ? "generando..." : pv.Numero)" disabled />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Fecha de Creación</label>
+                    <input type="datetime-local" class="form-control" @bind="pv.FechaCreacion" @bind:event="onchange" @bind:after="RecalcularFechaEntrega" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Fecha de Entrega (posible)</label>
+                    <input type="date" class="form-control" @bind="pv.Fecha" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Almacén <span class="text-danger">*</span></label>
+                    <select class="form-select" @bind="pv.WarehouseName">
+                        <option value="">@(almacenes.Count == 0 ? "Cargando almacenes..." : "Seleccione un almacén...")</option>
+                        @foreach (var a in almacenes)
+                        {
+                            <option value="@a.almacen_name">@a.almacen_code - @a.almacen_name</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Vendedor <span class="text-danger">*</span></label>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" @bind="pv.Vendedor">
+                            <option value="">@(vendedores.Count == 0 ? "Cargando vendedores..." : "Seleccione un vendedor...")</option>
+                            @foreach (var v in vendedores)
+                            {
+                                <option value="@v.vendedor_name">@v.vendedor_code - @v.vendedor_name</option>
+                            }
+                        </select>
+                        <Button Color="ButtonColor.Primary" Title="Crear nuevo vendedor" @onclick="AbrirModalVendedor">
+                            <Icon Name="IconName.PersonPlus" />
+                        </Button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Prioridad</label>
+                    <select class="form-select" @bind="pv.Prioridad">
+                        <option value="Normal">Normal</option>
+                        <option value="Media">Media</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Urgente">Urgente</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Cliente</div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Cliente <span class="text-danger">*</span></label>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" @bind="pv.Cliente_Id" @bind:event="onchange" @bind:after="OnClienteChanged">
+                            <option value="0">@(clientes.Count == 0 ? "Cargando clientes..." : "Seleccione un cliente...")</option>
+                            @foreach (var cli in clientes)
+                            {
+                                <option value="@cli.Cliente_Id">@cli.Cliente_Nombre</option>
+                            }
+                        </select>
+                        <Button Color="ButtonColor.Primary" Title="Crear nuevo cliente" @onclick="AbrirModalCliente">
+                            <Icon Name="IconName.PersonPlus" />
+                        </Button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label small fw-semibold">RNC</label>
+                        <input type="text" class="form-control" value="@ClienteSeleccionado?.Cliente_RNC" disabled />
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label small fw-semibold">Reference Number</label>
+                        <input type="text" class="form-control" @bind="pv.Reference" placeholder="Referencia del cliente" />
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <label class="form-label small fw-semibold">Dirección de Entrega <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="pv.DireccionEntrega" placeholder="Dirección de entrega del pedido" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-semibold">Descripción</label>
+                        <input type="text" class="form-control" @bind="pv.Description" placeholder="Descripción del pedido" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">Detalle de productos</div>
+    <div class="card-body">
+        <div class="row g-2 align-items-end mb-3 pb-3 border-bottom">
+            <div class="col-md-3 position-relative">
+                <label class="form-label small fw-semibold">Product Name</label>
+                <input @ref="nombreInput" type="text" class="form-control" placeholder="Buscar producto por nombre..."
+                       @bind="busquedaNombre" @bind:event="oninput" @bind:after="OnBusquedaChanged" autocomplete="off" />
+                @if (MostrarSugerencias)
+                {
+                    <div class="list-group position-absolute w-100 shadow" style="z-index:1050; max-height:220px; overflow-y:auto;">
+                        @foreach (var p in Sugerencias)
+                        {
+                            <button type="button" class="list-group-item list-group-item-action py-1" @onclick="() => SeleccionarProducto(p)">
+                                <strong>@p.Name</strong>
+                                <small class="text-muted d-block">@p.Code | Stock: @p.Stock.ToString("N2")</small>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Product Code</label>
+                <input type="text" class="form-control" placeholder="Código..." @bind="lineaCodigo" @bind:event="onchange" @bind:after="ResolverPorCodigo" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small fw-semibold">Cant.</label>
+                <input type="number" class="form-control" min="1" @bind="lineaCantidad" @bind:event="onchange" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small fw-semibold">Precio</label>
+                <input type="number" class="form-control" step="0.01" min="0" @bind="lineaPrecio" @bind:event="onchange" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small fw-semibold">Subtot.</label>
+                <input type="text" class="form-control text-end" value="@SubtotalLinea.ToString("N2")" disabled />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Comentario</label>
+                <input type="text" class="form-control" placeholder="Comentario..." @bind="lineaComentario" />
+            </div>
+            <div class="col-md-2 d-grid">
+                <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="AgregarLinea"><Icon Name="IconName.Plus" /> Add</Button>
+            </div>
+        </div>
+
+        @if (pv.Items.Count == 0)
+        {
+            <div class="text-center py-4">
+                <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay líneas</h6>
+                <p class="text-muted">Busque un producto, ingrese cantidad y precio, y presione Add para agregarlo al pedido.</p>
+            </div>
+        }
+        else
+        {
+            <QuickGrid Items="@pv.Items.AsQueryable()" ItemsPerPage="100" class="table table-hover table-bordered table-striped" Style="font-size:0.9rem;">
+                <TemplateColumn Title="#">
+                    <strong>@NumeroRenglon(context)</strong>
+                </TemplateColumn>
+                <TemplateColumn Title="Código">
+                    <strong>@context.Product_id</strong>
+                </TemplateColumn>
+                <TemplateColumn Title="Nombre" Sortable="true">@context.Product_name</TemplateColumn>
+                <TemplateColumn Title="Cantidad" Sortable="true">
+                    @if (Editando(context))
+                    {
+                        <input type="number" class="form-control form-control-sm" min="1" @bind="editCantidad" />
+                    }
+                    else
+                    {
+                        @context.Cantidad
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Precio">
+                    @if (Editando(context))
+                    {
+                        <input type="number" class="form-control form-control-sm" step="0.01" min="0" @bind="editPrecio" />
+                    }
+                    else
+                    {
+                        @context.Precio.ToString("N2")
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Subtotal">
+                    @(Editando(context) ? (editCantidad * editPrecio).ToString("N2") : context.Subtotal.ToString("N2"))
+                </TemplateColumn>
+                <TemplateColumn Title="Comentario">
+                    @if (Editando(context))
+                    {
+                        <input type="text" class="form-control form-control-sm" @bind="editComentario" />
+                    }
+                    else
+                    {
+                        @context.Comentario
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="">
+                    @if (Editando(context))
+                    {
+                        <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="GuardarLinea"><Icon Name="IconName.Check" /></Button>
+                        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="CancelarEdicion" Style="margin-left:4px;"><Icon Name="IconName.X" /></Button>
+                    }
+                    else
+                    {
+                        <Tooltip Title="Editar línea" Placement="TooltipPlacement.Top">
+                            <a href="javascript:void(0)" @onclick="() => EditarLinea(context)" style="cursor: pointer">
+                                <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                            </a>
+                        </Tooltip>
+                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => QuitarLinea(context)" Style="margin-left:6px;"><Icon Name="IconName.X" /></Button>
+                    }
+                </TemplateColumn>
+            </QuickGrid>
+        }
+
+        <div class="row justify-content-end mt-3">
+            <div class="col-md-4">
+                <div class="d-flex justify-content-between"><span class="text-muted">N° de renglones</span><span>@pv.Items.Count</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>@pv.Subtotal.ToString("N2")</span></div>
+                <div class="d-flex justify-content-between text-danger"><span class="text-muted">Descuento</span><span>-@pv.Descuento.ToString("N2")</span></div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Impuesto (IGV 18%)</span>
+                    <span>@pv.Impuesto.ToString("N2")</span>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>@pv.Total.ToString("N2")</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <Button Color="ButtonColor.Success" @onclick="Guardar"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+    <Button Color="ButtonColor.Secondary" @onclick="Cancelar"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+</div>
+
+@code {
+
+    private PedidoVenta pv = new();
+    private List<ClienteMock> clientes = [];
+    private List<ProductoMock> productos = [];
+    private List<Almacen> almacenes = [];
+    private List<Vendedor> vendedores = [];
+    private string busquedaNombre = "";
+    private string lineaCodigo = "";
+    private int lineaCantidad = 1;
+    private decimal lineaPrecio;
+    private string lineaComentario = "";
+    private ProductoMock? productoSeleccionado;
+    private bool sugerenciasVisible;
+    private ElementReference nombreInput;
+    private ModalCreateCustomers modalNuevoCliente = default!;
+    private ModalCreateVendedor modalNuevoVendedor = default!;
+    private DetalleVenta? lineaEnEdicion;
+    private int editCantidad;
+    private decimal editPrecio;
+    private string editComentario = "";
+
+    protected override void OnInitialized()
+    {
+        _ = CargarDatosInicialesAsync();
+    }
+
+    private async Task CargarDatosInicialesAsync()
+    {
+        try
+        {
+            pv.FechaCreacion = DateTime.Now;
+            pv.Fecha = pv.FechaCreacion.AddDays(7);
+
+            var tNumero = VentaService.GetNextNumAsync();
+            var tAlmacenes = AlmacenesService.GetAlmacenesAsync();
+            var tClientes = CustomersService.GetCustomersAsync();
+            var tProductos = ProductsService.GetProductAsync();
+            var tVendedores = VendedoresService.GetVendedoresAsync();
+
+            await Task.WhenAll(tNumero, tAlmacenes, tClientes, tProductos, tVendedores);
+
+            pv.Numero = await tNumero;
+            almacenes = await tAlmacenes;
+            vendedores = await tVendedores;
+
+            clientes = (await tClientes).Select(c => new ClienteMock
+            {
+                Cliente_Id = c.customer_id,
+                Cliente_Nombre = c.CustomerName,
+                Cliente_RNC = c.RNC ?? "",
+                Direccion = c.Direccion ?? ""
+            }).ToList();
+
+            productos = (await tProductos).Select(p => new ProductoMock
+            {
+                Codebar = p.Codebar ?? "",
+                Code = p.Product_Code ?? "",
+                Name = p.Product_Name ?? "",
+                Costo = (decimal)p.Costo,
+                Precio = (decimal)p.Price,
+                Stock = (decimal)p.Stock
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error cargando datos iniciales: {ex.Message}"));
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private ClienteMock? ClienteSeleccionado
+    {
+        get
+        {
+            if (clientes.Count == 0) return null;
+            return clientes.FirstOrDefault(c => c.Cliente_Id == pv.Cliente_Id);
+        }
+    }
+
+    private void OnClienteChanged()
+    {
+        var cli = clientes.FirstOrDefault(c => c.Cliente_Id == pv.Cliente_Id);
+        if (cli != null && pv.Cliente_Id > 0)
+            pv.DireccionEntrega = cli.Direccion ?? "";
+    }
+
+    private async Task AbrirModalCliente()
+    {
+        await modalNuevoCliente.ShowAsync();
+    }
+
+    private async Task AbrirModalVendedor()
+    {
+        await modalNuevoVendedor.ShowAsync();
+    }
+
+    private async Task OnVendedorCreado()
+    {
+        vendedores = await VendedoresService.GetVendedoresAsync();
+        var nuevo = vendedores.OrderByDescending(v => v.vendedor_id).FirstOrDefault();
+        if (nuevo != null)
+            pv.Vendedor = nuevo.vendedor_name;
+        StateHasChanged();
+    }
+
+    private async Task OnClienteCreado()
+    {
+        var customers = await CustomersService.GetCustomersAsync();
+        clientes = customers.Select(c => new ClienteMock
+        {
+            Cliente_Id = c.customer_id,
+            Cliente_Nombre = c.CustomerName,
+            Cliente_RNC = c.RNC ?? "",
+            Direccion = c.Direccion ?? ""
+        }).ToList();
+
+        var nuevo = clientes.OrderByDescending(c => c.Cliente_Id).FirstOrDefault();
+        if (nuevo != null)
+        {
+            pv.Cliente_Id = nuevo.Cliente_Id;
+            OnClienteChanged();
+        }
+        StateHasChanged();
+    }
+
+    private List<ProductoMock> Sugerencias =>
+        string.IsNullOrWhiteSpace(busquedaNombre)
+            ? []
+            : productos.Where(p => p.Name.Contains(busquedaNombre, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
+
+    private bool MostrarSugerencias => sugerenciasVisible && !string.IsNullOrWhiteSpace(busquedaNombre) && Sugerencias.Count > 0;
+
+    private decimal SubtotalLinea => lineaCantidad * lineaPrecio;
+
+    private void OnBusquedaChanged()
+    {
+        sugerenciasVisible = true;
+    }
+
+    private void SeleccionarProducto(ProductoMock p)
+    {
+        productoSeleccionado = p;
+        busquedaNombre = p.Name;
+        lineaCodigo = !string.IsNullOrEmpty(p.Codebar) ? p.Codebar : p.Code;
+        lineaPrecio = CalcularPrecioVenta(p);
+        sugerenciasVisible = false;
+    }
+
+    private void ResolverPorCodigo()
+    {
+        var codigo = lineaCodigo?.Trim();
+        if (string.IsNullOrWhiteSpace(codigo)) return;
+
+        var p = BuscarProducto(codigo);
+        if (p == null) return;
+
+        productoSeleccionado = p;
+        busquedaNombre = p.Name;
+        lineaPrecio = CalcularPrecioVenta(p);
+    }
+
+    private static decimal CalcularPrecioVenta(ProductoMock p)
+    {
+        return Math.Round(p.Costo * 1.30m, 2);
+    }
+
+    private ProductoMock? BuscarProducto(string codigo) =>
+        productos.FirstOrDefault(p =>
+            (!string.IsNullOrEmpty(p.Codebar) && p.Codebar.Trim().Equals(codigo, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(p.Code) && p.Code.Trim().Equals(codigo, StringComparison.OrdinalIgnoreCase)));
+
+    private async Task AgregarLinea()
+    {
+        var codigo = lineaCodigo?.Trim();
+        var producto = productoSeleccionado ?? (string.IsNullOrWhiteSpace(codigo) ? null : BuscarProducto(codigo));
+
+        if (producto is null)
+        {
+            ToastService.Notify(new(ToastType.Warning, "Seleccione un producto válido por nombre o código."));
+            return;
+        }
+
+        if (lineaCantidad <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La cantidad debe ser mayor a cero."));
+            return;
+        }
+
+        pv.Items.Add(new DetalleVenta
+        {
+            Product_id = !string.IsNullOrEmpty(producto.Codebar) ? producto.Codebar : producto.Code,
+            Product_name = producto.Name,
+            Cantidad = lineaCantidad,
+            Precio = lineaPrecio,
+            Stock = producto.Stock,
+            Comentario = lineaComentario?.Trim() ?? ""
+        });
+        ToastService.Notify(new(ToastType.Success, $"Agregado: {producto.Name} x {lineaCantidad}"));
+
+        RecalcularTotales();
+        LimpiarLinea();
+        await nombreInput.FocusAsync();
+    }
+
+    private void LimpiarLinea()
+    {
+        busquedaNombre = "";
+        lineaCodigo = "";
+        lineaCantidad = 1;
+        lineaPrecio = 0;
+        lineaComentario = "";
+        productoSeleccionado = null;
+        sugerenciasVisible = false;
+    }
+
+    private void RecalcularTotales()
+    {
+        pv.Subtotal = pv.Items.Sum(i => i.Cantidad * i.Precio);
+        pv.Descuento = pv.Items.Sum(i => i.Cantidad * i.Precio * (i.Descuento / 100m));
+        var neto = pv.Subtotal - pv.Descuento;
+        pv.Impuesto = neto * 0.18m;
+        pv.Total = neto + pv.Impuesto;
+        StateHasChanged();
+    }
+
+    private void RecalcularFechaEntrega()
+    {
+        pv.Fecha = pv.FechaCreacion.AddDays(7);
+    }
+
+    private void QuitarLinea(DetalleVenta item)
+    {
+        if (lineaEnEdicion == item) lineaEnEdicion = null;
+        pv.Items.Remove(item);
+        RecalcularTotales();
+    }
+
+    private bool Editando(DetalleVenta item) => lineaEnEdicion == item;
+
+    private int NumeroRenglon(DetalleVenta item)
+    {
+        var i = 1;
+        foreach (var x in pv.Items)
+        {
+            if (ReferenceEquals(x, item)) return i;
+            i++;
+        }
+        return 0;
+    }
+
+    private void EditarLinea(DetalleVenta item)
+    {
+        lineaEnEdicion = item;
+        editCantidad = item.Cantidad;
+        editPrecio = item.Precio;
+        editComentario = item.Comentario;
+    }
+
+    private void GuardarLinea()
+    {
+        if (lineaEnEdicion is null) return;
+
+        if (editCantidad <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La cantidad debe ser mayor a cero."));
+            return;
+        }
+
+        lineaEnEdicion.Cantidad = editCantidad;
+        lineaEnEdicion.Precio = editPrecio;
+        lineaEnEdicion.Comentario = editComentario?.Trim() ?? "";
+        lineaEnEdicion = null;
+        RecalcularTotales();
+        ToastService.Notify(new(ToastType.Success, "Línea actualizada."));
+    }
+
+    private void CancelarEdicion()
+    {
+        lineaEnEdicion = null;
+        StateHasChanged();
+    }
+
+    private async Task Guardar()
+    {
+        if (pv.Cliente_Id <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe seleccionar un cliente."));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(pv.WarehouseName))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe seleccionar un almacén."));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(pv.Vendedor))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe seleccionar un vendedor."));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(pv.DireccionEntrega))
+        {
+            ToastService.Notify(new(ToastType.Danger, "La dirección de entrega es obligatoria."));
+            return;
+        }
+
+        if (pv.Items.Count == 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe agregar al menos una línea al pedido."));
+            return;
+        }
+
+        var cli = clientes.FirstOrDefault(c => c.Cliente_Id == pv.Cliente_Id);
+        pv.Cliente_Nombre = cli?.Cliente_Nombre ?? "";
+        pv.Cliente_RNC = cli?.Cliente_RNC ?? "";
+
+        RecalcularTotales();
+        var result = await VentaService.CreateAsync(pv);
+
+        if (result.Success)
+        {
+            ToastService.Notify(new(ToastType.Success, result.Message));
+            Navigation.NavigateTo("/pedidoventa");
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, result.Message));
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/pedidoventa");
+    }
+}

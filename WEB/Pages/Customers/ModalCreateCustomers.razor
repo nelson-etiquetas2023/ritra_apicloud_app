@@ -9,44 +9,36 @@
         <EditForm Model="@customer" OnValidSubmit="CreateCustomer">
             <DataAnnotationsValidator />
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="txt_customername"><strong>Nombre del Cliente :</strong> </label>
-                    <InputText class="form-control" id="txt_customername" @bind-Value="customer.CustomerName" />
-                    <ValidationMessage For="@(() => customer.CustomerName)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_customercode"><strong>Código del Cliente :</strong></label>
+                <input class="form-control" id="txt_customercode" value="@customer.CustomerCode" readonly />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_customercode"><strong>Código del Cliente :</strong></label>
-                    <input class="form-control" id="txt_customercode" value="@customer.CustomerCode" readonly
-                           placeholder="Se asignará automáticamente (C######)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_customername"><strong>Nombre del Cliente :</strong> </label>
+                <InputText class="form-control" id="txt_customername" @bind-Value="customer.CustomerName" />
+                <ValidationMessage For="@(() => customer.CustomerName)" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_direccion"><strong>Dirección :</strong> </label>
-                    <InputText class="form-control" id="txt_direccion" @bind-Value="customer.Direccion" />
-                    <ValidationMessage For="@(() => customer.Direccion)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_direccion"><strong>Dirección :</strong> </label>
+                <InputText class="form-control" id="txt_direccion" @bind-Value="customer.Direccion" />
+                <ValidationMessage For="@(() => customer.Direccion)" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_registrofiscal"><strong>Registro Fiscal :</strong></label>
-                    <InputText class="form-control" id="txt_registrofiscal" @bind-Value="customer.Registro_Fiscal" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_rnc"><strong>RNC :</strong></label>
+                <InputText class="form-control" id="txt_rnc" @bind-Value="customer.RNC" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_telefono"><strong>Teléfono :</strong></label>
-                    <InputText class="form-control" id="txt_telefono" @bind-Value="customer.Telefono" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_telefono"><strong>Teléfono :</strong></label>
+                <InputText class="form-control" id="txt_telefono" @bind-Value="customer.Telefono" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_correo"><strong>Correo :</strong></label>
-                    <InputText class="form-control" id="txt_correo" @bind-Value="customer.Correo" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="txt_email"><strong>Email :</strong></label>
-                    <InputText class="form-control" id="txt_email" @bind-Value="customer.Email" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_email"><strong>Email :</strong></label>
+                <InputText class="form-control" id="txt_email" @bind-Value="customer.Email" />
             </div>
 
             <div class="mb-3">
@@ -98,6 +90,7 @@
     public async Task ShowAsync()
     {
         customer = new Customer();
+        customer.CustomerCode = await service.GetNextNumAsync();
         await modal.ShowAsync();
     }
 

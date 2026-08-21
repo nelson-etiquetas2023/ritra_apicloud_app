@@ -1,0 +1,41 @@
+@page "/CargaInicial/editar/{id:int}"
+@inject ICargasInicialesService servicio
+@inject NavigationManager Navigation
+@using WEB.Services.CargasIniciales
+@using Shared.Dtos.CargasIniciales
+
+@if (loading)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mt-0">
+        <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Editar Carga de Iniciales</h2>
+    </div>
+
+    <EditorCargaInicial Inicial="carga"
+                        OnSaved="IrIndex"
+                        OnCancel="IrIndex" />
+}
+
+@code {
+
+    [Parameter] public int Id { get; set; }
+
+    private Inicial carga = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        carga = await servicio.GetByIdAsync(Id);
+        loading = false;
+    }
+
+    private void IrIndex()
+    {
+        Navigation.NavigateTo("/CargaInicial");
+    }
+}

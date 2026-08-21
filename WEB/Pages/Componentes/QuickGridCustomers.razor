@@ -11,11 +11,14 @@
             class="table table-hover table-bordered table-striped" ItemsPerPage="@pageSize" Pagination="@pagination" style="margin-top:15px;">
         <PropertyColumn Property="@(customers => customers.customer_id)" Title="ID" Sortable="true" />
         <PropertyColumn Property="@(customers => customers.CustomerCode)" Title="Código" Sortable="true" />
-        <PropertyColumn Property="@(customers => customers.CustomerName)" Title="Nombre" Sortable="true" />
+        <TemplateColumn Title="Nombre" Sortable="true">
+            <div style="min-width:280px;">@context.CustomerName</div>
+        </TemplateColumn>
         <PropertyColumn Property="@(customers => customers.Direccion)" Title="Dirección" Sortable="true" />
-        <PropertyColumn Property="@(customers => customers.Registro_Fiscal)" Title="Registro Fiscal" Sortable="true" />
+        <TemplateColumn Title="RNC" Sortable="true">
+            <div style="min-width:140px; white-space:nowrap;">@context.RNC</div>
+        </TemplateColumn>
         <PropertyColumn Property="@(customers => customers.Telefono)" Title="Teléfono" Sortable="true" />
-        <PropertyColumn Property="@(customers => customers.Correo)" Title="Correo" Sortable="true" />
         <PropertyColumn Property="@(customers => customers.Email)" Title="Email" Sortable="true" />
         <!--Columna de Herramientas o Action-->
         <TemplateColumn Title="Acciones" Context="item">

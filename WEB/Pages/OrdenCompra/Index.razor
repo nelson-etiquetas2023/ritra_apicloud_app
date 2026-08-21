@@ -1,0 +1,275 @@
+@page "/ordencompra"
+@inject IOrdenCompraService servicio
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@using WEB.Services.OrdenCompra
+@using WEB.Pages.Mobile
+@using Shared.Dtos.Compras
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+<ModalDetailsOrdenCompra @ref="modalDetails" />
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h2 class="mb-0"><Icon Name="IconName.Cart" Size="IconSize.x2" /> Orden de Compra</h2>
+    <button class="btn btn-primary" type="button" @onclick="NuevaOC">
+        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva OC
+    </button>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+        <form id="formbusqueda" class="d-flex align-items-center gap-2 w-100" @onsubmit="buscar" @onsubmit:preventDefault>
+            <strong class="text-nowrap">buscar por filtro:</strong>
+            <div class="d-flex flex-grow-1">
+                <input id="txt_busqueda" type="text" class="form-control me-2" placeholder="Buscar por numero, proveedor, descripcion o fecha..."
+                       @bind-value="searchText"
+                       @bind-value:event="oninput" />
+                <Button Type="ButtonType.Submit" class="btn btn-primary">
+                    <Icon Name="IconName.Search" />
+                </Button>
+            </div>
+            <strong class="text-nowrap" style="width: 100px;">@ordenesFiltered?.Count().ToString() Items.</strong>
+        </form>
+    </div>
+</nav>
+
+@if (Ordenes == null)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else if (!ordenesFiltered!.Any())
+{
+    <div class="text-center py-5">
+        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
+        <p class="text-muted">Presiona "Nueva OC" para crear la primera orden de compra.</p>
+    </div>
+}
+else
+{
+    <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
+        <TemplateColumn Title="Numero" Sortable="true">
+            <strong>@context.Numero</strong>
+        </TemplateColumn>
+        <TemplateColumn Title="Fecha" Sortable="true">
+            <Icon Name="IconName.CalendarDate" />
+            @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
+        </TemplateColumn>
+        <TemplateColumn Title="Entrega" Sortable="true">
+            <Icon Name="IconName.CalendarDate" />
+            @context.Fecha.ToString("dd-MM-yyyy")
+        </TemplateColumn>
+        <TemplateColumn Title="Proveedor" Sortable="true">
+            @context.Supply_Name
+        </TemplateColumn>
+        <PropertyColumn Property="@(o => o.Description)" Title="Descripcion" Sortable="true" />
+        <PropertyColumn Property="@(o => o.Tipo_Documento)" Title="Tipo Doc." Sortable="true" />
+        <TemplateColumn Title="Items" Sortable="true">
+            <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
+                @context.Items.Count
+            </Badge>
+        </TemplateColumn>
+        <TemplateColumn Title="Total">
+            <span class="fw-semibold">@($"${context.Total:N2}")</span>
+        </TemplateColumn>
+        <TemplateColumn Title="Status">
+            @if (context.Status == 0)
+            {
+                <Badge Color="BadgeColor.Info">Planificado</Badge>
+            }
+            else if (context.Status == 1)
+            {
+                <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+            }
+            else if (context.Status == 2)
+            {
+                <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+            }
+            else if (context.Status == 3)
+            {
+                <Badge Color="BadgeColor.Secondary">Cerrado</Badge>
+            }
+            else if (context.Status == 4)
+            {
+                <Badge Color="BadgeColor.Success">Procesado</Badge>
+            }
+            else if (context.Status == 5)
+            {
+                <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
+            }
+            else if (context.Status == 6)
+            {
+                <Badge Color="BadgeColor.Danger">Anulado</Badge>
+            }
+            else
+            {
+                <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
+            }
+        </TemplateColumn>
+        <TemplateColumn Title="Prioridad" Sortable="true">
+            @switch (context.Prioridad)
+            {
+                case "Urgente":
+                    <Badge Color="BadgeColor.Danger">Urgente</Badge>
+                    break;
+                case "Alta":
+                    <Badge Color="BadgeColor.Warning">Alta</Badge>
+                    break;
+                case "Media":
+                    <Badge Color="BadgeColor.Info">Media</Badge>
+                    break;
+                default:
+                    <Badge Color="BadgeColor.Secondary">Normal</Badge>
+                    break;
+            }
+        </TemplateColumn>
+        <TemplateColumn Title="Cumplimiento">
+            @if (EstaAtrasado(context))
+            {
+                <Tooltip Title="@TextoCumplimiento(context)" Placement="TooltipPlacement.Top">
+                    <Badge Color="BadgeColor.Danger">Atrasado</Badge>
+                </Tooltip>
+            }
+            else
+            {
+                <Tooltip Title="@TextoCumplimiento(context)" Placement="TooltipPlacement.Top">
+                    <Badge Color="BadgeColor.Success">Normal</Badge>
+                </Tooltip>
+            }
+        </TemplateColumn>
+        <TemplateColumn Title="Acciones">
+            <div style="white-space:nowrap;">
+                @if (context.Status != 4 && context.Status != 5 && context.Status != 6)
+                {
+                    <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
+                        <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer">
+                            <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                        </a>
+                    </Tooltip>
+                    <Tooltip Title="Anular" Placement="TooltipPlacement.Top">
+                        <a href="javascript:void(0)" @onclick="() => Anular(context)" style="cursor: pointer; margin-left:10px;">
+                            <Icon Name="IconName.XCircle" Size="IconSize.x5" Color="IconColor.Danger" />
+                        </a>
+                    </Tooltip>
+                }
+            </div>
+        </TemplateColumn>
+    </QuickGrid>
+    <div class="mt-2">
+        <Paginator State="@paginationIndex" />
+    </div>
+}
+
+@code {
+
+    private List<OrdenCompra>? Ordenes;
+    private IEnumerable<OrdenCompra>? ordenesFiltered;
+    private string searchText = "";
+    private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
+    private int pageSize = 15;
+    private ModalDetailsOrdenCompra modalDetails = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        Ordenes = await servicio.GetOrdersAsync();
+        buscar();
+    }
+
+    private static int NumeroOrdenKey(OrdenCompra o)
+    {
+        return int.TryParse(o.Numero?.Replace("OC-", ""), out var n) ? n : 0;
+    }
+
+    private void buscar()
+    {
+        if (Ordenes == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            ordenesFiltered = Ordenes.OrderByDescending(NumeroOrdenKey);
+        }
+        else
+        {
+            ordenesFiltered = Ordenes.Where(o =>
+                (o.Numero != null && o.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Supply_Name != null && o.Supply_Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Description != null && o.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Tipo_Documento != null && o.Tipo_Documento.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                .OrderByDescending(NumeroOrdenKey);
+        }
+        StateHasChanged();
+    }
+
+    private void NuevaOC()
+    {
+        Navigation.NavigateTo("/ordencompra/nueva");
+    }
+
+    private void Editar(OrdenCompra oc)
+    {
+        Navigation.NavigateTo($"/ordencompra/editar/{oc.Numero}");
+    }
+
+    private async Task ShowDetails(OrdenCompra oc)
+    {
+        await modalDetails.ShowAsync(oc);
+    }
+
+    private async Task Eliminar(OrdenCompra oc)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Estás seguro de que deseas eliminar la orden {oc.Numero}? Esta acción no se puede deshacer.");
+        if (!confirm) return;
+
+        var ok = await servicio.DeleteOrderAsync(oc.Numero);
+        if (ok)
+        {
+            ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} eliminada."));
+            await LoadOrders();
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, "No se pudo eliminar la orden. Los documentos procesados no pueden eliminarse."));
+        }
+    }
+
+    private async Task Anular(OrdenCompra oc)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Estás seguro de que deseas anular la orden {oc.Numero}? Esta acción no se puede deshacer.");
+        if (!confirm) return;
+
+        var ok = await servicio.AnularOrderAsync(oc.Numero);
+        if (ok)
+        {
+            oc.Status = 6;
+            ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} anulada."));
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo anular la orden {oc.Numero}."));
+        }
+        buscar();
+    }
+
+    private bool EstaAtrasado(OrdenCompra oc)
+    {
+        return oc.Status != 4 && DateTime.Today > oc.Fecha.Date;
+    }
+
+    private string TextoCumplimiento(OrdenCompra oc)
+    {
+        var dias = (oc.Fecha.Date - DateTime.Today).Days;
+        return EstaAtrasado(oc)
+            ? $"Venció hace {Math.Abs(dias)} día(s) desde su creación ({oc.FechaCreacion:dd-MM-yyyy})."
+            : $"Dentro del plazo: {dias} día(s) para la entrega tentativa.";
+    }
+}

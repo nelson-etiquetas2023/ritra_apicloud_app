@@ -1,0 +1,557 @@
+@page "/ordencompra/editar/{numero}"
+@inject IOrdenCompraService servicio
+@inject ISuppliersService suppliersService
+@inject IProductsService productsService
+@inject IAlmacenesService AlmacenesService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@using WEB.Services.OrdenCompra
+@using WEB.Services.Suppliers
+@using WEB.Services.Products
+@using WEB.Pages.Suppliers
+@using Shared.Dtos
+@using Shared.Dtos.Compras
+
+<ModalCreateSuppliers @ref="modalNuevoProveedor" OnSupplierCreated="OnProveedorCreado" />
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h3 class="mb-0"><Icon Name="IconName.Cart" Size="IconSize.x2" /> Editar Orden de Compra @oc.Numero</h3>
+    <Button Color="ButtonColor.Secondary" @onclick="Cancelar"><Icon Name="IconName.ArrowLeft" /> Volver</Button>
+</div>
+
+@if (cargando)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else if (oc.Numero == "")
+{
+    <div class="text-center py-5">
+        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> Orden no encontrada</h6>
+        <p class="text-muted">El documento no existe o no tienes permisos para editarlo.</p>
+        <Button Color="ButtonColor.Primary" @onclick="Cancelar"><Icon Name="IconName.ArrowLeft" /> Volver al listado</Button>
+    </div>
+}
+else
+{
+    <div class="row mt-2">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold">Documento</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Tipo Documento</label>
+                        <input type="text" class="form-control" value="OC" disabled />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Número</label>
+                        <input type="text" class="form-control" value="@oc.Numero" disabled />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Fecha de Creación</label>
+                        <input type="text" class="form-control" value="@oc.FechaCreacion.ToString("dd/MM/yyyy HH:mm")" disabled />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Fecha de Entrega Esperada</label>
+                        <input type="date" class="form-control" @bind="oc.Fecha" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Almacén <span class="text-danger">*</span></label>
+                        <select class="form-select" @bind="oc.WarehouseName">
+                            <option value="">Seleccione un almacén...</option>
+                            @if (!string.IsNullOrEmpty(oc.WarehouseName) && !almacenes.Any(a => a.almacen_name == oc.WarehouseName))
+                            {
+                                <option value="@oc.WarehouseName">@oc.WarehouseName</option>
+                            }
+                            @foreach (var a in almacenes)
+                            {
+                                <option value="@a.almacen_name">@a.almacen_code - @a.almacen_name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-semibold">Prioridad</label>
+                        <select class="form-select" @bind="oc.Prioridad">
+                            <option value="Normal">Normal</option>
+                            <option value="Media">Media</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Urgente">Urgente</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold">Proveedor</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Proveedor <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" @bind="oc.Supply_Id" @bind:event="onchange">
+                                <option value="0">Seleccione un proveedor...</option>
+                                @foreach (var sup in proveedores)
+                                {
+                                    <option value="@sup.SupplierId">@sup.SupplierName</option>
+                                }
+                            </select>
+                            <Button Color="ButtonColor.Primary" Title="Crear nuevo proveedor" @onclick="AbrirModalProveedor">
+                                <Icon Name="IconName.PersonPlus" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-semibold">RNC</label>
+                            <input type="text" class="form-control" value="@ProveedorSeleccionado?.Ruc" disabled />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-semibold">Reference Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="oc.Reference" placeholder="Referencia del proveedor" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-semibold">Descripción</label>
+                            <input type="text" class="form-control" @bind="oc.Description" placeholder="Descripción de la OC" />
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label small fw-semibold">Comentario</label>
+                            <textarea class="form-control" @bind="oc.Comentario" rows="2" placeholder="Comentario de la orden..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">Detalle de productos</div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end mb-3 pb-3 border-bottom">
+                <div class="col-md-3 position-relative">
+                    <label class="form-label small fw-semibold">Product Name</label>
+                    <input @ref="nombreInput" type="text" class="form-control" placeholder="Buscar producto por nombre..."
+                           @bind="busquedaNombre" @bind:event="oninput" @bind:after="OnBusquedaChanged" autocomplete="off" />
+                    @if (MostrarSugerencias)
+                    {
+                        <div class="list-group position-absolute w-100 shadow" style="z-index:1050; max-height:220px; overflow-y:auto;">
+                            @foreach (var p in Sugerencias)
+                            {
+                                <button type="button" class="list-group-item list-group-item-action py-1" @onclick="() => SeleccionarProducto(p)">
+                                    <strong>@p.Product_Name</strong>
+                                    <small class="text-muted d-block">@p.Product_Code | Stock: @p.Stock.ToString("N2")</small>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Product Code</label>
+                    <input type="text" class="form-control" placeholder="Código..." @bind="lineaCodigo" @bind:event="onchange" @bind:after="ResolverPorCodigo" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-semibold">Cant.</label>
+                    <input type="number" class="form-control" min="1" @bind="lineaCantidad" @bind:event="onchange" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-semibold">Costo</label>
+                    <input type="number" class="form-control" step="0.01" min="0" @bind="lineaCosto" @bind:event="onchange" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-semibold">Subtot.</label>
+                    <input type="text" class="form-control text-end" value="@SubtotalLinea.ToString("N2")" disabled />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Comentario</label>
+                    <input type="text" class="form-control" placeholder="Comentario..." @bind="lineaComentario" />
+                </div>
+                <div class="col-md-2 d-grid">
+                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="AgregarLinea"><Icon Name="IconName.Plus" /> Add</Button>
+                </div>
+            </div>
+
+            @if (oc.Items.Count == 0)
+            {
+                <div class="text-center py-4">
+                    <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay líneas</h6>
+                    <p class="text-muted">Busque un producto, ingrese cantidad y costo, y presione Add para agregarlo a la orden.</p>
+                </div>
+            }
+            else
+            {
+                <QuickGrid Items="@oc.Items.AsQueryable()" ItemsPerPage="100" class="table table-hover table-bordered table-striped" Style="font-size:0.9rem;">
+                    <TemplateColumn Title="#">
+                        <strong>@NumeroRenglon(context)</strong>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Código">
+                        <strong>@context.Product_id</strong>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Nombre" Sortable="true">@context.Product_name</TemplateColumn>
+                    <TemplateColumn Title="Cantidad" Sortable="true">
+                        @if (Editando(context))
+                        {
+                            <input type="number" class="form-control form-control-sm" min="1" @bind="editCantidad" />
+                        }
+                        else
+                        {
+                            @context.Cantidad
+                        }
+                    </TemplateColumn>
+                    <TemplateColumn Title="Costo">
+                        @if (Editando(context))
+                        {
+                            <input type="number" class="form-control form-control-sm" step="0.01" min="0" @bind="editCosto" />
+                        }
+                        else
+                        {
+                            @context.Costo.ToString("N2")
+                        }
+                    </TemplateColumn>
+                    <TemplateColumn Title="Subtotal">
+                        @(Editando(context) ? (editCantidad * editCosto).ToString("N2") : context.Subtotal.ToString("N2"))
+                    </TemplateColumn>
+                    <TemplateColumn Title="Comentario">
+                        @if (Editando(context))
+                        {
+                            <input type="text" class="form-control form-control-sm" @bind="editComentario" />
+                        }
+                        else
+                        {
+                            @context.Comentario
+                        }
+                    </TemplateColumn>
+                    <TemplateColumn Title="">
+                        @if (Editando(context))
+                        {
+                            <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="GuardarLinea"><Icon Name="IconName.Check" /></Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="CancelarEdicion" Style="margin-left:4px;"><Icon Name="IconName.X" /></Button>
+                        }
+                        else
+                        {
+                            <Tooltip Title="Editar línea" Placement="TooltipPlacement.Top">
+                                <a href="javascript:void(0)" @onclick="() => EditarLinea(context)" style="cursor: pointer">
+                                    <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                                </a>
+                            </Tooltip>
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => QuitarLinea(context)" Style="margin-left:6px;"><Icon Name="IconName.X" /></Button>
+                        }
+                    </TemplateColumn>
+                </QuickGrid>
+            }
+
+            <div class="row justify-content-end mt-3">
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between"><span class="text-muted">N° de renglones</span><span>@oc.Items.Count</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>@oc.Subtotal.ToString("N2")</span></div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Impuesto</span>
+                        <input type="number" class="form-control form-control-sm text-end" style="max-width:120px;" @bind="oc.Impuesto" step="0.01" @bind:event="onchange" @bind:after="RecalcularTotales" />
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>@oc.Total.ToString("N2")</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <Button Color="ButtonColor.Success" @onclick="Guardar"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="Cancelar"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+    </div>
+}
+
+@code {
+
+    [Parameter]
+    public string? numero { get; set; }
+
+    private OrdenCompra oc = new();
+    private List<Supplier> proveedores = [];
+    private List<Product> productos = [];
+    private List<Almacen> almacenes = [];
+    private ModalCreateSuppliers modalNuevoProveedor = default!;
+    private string busquedaNombre = "";
+    private string lineaCodigo = "";
+    private int lineaCantidad = 1;
+    private decimal lineaCosto;
+    private string lineaComentario = "";
+    private Product? productoSeleccionado;
+    private bool sugerenciasVisible;
+    private ElementReference nombreInput;
+    private DetalleCompras? lineaEnEdicion;
+    private int editCantidad;
+    private decimal editCosto;
+    private string editComentario = "";
+    private bool cargando = true;
+    private bool guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var tAlmacenes = AlmacenesService.GetAlmacenesAsync();
+            var tProveedores = suppliersService.GetSuppliersAsync();
+            var tProductos = productsService.GetProductAsync();
+            var tOrden = LoadOrderAsync();
+
+            await Task.WhenAll(tAlmacenes, tProveedores, tProductos, tOrden);
+
+            almacenes = await tAlmacenes;
+            proveedores = await tProveedores;
+            productos = await tProductos;
+        }
+        catch
+        {
+            oc = new OrdenCompra();
+        }
+
+        cargando = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadOrderAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(numero))
+        {
+            var order = await servicio.GetOrderByIdAsync(numero!);
+            if (order != null)
+                oc = order;
+        }
+    }
+
+    private Supplier? ProveedorSeleccionado
+    {
+        get
+        {
+            if (proveedores.Count == 0) return null;
+            return proveedores.FirstOrDefault(p => p.SupplierId == oc.Supply_Id);
+        }
+    }
+
+    private List<Product> Sugerencias =>
+        string.IsNullOrWhiteSpace(busquedaNombre)
+            ? []
+            : productos.Where(p => p.Product_Name.Contains(busquedaNombre, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
+
+    private bool MostrarSugerencias => sugerenciasVisible && !string.IsNullOrWhiteSpace(busquedaNombre) && Sugerencias.Count > 0;
+
+    private decimal SubtotalLinea => lineaCantidad * lineaCosto;
+
+    private void OnBusquedaChanged()
+    {
+        sugerenciasVisible = true;
+    }
+
+    private void SeleccionarProducto(Product p)
+    {
+        productoSeleccionado = p;
+        busquedaNombre = p.Product_Name ?? "";
+        lineaCodigo = !string.IsNullOrEmpty(p.Codebar) ? p.Codebar : p.Product_Code ?? "";
+        lineaCosto = (decimal)p.Costo;
+        sugerenciasVisible = false;
+    }
+
+    private void ResolverPorCodigo()
+    {
+        var codigo = lineaCodigo?.Trim();
+        if (string.IsNullOrWhiteSpace(codigo)) return;
+
+        var p = BuscarProducto(codigo);
+        if (p == null) return;
+
+        productoSeleccionado = p;
+        busquedaNombre = p.Product_Name ?? "";
+        lineaCosto = (decimal)p.Costo;
+    }
+
+    private Product? BuscarProducto(string codigo)
+    {
+        return productos.FirstOrDefault(p =>
+            (!string.IsNullOrEmpty(p.Codebar) && p.Codebar.Trim().Equals(codigo, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrEmpty(p.Product_Code) && p.Product_Code.Trim().Equals(codigo, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private async Task AgregarLinea()
+    {
+        var codigo = lineaCodigo?.Trim();
+        var producto = productoSeleccionado ?? (string.IsNullOrWhiteSpace(codigo) ? null : BuscarProducto(codigo));
+
+        if (producto is null)
+        {
+            ToastService.Notify(new(ToastType.Warning, "Seleccione un producto válido por nombre o código."));
+            return;
+        }
+
+        if (lineaCantidad <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La cantidad debe ser mayor a cero."));
+            return;
+        }
+
+        oc.Items.Add(new DetalleCompras
+        {
+            Numero = oc.Numero,
+            Product_id = !string.IsNullOrEmpty(producto.Codebar) ? producto.Codebar : producto.Product_Code ?? "",
+            Product_name = producto.Product_Name ?? "",
+            Cantidad = lineaCantidad,
+            Costo = lineaCosto,
+            Subtotal = lineaCantidad * lineaCosto,
+            Comentario = lineaComentario?.Trim() ?? ""
+        });
+        ToastService.Notify(new(ToastType.Success, $"Agregado: {producto.Product_Name} x {lineaCantidad}"));
+
+        RecalcularTotales();
+        LimpiarLinea();
+        await nombreInput.FocusAsync();
+    }
+
+    private void LimpiarLinea()
+    {
+        busquedaNombre = "";
+        lineaCodigo = "";
+        lineaCantidad = 1;
+        lineaCosto = 0;
+        lineaComentario = "";
+        productoSeleccionado = null;
+        sugerenciasVisible = false;
+    }
+
+    private int NumeroRenglon(DetalleCompras item)
+    {
+        var i = 1;
+        foreach (var x in oc.Items)
+        {
+            if (ReferenceEquals(x, item)) return i;
+            i++;
+        }
+        return 0;
+    }
+
+    private bool Editando(DetalleCompras item) => lineaEnEdicion == item;
+
+    private void EditarLinea(DetalleCompras item)
+    {
+        lineaEnEdicion = item;
+        editCantidad = item.Cantidad;
+        editCosto = item.Costo;
+        editComentario = item.Comentario;
+    }
+
+    private void GuardarLinea()
+    {
+        if (lineaEnEdicion is null) return;
+
+        if (editCantidad <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La cantidad debe ser mayor a cero."));
+            return;
+        }
+
+        lineaEnEdicion.Cantidad = editCantidad;
+        lineaEnEdicion.Costo = editCosto;
+        lineaEnEdicion.Subtotal = editCantidad * editCosto;
+        lineaEnEdicion.Comentario = editComentario?.Trim() ?? "";
+        lineaEnEdicion = null;
+        RecalcularTotales();
+        ToastService.Notify(new(ToastType.Success, "Línea actualizada."));
+    }
+
+    private void CancelarEdicion()
+    {
+        lineaEnEdicion = null;
+        StateHasChanged();
+    }
+
+    private void RecalcularTotales()
+    {
+        foreach (var item in oc.Items)
+            item.Subtotal = item.Cantidad * item.Costo;
+
+        oc.Subtotal = (double)oc.Items.Sum(i => i.Cantidad * i.Costo);
+        oc.Total = oc.Subtotal + oc.Impuesto;
+        StateHasChanged();
+    }
+
+    private void QuitarLinea(DetalleCompras item)
+    {
+        if (lineaEnEdicion == item) lineaEnEdicion = null;
+        oc.Items.Remove(item);
+        RecalcularTotales();
+    }
+
+    private async Task AbrirModalProveedor()
+    {
+        await modalNuevoProveedor.ShowAsync();
+    }
+
+    private async Task OnProveedorCreado()
+    {
+        proveedores = await suppliersService.GetSuppliersAsync();
+        var nuevo = proveedores.OrderByDescending(p => p.SupplierId).FirstOrDefault();
+        if (nuevo != null)
+            oc.Supply_Id = nuevo.SupplierId;
+        StateHasChanged();
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+
+        if (oc.Supply_Id <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe seleccionar un proveedor."));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(oc.WarehouseName))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe seleccionar un almacén."));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(oc.Reference))
+        {
+            ToastService.Notify(new(ToastType.Danger, "El Reference Number es obligatorio."));
+            return;
+        }
+
+        if (oc.Items.Count == 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Debe agregar al menos una línea a la orden."));
+            return;
+        }
+
+        var sup = proveedores.FirstOrDefault(p => p.SupplierId == oc.Supply_Id);
+        oc.Supply_Name = sup?.SupplierName ?? "";
+
+        RecalcularTotales();
+
+        guardando = true;
+        StateHasChanged();
+
+        try
+        {
+            var ok = await servicio.UpdateOrderAsync(oc.Numero, oc);
+            if (ok)
+            {
+                ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} actualizada correctamente."));
+                Navigation.NavigateTo("/ordencompra");
+            }
+            else
+            {
+                ToastService.Notify(new(ToastType.Danger, "No se pudo actualizar la orden de compra. Los documentos procesados o anulados no pueden modificarse."));
+            }
+        }
+        finally
+        {
+            guardando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/ordencompra");
+    }
+}

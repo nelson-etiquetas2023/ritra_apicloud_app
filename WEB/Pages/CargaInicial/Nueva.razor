@@ -1,0 +1,33 @@
+@page "/CargaInicial/nueva"
+@inject ICargasInicialesService servicio
+@inject NavigationManager Navigation
+@using WEB.Services.CargasIniciales
+@using Shared.Dtos.CargasIniciales
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Nueva Carga de Iniciales</h2>
+</div>
+
+<EditorCargaInicial Inicial="carga"
+                    OnSaved="IrIndex"
+                    OnCancel="IrIndex" />
+
+@code {
+
+    private Inicial carga = new()
+    {
+        Numero = "0001",
+        FechaCreacion = DateTime.Now,
+        Detalles = []
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        carga.Numero = await servicio.GetNextNumAsync();
+    }
+
+    private void IrIndex()
+    {
+        Navigation.NavigateTo("/CargaInicial");
+    }
+}

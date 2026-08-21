@@ -365,6 +365,9 @@ namespace ScanProMovil.Migrations
                     b.Property<double>("Costo")
                         .HasColumnType("REAL");
 
+                    b.Property<bool>("Enviado")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Nota")
                         .IsRequired()
                         .HasColumnType("TEXT");

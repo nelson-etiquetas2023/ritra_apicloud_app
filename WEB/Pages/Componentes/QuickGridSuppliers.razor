@@ -9,10 +9,14 @@
 <div>
     <QuickGrid Items="suppliersFiltered"
             class="table table-hover table-bordered table-striped" ItemsPerPage="@pageSize" Pagination="@pagination" style="margin-top:15px;">
-        <PropertyColumn Property="@(suppliers => suppliers.SupplierId)" Title="ID" Sortable="true" />
-        <PropertyColumn Property="@(suppliers => suppliers.SupplierCode)" Title="Código" Sortable="true" />
-        <PropertyColumn Property="@(suppliers => suppliers.SupplierName)" Title="Nombre" Sortable="true" />
-        <PropertyColumn Property="@(suppliers => suppliers.Ruc)" Title="RUC" Sortable="true" />
+<PropertyColumn Property="@(suppliers => suppliers.SupplierId)" Title="ID" Sortable="true" />
+<PropertyColumn Property="@(suppliers => suppliers.SupplierCode)" Title="Código" Sortable="true" />
+<TemplateColumn Title="Nombre" Sortable="true">
+    <div style="min-width:280px;">@context.SupplierName</div>
+</TemplateColumn>
+<TemplateColumn Title="RNC" Sortable="true">
+    <div style="min-width:140px; white-space:nowrap;">@context.Ruc</div>
+</TemplateColumn>
         <PropertyColumn Property="@(suppliers => suppliers.ContactName)" Title="Contacto" Sortable="true" />
         <PropertyColumn Property="@(suppliers => suppliers.Phone)" Title="Teléfono" Sortable="true" />
         <PropertyColumn Property="@(suppliers => suppliers.Email)" Title="Email" Sortable="true" />

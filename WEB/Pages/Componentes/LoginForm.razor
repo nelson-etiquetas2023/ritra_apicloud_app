@@ -38,7 +38,6 @@
                         <div class="input-wrapper">
                             <InputText @bind-Value="user.Email" id="email" type="email" class="form-input" autocomplete="email" />
                             <label for="email" class="@(HasEmail ? "floated" : "")">Email corporativo</label>
-                            <span class="input-border"></span>
                         </div>
                     </div>
 
@@ -49,7 +48,6 @@
                             <button type="button" class="password-toggle" aria-label="Mostrar u ocultar contraseña" @onclick="TogglePassword">
                                 <span class="toggle-icon @(_showPassword ? "show-password" : "")"></span>
                             </button>
-                            <span class="input-border"></span>
                         </div>
                     </div>
 

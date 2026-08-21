@@ -1,0 +1,170 @@
+@page "/"
+@inject IOrdenCompraService compraService
+@inject IProductsService productsService
+@inject ICustomersService customersService
+@inject IVentasService ventasService
+@inject NavigationManager Navigation
+@using WEB.Services.OrdenCompra
+@using WEB.Services.Products
+@using WEB.Services.Customers
+@using WEB.Pages.PedidoVenta
+@using Shared.Dtos.Compras
+
+<PageTitle>Dashboard | ScanStock Pro</PageTitle>
+
+<div class="dashboard">
+    <div class="dashboard-header">
+        <div>
+            <h2 class="dashboard-title"><Icon Name="IconName.Speedometer2" Size="IconSize.x2" /> Panel de Control</h2>
+            <p class="dashboard-subtitle">Resumen general del sistema · @DateTime.Today.ToString("dddd, dd 'de' MMMM yyyy")</p>
+        </div>
+    </div>
+
+    @if (cargando)
+    {
+        <div class="d-flex justify-content-center align-items-center p-5">
+            <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+        </div>
+    }
+    else
+    {
+        <div class="kpi-grid">
+            @{
+                var comprasPendiente = comprasPendientes > 0;
+                var comprasAccent = comprasPendiente ? "#dc3545" : "#4361ee";
+                var comprasIconBg = comprasPendiente ? "rgba(220,53,69,.12)" : "rgba(67,97,238,.12)";
+            }
+            <div class="kpi-card" style="--accent:@comprasAccent;" @onclick="IrACompras" title="Órdenes de compra registradas">
+                <div class="kpi-icon" style="background:@comprasIconBg; color:@comprasAccent;">
+                    <Icon Name="IconName.Cart" />
+                </div>
+                <div class="kpi-body">
+                    <span class="kpi-label">Compras Realizadas</span>
+                    <span class="kpi-value">@comprasCount</span>
+                    <span class="kpi-foot">@($"${comprasTotal:N2}") en mercancía</span>
+                    <span class="small @(comprasPendiente ? "text-danger fw-semibold" : "text-muted")">
+                        <Icon Name="IconName.ExclamationTriangleFill" /> No procesados: @comprasPendientes (@($"${comprasPendientesMonto:N2}"))
+                    </span>
+                </div>
+            </div>
+            <div class="kpi-card" style="--accent:#198754;" @onclick="IrAVentas">
+                <div class="kpi-icon" style="background:rgba(25,135,84,.12); color:#198754;">
+                    <Icon Name="IconName.Cart4" />
+                </div>
+                <div class="kpi-body">
+                    <span class="kpi-label">Pedidos de Venta</span>
+                    <span class="kpi-value">@ventasCount</span>
+                    <span class="kpi-foot">@($"${ventasTotal:N2}") en ventas</span>
+                </div>
+            </div>
+            <div class="kpi-card" style="--accent:#fd7e14;" @onclick="IrAProductos">
+                <div class="kpi-icon" style="background:rgba(253,126,20,.12); color:#fd7e14;">
+                    <Icon Name="IconName.Box" />
+                </div>
+                <div class="kpi-body">
+                    <span class="kpi-label">Productos</span>
+                    <span class="kpi-value">@productosCount</span>
+                    <span class="kpi-foot">Registrados en catálogo</span>
+                </div>
+            </div>
+            <div class="kpi-card" style="--accent:#6f42c1;" @onclick="IrAClientes">
+                <div class="kpi-icon" style="background:rgba(111,66,193,.12); color:#6f42c1;">
+                    <Icon Name="IconName.People" />
+                </div>
+                <div class="kpi-body">
+                    <span class="kpi-label">Clientes</span>
+                    <span class="kpi-value">@clientesCount</span>
+                    <span class="kpi-foot">Empresas y clientes</span>
+                </div>
+            </div>
+        </div>
+
+    }
+</div>
+
+@code {
+
+    private bool cargando = true;
+
+    private int comprasCount;
+    private double comprasTotal;
+    private int comprasPendientes;
+    private double comprasPendientesMonto;
+
+    private int ventasCount;
+    private double ventasTotal;
+
+    private int productosCount;
+    private int clientesCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(
+            CargarCompras(),
+            CargarVentas(),
+            CargarProductos(),
+            CargarClientes());
+
+        cargando = false;
+    }
+
+    private async Task CargarCompras()
+    {
+        try
+        {
+            var compras = await compraService.GetOrdersAsync();
+
+            comprasCount = compras.Count;
+            comprasTotal = compras.Sum(o => o.Total);
+            comprasPendientes = compras.Count(o => o.Status != 4);
+            comprasPendientesMonto = compras.Where(o => o.Status != 4).Sum(o => o.Total);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar compras en dashboard: {ex.Message}");
+        }
+    }
+
+    private async Task CargarVentas()
+    {
+        try
+        {
+            var pedidos = await ventasService.GetAllAsync();
+            ventasCount = pedidos.Count;
+            ventasTotal = pedidos.Sum(p => (double)p.Total);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar ventas en dashboard: {ex.Message}");
+        }
+    }
+
+    private async Task CargarProductos()
+    {
+        try
+        {
+            productosCount = (await productsService.GetProductAsync()).Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar productos en dashboard: {ex.Message}");
+        }
+    }
+
+    private async Task CargarClientes()
+    {
+        try
+        {
+            clientesCount = (await customersService.GetCustomersAsync()).Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar clientes en dashboard: {ex.Message}");
+        }
+    }
+
+    private void IrACompras() => Navigation.NavigateTo("/ordencompra");
+    private void IrAVentas() => Navigation.NavigateTo("/pedidoventa");
+    private void IrAProductos() => Navigation.NavigateTo("/products");
+    private void IrAClientes() => Navigation.NavigateTo("/customers");
+}

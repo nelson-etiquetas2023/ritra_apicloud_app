@@ -52,6 +52,14 @@ namespace API.Controllers
             return Ok(updated);
         }
 
+        [HttpGet]
+        [Route("getnextnum")]
+        public async Task<IActionResult> GetNextNumAsync()
+        {
+            var next = await service.GetNextNumAsync();
+            return Ok(new { numero = next });
+        }
+
         [HttpDelete]
         [Route("deletesuppliers/{id}")]
         public async Task<IActionResult> DeleteSuppliersAsync(int id)

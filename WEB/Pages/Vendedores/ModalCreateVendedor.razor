@@ -1,0 +1,108 @@
+@inject IVendedoresService service
+@inject ToastService ToastService
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modal" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
+    <HeaderTemplate><Icon Name="IconName.PersonBadge" Size="IconSize.x3" /><strong> Crear Vendedor</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="@vendedor" OnValidSubmit="CreateVendedor">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="txt_vendedorcode"><strong>Código del Vendedor :</strong></label>
+                <input class="form-control" id="txt_vendedorcode" value="@vendedor.vendedor_code" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_vendedornombre"><strong>Nombre del Vendedor :</strong></label>
+                <InputText class="form-control" id="txt_vendedornombre" @bind-Value="vendedor.vendedor_name" />
+                <ValidationMessage For="@(() => vendedor.vendedor_name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_vendedortelefono"><strong>Teléfono :</strong></label>
+                <InputText class="form-control" id="txt_vendedortelefono" @bind-Value="vendedor.telefono" />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_vendedoremail"><strong>Email :</strong></label>
+                <InputText class="form-control" id="txt_vendedoremail" @bind-Value="vendedor.email" />
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync" class="btn-cancel"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public EventCallback OnVendedorCreated { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private Modal modal = default!;
+    private Vendedor vendedor = new();
+    private string errorMessage = string.Empty;
+
+    public async Task ShowAsync()
+    {
+        errorMessage = string.Empty;
+        vendedor = new Vendedor
+        {
+            vendedor_code = await service.GetNextNumAsync()
+        };
+        await modal.ShowAsync();
+    }
+
+    private async Task CreateVendedor()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.CreateVendedorAsync(vendedor);
+            if (!success)
+            {
+                errorMessage = "No se pudo crear el vendedor. Verifique los datos e intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            ToastService.Notify(new(ToastType.Success, $"Vendedor {vendedor.vendedor_code} creado correctamente."));
+            vendedor = new Vendedor();
+            await modal.HideAsync();
+            await Task.Delay(300);
+            await OnVendedorCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al crear el vendedor: {ex.Message}";
+            Console.WriteLine($"Error general en CreateVendedor: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        vendedor = new Vendedor();
+        await modal.HideAsync();
+    }
+}

@@ -1,6 +1,7 @@
 using API.Data;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using Shared.Dtos;
 using Shared.Dtos.CargasIniciales;
 using System.Globalization;
 
@@ -25,40 +26,218 @@ namespace API.Services.CargasIniciales
                 .FirstOrDefaultAsync(i => i.Id == id);
         }
 
-        public async Task<Inicial> CreateAsync(Inicial inicial)
+        public async Task<CargaInicialSaveResult> CreateAsync(Inicial inicial)
         {
+            var result = new CargaInicialSaveResult();
+
+            if (inicial.Detalles == null || inicial.Detalles.Count == 0)
+            {
+                result.Success = false;
+                result.Message = "El documento no tiene líneas de detalle.";
+                return result;
+            }
+
+            var catalogo = await ObtenerCatalogoCodigosAsync();
+            var errores = new List<RowError>();
+            foreach (var detalle in inicial.Detalles)
+            {
+                if (string.IsNullOrWhiteSpace(detalle.ProductCode))
+                {
+                    errores.Add(new RowError { Row = 0, Message = "El código de producto es obligatorio en cada línea." });
+                    continue;
+                }
+
+                if (!catalogo.Contains(detalle.ProductCode))
+                {
+                    errores.Add(new RowError { Row = 0, Message = $"El producto '{detalle.ProductCode}' no existe en el catálogo." });
+                    continue;
+                }
+
+                if (detalle.Cantidad <= 0)
+                {
+                    errores.Add(new RowError { Row = 0, Message = $"La cantidad del producto '{detalle.ProductCode}' debe ser mayor a cero." });
+                }
+            }
+
+            if (errores.Count > 0)
+            {
+                result.Success = false;
+                result.Message = "El documento no se guardó. Corrige los errores del detalle.";
+                result.Errors = errores;
+                return result;
+            }
+
             if (string.IsNullOrWhiteSpace(inicial.Numero))
                 inicial.Numero = BuildNextNum();
             inicial.FechaCreacion = DateTime.Now;
-
-            context.CargasIniciales.Add(inicial);
-            await context.SaveChangesAsync();
-            return inicial;
-        }
-
-        public async Task<Inicial?> UpdateAsync(int id, Inicial inicial)
-        {
-            var existing = await context.CargasIniciales
-                .Include(i => i.Detalles)
-                .FirstOrDefaultAsync(i => i.Id == id);
-            if (existing == null) return null;
-
-            existing.Numero = inicial.Numero;
-            existing.Comentario = inicial.Comentario;
-            existing.FechaCreacion = inicial.FechaCreacion;
-
-            context.CargasInicialesDetalles.RemoveRange(existing.Detalles);
-            await context.SaveChangesAsync();
+            inicial.Status = 0;
 
             foreach (var detalle in inicial.Detalles)
             {
                 detalle.Id = 0;
-                detalle.InicialId = id;
-                context.CargasInicialesDetalles.Add(detalle);
+                detalle.Procesado = false;
+                detalle.FechaProcesado = null;
+            }
+
+            context.CargasIniciales.Add(inicial);
+            await context.SaveChangesAsync();
+
+            result.Success = true;
+            result.Message = $"Carga inicial {inicial.Numero} guardada correctamente.";
+            result.Data = inicial;
+            return result;
+        }
+
+        public async Task<CargaInicialSaveResult> UpdateAsync(int id, Inicial inicial)
+        {
+            var result = new CargaInicialSaveResult();
+
+            var existing = await context.CargasIniciales
+                .Include(i => i.Detalles)
+                .FirstOrDefaultAsync(i => i.Id == id);
+            if (existing == null)
+            {
+                result.Success = false;
+                result.Message = $"La carga inicial {id} no fue encontrada.";
+                return result;
+            }
+
+            if (existing.Status == 4)
+            {
+                result.Success = false;
+                result.Message = "El documento ya fue procesado y no puede editarse.";
+                return result;
+            }
+
+            if (inicial.Detalles == null || inicial.Detalles.Count == 0)
+            {
+                result.Success = false;
+                result.Message = "El documento no tiene líneas de detalle.";
+                return result;
+            }
+
+            var catalogo = await ObtenerCatalogoCodigosAsync();
+            var errores = new List<RowError>();
+            foreach (var detalle in inicial.Detalles)
+            {
+                if (string.IsNullOrWhiteSpace(detalle.ProductCode))
+                {
+                    errores.Add(new RowError { Row = 0, Message = "El código de producto es obligatorio en cada línea." });
+                    continue;
+                }
+
+                if (!catalogo.Contains(detalle.ProductCode))
+                {
+                    errores.Add(new RowError { Row = 0, Message = $"El producto '{detalle.ProductCode}' no existe en el catálogo." });
+                    continue;
+                }
+
+                if (detalle.Cantidad <= 0)
+                {
+                    errores.Add(new RowError { Row = 0, Message = $"La cantidad del producto '{detalle.ProductCode}' debe ser mayor a cero." });
+                }
+            }
+
+            if (errores.Count > 0)
+            {
+                result.Success = false;
+                result.Message = "El documento no se actualizó. Corrige los errores del detalle.";
+                result.Errors = errores;
+                return result;
+            }
+
+            existing.Numero = inicial.Numero;
+            existing.Comentario = inicial.Comentario;
+            existing.Status = 1;
+
+            // Merge por ProductCode: actualiza los que llegan, agrega los nuevos
+            // y conserva los detalles ya existentes (sync parcial desde la móvil).
+            var incoming = inicial.Detalles.ToList();
+            foreach (var detalle in incoming)
+            {
+                var match = existing.Detalles.FirstOrDefault(d =>
+                    string.Equals(d.ProductCode?.Trim(), detalle.ProductCode?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (match is not null)
+                {
+                    match.ProductName = detalle.ProductName;
+                    match.Cantidad = detalle.Cantidad;
+                    match.CantidadFisica = detalle.CantidadFisica;
+                    match.Ubicacion = detalle.Ubicacion;
+                    match.Costo = detalle.Costo;
+                    match.Categoria = detalle.Categoria;
+                    match.Unidad = detalle.Unidad;
+                    match.Nota = detalle.Nota;
+                }
+                else
+                {
+                    detalle.Id = 0;
+                    detalle.InicialId = id;
+                    detalle.Procesado = false;
+                    detalle.FechaProcesado = null;
+                    context.CargasInicialesDetalles.Add(detalle);
+                }
             }
 
             await context.SaveChangesAsync();
-            return await GetByIdAsync(id);
+
+            result.Success = true;
+            result.Message = $"Carga inicial {existing.Numero} actualizada correctamente.";
+            result.Data = await GetByIdAsync(id);
+            return result;
+        }
+
+        public async Task<CargaInicialSaveResult> ProcesarInicialAsync(int id)
+        {
+            var result = new CargaInicialSaveResult();
+
+            var inicial = await context.CargasIniciales
+                .Include(i => i.Detalles)
+                .FirstOrDefaultAsync(i => i.Id == id);
+
+            if (inicial == null)
+            {
+                result.Success = false;
+                result.Message = $"La carga inicial {id} no fue encontrada.";
+                return result;
+            }
+
+            if (inicial.Status == 4)
+            {
+                result.Success = false;
+                result.Message = "El documento ya fue procesado y no puede volver a procesarse.";
+                return result;
+            }
+
+            bool hayFallo = false;
+
+            foreach (var detalle in inicial.Detalles)
+            {
+                if (detalle.Procesado) continue;
+
+                var producto = await ResolverProductoAsync(detalle.ProductCode);
+                if (producto == null)
+                {
+                    hayFallo = true;
+                    result.Errors.Add(new RowError { Row = 0, Message = $"Producto '{detalle.ProductCode}' no encontrado en el catálogo." });
+                    continue;
+                }
+
+                producto.Stock += detalle.Cantidad;
+                detalle.Procesado = true;
+                detalle.FechaProcesado = DateTime.Now;
+                await context.SaveChangesAsync();
+            }
+
+            inicial.Status = hayFallo ? 5 : 4;
+            await context.SaveChangesAsync();
+
+            result.Success = !hayFallo;
+            result.Message = hayFallo
+                ? $"El documento quedó en Transacción Fallida. Los productos con error no afectaron el inventario y el documento puede volver a procesarse."
+                : $"El documento {inicial.Numero} fue procesado exitosamente. El stock de los productos se incrementó.";
+            result.Data = await GetByIdAsync(id);
+            return result;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -85,34 +264,32 @@ namespace API.Services.CargasIniciales
                 return result;
             }
 
-            var headers = new Dictionary<string, int>();
-            var headerRow = worksheet.Row(1);
-            var lastCol = headerRow.LastCellUsed()?.Address.ColumnNumber ?? 0;
-            for (int col = 1; col <= lastCol; col++)
-            {
-                var name = NormalizeHeader(headerRow.Cell(col).GetString());
-                if (!string.IsNullOrEmpty(name))
-                    headers[name] = col;
-            }
-
-            if (!headers.TryGetValue("productcode", out _))
-            {
-                result.Success = false;
-                result.Errors.Add(new RowError { Row = 0, Message = "No se encontró la columna obligatoria 'product_code'. Usa la plantilla." });
-                return result;
-            }
-
             var lastDataRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
+
+            //Catálogo de productos existentes (match por Codebar o Product_Code, case-insensitive).
+            var productosExistentes = await context.Productos
+                .Select(p => new { p.Codebar, p.Product_Code })
+                .ToListAsync();
+
+            var codigosExistentes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prod in productosExistentes)
+            {
+                if (!string.IsNullOrWhiteSpace(prod.Codebar))
+                    codigosExistentes.Add(prod.Codebar.Trim());
+                if (!string.IsNullOrWhiteSpace(prod.Product_Code))
+                    codigosExistentes.Add(prod.Product_Code.Trim());
+            }
+
             for (int row = 2; row <= lastDataRow; row++)
             {
-                var productCode = GetCell(worksheet, row, headers.GetValueOrDefault("productcode", -1));
-                var productName = GetCell(worksheet, row, headers.GetValueOrDefault("productname", -1));
-                var cantidad = GetCell(worksheet, row, headers.GetValueOrDefault("cantidad", -1));
-                var ubicacion = GetCell(worksheet, row, headers.GetValueOrDefault("ubicacion", -1));
-                var costo = GetCell(worksheet, row, headers.GetValueOrDefault("costo", -1));
-                var categoria = GetCell(worksheet, row, headers.GetValueOrDefault("categoria", -1));
-                var unidad = GetCell(worksheet, row, headers.GetValueOrDefault("unidad", -1));
-                var nota = GetCell(worksheet, row, headers.GetValueOrDefault("nota", -1));
+                var productCode = GetCell(worksheet, row, 1);
+                var productName = GetCell(worksheet, row, 2);
+                var cantidad = GetCell(worksheet, row, 3);
+                var ubicacion = GetCell(worksheet, row, 4);
+                var costo = GetCell(worksheet, row, 5);
+                var categoria = GetCell(worksheet, row, 6);
+                var unidad = GetCell(worksheet, row, 7);
+                var nota = GetCell(worksheet, row, 8);
 
                 if (string.IsNullOrWhiteSpace(productCode) && string.IsNullOrWhiteSpace(productName) &&
                     string.IsNullOrWhiteSpace(cantidad) && string.IsNullOrWhiteSpace(ubicacion))
@@ -125,8 +302,22 @@ namespace API.Services.CargasIniciales
                     continue;
                 }
 
+                if (!codigosExistentes.Contains(productCode))
+                {
+                    result.Skipped++;
+                    result.Errors.Add(new RowError { Row = row, Message = $"El producto '{productCode}' no existe en el catálogo de productos." });
+                    continue;
+                }
+
                 if (!int.TryParse(cantidad, NumberStyles.Integer, CultureInfo.InvariantCulture, out var cantidadParsed))
                     cantidadParsed = 0;
+
+                if (cantidadParsed <= 0)
+                {
+                    result.Skipped++;
+                    result.Errors.Add(new RowError { Row = row, Message = $"La cantidad '{cantidad}' debe ser un número entero mayor a cero." });
+                    continue;
+                }
 
                 if (!string.IsNullOrWhiteSpace(costo) && !TryParseDecimal(costo, out _))
                 {
@@ -157,17 +348,7 @@ namespace API.Services.CargasIniciales
                 return result;
             }
 
-            var inicial = new Inicial
-            {
-                Numero = BuildNextNum(),
-                FechaCreacion = DateTime.Now,
-                Comentario = "Carga inicial importada desde Excel",
-                Detalles = detalles
-            };
-
-            context.CargasIniciales.Add(inicial);
-            await context.SaveChangesAsync();
-
+            result.Detalles = detalles;
             result.Inserted = detalles.Count;
             result.Success = true;
             return result;
@@ -234,6 +415,11 @@ namespace API.Services.CargasIniciales
             return stream.ToArray();
         }
 
+        public Task<string> GetNextNumAsync()
+        {
+            return Task.FromResult(BuildNextNum());
+        }
+
         private string BuildNextNum()
         {
             var last = context.CargasIniciales
@@ -242,24 +428,40 @@ namespace API.Services.CargasIniciales
             int next = 1;
             if (last != null && int.TryParse(last.Numero, out int parsed))
                 next = parsed + 1;
-            return next.ToString("D6");
-        }
-
-        private static string NormalizeHeader(string header)
-        {
-            var sb = new System.Text.StringBuilder();
-            foreach (var ch in header)
-            {
-                if (char.IsLetterOrDigit(ch))
-                    sb.Append(char.ToLowerInvariant(ch));
-            }
-            return sb.ToString();
+            return next.ToString("D4");
         }
 
         private static string GetCell(IXLWorksheet worksheet, int row, int col)
         {
             if (col <= 0) return "";
             return worksheet.Cell(row, col).GetString().Trim();
+        }
+
+        private async Task<HashSet<string>> ObtenerCatalogoCodigosAsync()
+        {
+            var productosExistentes = await context.Productos
+                .Select(p => new { p.Codebar, p.Product_Code })
+                .ToListAsync();
+
+            var codigos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prod in productosExistentes)
+            {
+                if (!string.IsNullOrWhiteSpace(prod.Codebar))
+                    codigos.Add(prod.Codebar.Trim());
+                if (!string.IsNullOrWhiteSpace(prod.Product_Code))
+                    codigos.Add(prod.Product_Code.Trim());
+            }
+            return codigos;
+        }
+
+        private async Task<Shared.Dtos.Product?> ResolverProductoAsync(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo)) return null;
+
+            var normalized = codigo.Trim();
+            return await context.Productos.FirstOrDefaultAsync(p =>
+                (p.Codebar != null && p.Codebar.ToLower() == normalized.ToLower()) ||
+                (p.Product_Code != null && p.Product_Code.ToLower() == normalized.ToLower()));
         }
 
         private static bool TryParseDecimal(string raw, out decimal value)

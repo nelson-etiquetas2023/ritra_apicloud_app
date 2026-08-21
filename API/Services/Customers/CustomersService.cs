@@ -22,9 +22,9 @@ BEGIN
         [CustomerCode] nvarchar(20) NOT NULL CONSTRAINT [DF_Customers_CustomerCode] DEFAULT '',
         [CustomerName] nvarchar(150) NOT NULL CONSTRAINT [DF_Customers_CustomerName] DEFAULT '',
         [Direccion] nvarchar(max) NOT NULL,
-        [Registro_Fiscal] nvarchar(max) NOT NULL,
+        [RNC] nvarchar(max) NOT NULL,
+        [Contacto] nvarchar(max) NOT NULL,
         [Telefono] nvarchar(max) NOT NULL,
-        [Correo] nvarchar(max) NOT NULL,
         [Email] nvarchar(max) NOT NULL
     );
 
@@ -53,6 +53,12 @@ END");
             return max;
         }
 
+        public async Task<string> GetNextNumAsync()
+        {
+            var max = await GetMaxCustomerCodeNumberAsync();
+            return FormatCustomerCode(max + 1);
+        }
+
         public async Task<List<Customer>> GetCustomersAsync()
         {
             await EnsureCustomersTableAsync();
@@ -75,9 +81,9 @@ END");
 
             customer.CustomerName = name;
             customer.Direccion = customer.Direccion?.Trim() ?? string.Empty;
-            customer.Registro_Fiscal = customer.Registro_Fiscal?.Trim() ?? string.Empty;
+            customer.RNC = customer.RNC?.Trim() ?? string.Empty;
+            customer.Contacto = customer.Contacto?.Trim() ?? string.Empty;
             customer.Telefono = customer.Telefono?.Trim() ?? string.Empty;
-            customer.Correo = customer.Correo?.Trim() ?? string.Empty;
             customer.Email = customer.Email?.Trim() ?? string.Empty;
 
             for (int attempt = 0; attempt < 3; attempt++)
@@ -108,9 +114,9 @@ END");
 
             existing.CustomerName = customer.CustomerName.Trim();
             existing.Direccion = customer.Direccion?.Trim() ?? string.Empty;
-            existing.Registro_Fiscal = customer.Registro_Fiscal?.Trim() ?? string.Empty;
+            existing.RNC = customer.RNC?.Trim() ?? string.Empty;
+            existing.Contacto = customer.Contacto?.Trim() ?? string.Empty;
             existing.Telefono = customer.Telefono?.Trim() ?? string.Empty;
-            existing.Correo = customer.Correo?.Trim() ?? string.Empty;
             existing.Email = customer.Email?.Trim() ?? string.Empty;
 
             await context.SaveChangesAsync();
@@ -168,25 +174,25 @@ END");
                     continue;
 
                 var direccion = columns.Direccion.HasValue ? GetCell(worksheet, i, columns.Direccion.Value) : "";
-                var registroFiscal = columns.RegistroFiscal.HasValue ? GetCell(worksheet, i, columns.RegistroFiscal.Value) : "";
+                var rnc = columns.Rnc.HasValue ? GetCell(worksheet, i, columns.Rnc.Value) : "";
+                var contacto = columns.Contacto.HasValue ? GetCell(worksheet, i, columns.Contacto.Value) : "";
                 var telefono = columns.Telefono.HasValue ? GetCell(worksheet, i, columns.Telefono.Value) : "";
-                var correo = columns.Correo.HasValue ? GetCell(worksheet, i, columns.Correo.Value) : "";
                 var email = columns.Email.HasValue ? GetCell(worksheet, i, columns.Email.Value) : "";
 
-                if (!string.IsNullOrWhiteSpace(registroFiscal) && !fileKeys.Add(registroFiscal))
-                {
-                    result.Skipped++;
-                    result.Errors.Add(new CustomerImportError { Row = i, Message = $"El registro fiscal '{registroFiscal}' está duplicado en el archivo." });
-                    continue;
-                }
+if (!string.IsNullOrWhiteSpace(rnc) && !fileKeys.Add(rnc))
+{
+    result.Skipped++;
+    result.Errors.Add(new CustomerImportError { Row = i, Message = $"El RNC '{rnc}' está duplicado en el archivo." });
+    continue;
+}
 
                 rows.Add((i, new Customer
                 {
                     CustomerName = customerName,
                     Direccion = direccion,
-                    Registro_Fiscal = registroFiscal,
+                    RNC = rnc,
+                    Contacto = contacto,
                     Telefono = telefono,
-                    Correo = correo,
                     Email = email
                 }));
             }
@@ -201,9 +207,9 @@ END");
             try
             {
                 var existing = await context.Customers.ToListAsync();
-                var byRegistro = existing
-                    .Where(c => !string.IsNullOrWhiteSpace(c.Registro_Fiscal))
-                    .ToDictionary(c => c.Registro_Fiscal, c => c, StringComparer.OrdinalIgnoreCase);
+                var byRnc = existing
+                    .Where(c => !string.IsNullOrWhiteSpace(c.RNC))
+                    .ToDictionary(c => c.RNC, c => c, StringComparer.OrdinalIgnoreCase);
 
                 var nextCodeNumber = 0;
                 foreach (var c in existing)
@@ -216,13 +222,14 @@ END");
 
                 foreach (var (_, customer) in rows)
                 {
-                    if (!string.IsNullOrWhiteSpace(customer.Registro_Fiscal) &&
-                        byRegistro.TryGetValue(customer.Registro_Fiscal, out var existingCustomer))
+                    if (!string.IsNullOrWhiteSpace(customer.RNC) &&
+                        byRnc.TryGetValue(customer.RNC, out var existingCustomer))
                     {
                         existingCustomer.CustomerName = customer.CustomerName;
                         existingCustomer.Direccion = customer.Direccion;
+                        existingCustomer.RNC = customer.RNC;
+                        existingCustomer.Contacto = customer.Contacto;
                         existingCustomer.Telefono = customer.Telefono;
-                        existingCustomer.Correo = customer.Correo;
                         existingCustomer.Email = customer.Email;
                         result.Updated++;
                     }
@@ -251,16 +258,16 @@ END");
 
         private enum ImportColumn
         {
-            CustomerName, Direccion, RegistroFiscal, Telefono, Correo, Email
+            CustomerName, Direccion, Rnc, Contacto, Telefono, Email
         }
 
         private sealed class ImportColumns
         {
             public int? CustomerName { get; set; }
             public int? Direccion { get; set; }
-            public int? RegistroFiscal { get; set; }
+            public int? Rnc { get; set; }
+            public int? Contacto { get; set; }
             public int? Telefono { get; set; }
-            public int? Correo { get; set; }
             public int? Email { get; set; }
         }
 
@@ -279,9 +286,9 @@ END");
         {
             [ImportColumn.CustomerName] = ["nombre", "cliente", "name", "razonsocial"],
             [ImportColumn.Direccion] = ["direccion", "address", "dirección"],
-            [ImportColumn.RegistroFiscal] = ["registrofiscal", "ruc", "registrofiscal", "ncf", "taxid", "tipoidentificacion"],
+            [ImportColumn.Rnc] = ["rnc", "registrofiscal", "ruc", "ncf", "taxid", "tipoidentificacion"],
+            [ImportColumn.Contacto] = ["contacto", "contact"],
             [ImportColumn.Telefono] = ["telefono", "phone", "teléfono", "celular"],
-            [ImportColumn.Correo] = ["correo", "email", "correoelectronico", "mail"],
             [ImportColumn.Email] = ["email", "correo", "correoelectronico", "mail"],
         };
 
@@ -314,9 +321,8 @@ END");
                     {
                         case ImportColumn.CustomerName when parsed.CustomerName is null: parsed.CustomerName = col; break;
                         case ImportColumn.Direccion when parsed.Direccion is null: parsed.Direccion = col; break;
-                        case ImportColumn.RegistroFiscal when parsed.RegistroFiscal is null: parsed.RegistroFiscal = col; break;
+                        case ImportColumn.Rnc when parsed.Rnc is null: parsed.Rnc = col; break;
                         case ImportColumn.Telefono when parsed.Telefono is null: parsed.Telefono = col; break;
-                        case ImportColumn.Correo when parsed.Correo is null: parsed.Correo = col; break;
                         case ImportColumn.Email when parsed.Email is null: parsed.Email = col; break;
                     }
                 }

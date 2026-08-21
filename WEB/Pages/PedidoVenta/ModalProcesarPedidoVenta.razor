@@ -1,0 +1,183 @@
+@inject IVentasService ventaService
+@inject ToastService ToastService
+@using WEB.Services.Ventas
+@using Shared.Dtos.Ventas
+
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <Icon Name="IconName.BoxArrowUp" Size="IconSize.x3" /><strong> Procesar Pedido de Venta @pedido.Numero</strong>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        @if (!Procesando && Result is null)
+        {
+            <div class="alert alert-primary">
+                Se procesarán <strong>@pedido.Items.Count</strong> producto(s). Cada producto descontará su
+                inventario (stock) en la cantidad indicada en el pedido. Las líneas con stock insuficiente no afectarán el inventario.
+            </div>
+        }
+
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cantidad</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < pedido.Items.Count; i++)
+                {
+                    var item = pedido.Items.ElementAt(i);
+                    <tr>
+                        <td>@item.Product_id</td>
+                        <td>@item.Product_name</td>
+                        <td>@item.Cantidad</td>
+                        <td>
+                            @if (Result is not null)
+                            {
+                                var itemResult = Result.Items.FirstOrDefault(r => r.ProductCode == item.Product_id);
+                                if (itemResult is not null)
+                                {
+                                    @if (itemResult.YaProcesado)
+                                    {
+                                        <span class="text-secondary"><Icon Name="IconName.SkipForwardFill" /> Ya procesado</span>
+                                    }
+                                    else if (itemResult.Ok)
+                                    {
+                                        <span class="text-success"><Icon Name="IconName.CheckCircleFill" /> Stock: @itemResult.StockAnterior.ToString("N2") → @itemResult.StockNuevo.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger"><Icon Name="IconName.XCircleFill" /> @itemResult.Error</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">—</span>
+                                }
+                            }
+                            else if (Procesando && i == RowProcesando)
+                            {
+                                <span class="three-dots-loader"><span></span><span></span><span></span></span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary">Pendiente</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (Result is not null)
+        {
+            <div class="alert @(Result.Success ? "alert-success" : "alert-danger") mt-2">
+                <strong>@(Result.Success ? "Procesado exitosamente" : "Transacción Fallida")</strong><br />
+                @Result.Message<br />
+                <small>Tiempo: @Result.ElapsedMilliseconds ms</small>
+            </div>
+        }
+    </BodyTemplate>
+
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="Procesar" Disabled="@(Procesando || pedido.Status == 4)">
+            <Icon Name="IconName.BoxArrowUp" /> @(pedido.Status == 5 ? "Re-procesar" : "Procesar")
+        </Button>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync" Disabled="@Procesando">
+            <Icon Name="IconName.XCircle" /> Cerrar
+        </Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    private Modal modal = default!;
+    private PedidoVenta pedido = new();
+    private ProcesarPedidoResult? Result;
+    private bool Procesando;
+    private int RowProcesando = -1;
+    private CancellationTokenSource? cts;
+
+    [Parameter]
+    public EventCallback OnProcesado { get; set; }
+
+    public async Task ShowAsync(PedidoVenta pv)
+    {
+        pedido = pv;
+        Result = null;
+        Procesando = false;
+        RowProcesando = -1;
+        await modal.ShowAsync();
+    }
+
+    private async Task Procesar()
+    {
+        if (Procesando) return;
+
+        Procesando = true;
+        Result = null;
+        RowProcesando = 0;
+        cts = new CancellationTokenSource();
+        StateHasChanged();
+
+        var animacion = AnimarFilasAsync(cts.Token);
+        await Task.Delay(2000);
+        var resultado = await ventaService.ProcesarPedidoAsync(pedido.Numero);
+
+        cts.Cancel();
+        await animacion;
+
+        if (resultado is null)
+        {
+            Result = new ProcesarPedidoResult
+            {
+                Success = false,
+                Message = "No se pudo contactar el servidor.",
+                Items = []
+            };
+            ToastService.Notify(new(ToastType.Danger, "No se pudo procesar el pedido."));
+        }
+        else
+        {
+            Result = resultado;
+            pedido.Status = resultado.StatusFinal;
+
+            if (resultado.Success)
+                ToastService.Notify(new(ToastType.Success, "Pedido procesado correctamente."));
+            else
+                ToastService.Notify(new(ToastType.Danger, "El pedido quedó en Transacción Fallida."));
+
+            await OnProcesado.InvokeAsync();
+        }
+
+        Procesando = false;
+        StateHasChanged();
+    }
+
+    private async Task AnimarFilasAsync(CancellationToken token)
+    {
+        var count = pedido.Items.Count;
+        while (!token.IsCancellationRequested && RowProcesando < count)
+        {
+            try
+            {
+                await Task.Delay(200, token);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+            RowProcesando++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        cts?.Cancel();
+        await modal.HideAsync();
+    }
+}

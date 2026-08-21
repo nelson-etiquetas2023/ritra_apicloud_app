@@ -1,0 +1,97 @@
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <div class="order-header">
+            <h1>Numero de documento: @pedido.Numero</h1>
+        </div>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        <div class="order-info">
+            <div class="info-box">
+                <h3>Datos del Documento</h3>
+                <p><strong>Status: </strong>@pedido.StatusTexto</p>
+                <p><strong>Fecha del Documento: </strong>@pedido.Fecha.ToString("dd/MM/yyyy")</p>
+                <p><strong>Fecha de Creación: </strong>@pedido.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>Bodega: </strong>@pedido.WarehouseName</p>
+                <p><strong>Vendedor: </strong>@pedido.Vendedor</p>
+                <p><strong>Prioridad: </strong>@pedido.Prioridad</p>
+            </div>
+            <div class="info-box">
+                <h3>Datos del Cliente</h3>
+                <p><strong>Cliente: </strong>@pedido.Cliente_Nombre</p>
+                <p><strong>RNC: </strong>@pedido.Cliente_RNC</p>
+                <p><strong>Dirección de Entrega: </strong>@pedido.DireccionEntrega</p>
+                <p><strong>Referencia: </strong>@pedido.Reference</p>
+                <p><strong>Descripción: </strong>@pedido.Description</p>
+            </div>
+        </div>
+
+        <section class="order-detalle">
+            <h3>Detalle de productos</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre del Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Subtotal</th>
+                        <th>Comentario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in pedido.Items)
+                    {
+                        <tr>
+                            <td>@item.Product_id</td>
+                            <td>@item.Product_name</td>
+                            <td>@item.Cantidad</td>
+                            <td>@item.Precio.ToString("N2")</td>
+                            <td>@item.Subtotal.ToString("N2")</td>
+                            <td>@item.Comentario</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    </BodyTemplate>
+
+    <FooterTemplate>
+        <table>
+            <tr>
+                <td class="total-label">SubTotal :</td>
+                <td class="total-value"><strong>@pedido.Subtotal.ToString("N2")</strong></td>
+            </tr>
+            <tr>
+                <td class="total-label">Descuento :</td>
+                <td class="total-value"><strong>-@pedido.Descuento.ToString("N2")</strong></td>
+            </tr>
+            <tr>
+                <td class="total-label">Impuestos (IGV 18%) :</td>
+                <td class="total-value"><strong>@pedido.Impuesto.ToString("N2")</strong></td>
+            </tr>
+            <tr>
+                <td class="total-label total-final">Total General: </td>
+                <td class="total-value total-final"><strong>@pedido.Total.ToString("N2")</strong></td>
+            </tr>
+        </table>
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    public PedidoVenta pedido { get; set; } = new();
+
+    private Modal modal = default!;
+
+    public async Task ShowAsync(PedidoVenta pv)
+    {
+        pedido = pv;
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

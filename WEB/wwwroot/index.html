@@ -219,7 +219,33 @@
             }
         };
 
-        // Drag & drop del logo de la empresa
+        // Drag & drop del archivo Excel en la franja de carga inicial
+        window.initCargaInicialDropZone = (dotNetRef) => {
+            const zone = document.getElementById('dropZone');
+            if (!zone) return;
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (!file) return;
+
+                const isValid = /\.(xlsx|xls)$/i.test(file.name);
+                if (!isValid) {
+                    dotNetRef.invokeMethodAsync('OnInvalidFileDropped');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const result = ev.target.result || '';
+                    const base64 = result.indexOf(',') >= 0 ? result.split(',')[1] : result;
+                    dotNetRef.invokeMethodAsync('OnFileDropped', file.name, file.size, file.type || '', base64);
+                };
+                reader.readAsDataURL(file);
+            });
+        };
         window.initLogoDropZone = (dotNetRef) => {
             const zone = document.getElementById('dropZoneLogo');
             if (!zone) return;

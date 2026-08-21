@@ -9,6 +9,7 @@ namespace Shared.Dtos.Compras
         public DateTime Fecha { get; set; }
         public DateTime FechaCreacion { get; set; }
         public string Description { get; set; } = "";
+        public string Comentario { get; set; } = "";
         public int Status { get; set; }
         public bool Sincro { get; set; }
         public string Tipo_Documento { get; set; } = "";
@@ -18,6 +19,7 @@ namespace Shared.Dtos.Compras
         public int Supply_Id { get; set; }
         public string Supply_Name { get; set; } = "";
         public string Reference { get; set; } = "";
+        public string Prioridad { get; set; } = "Normal";
         public string UserName { get; set; } = "";
         public string UserEmail { get; set; } = "";
         public string UserRole { get; set; } = "";
@@ -32,7 +34,7 @@ namespace Shared.Dtos.Compras
             {
                 return Status switch
                 {
-                    0 => "Pendiente",
+                    0 => "Publicado-Iniciado",
                     1 => "Modificado",
                     2 => "Sincronizado",
                     3 => "Cerrado",

@@ -1,0 +1,120 @@
+@inject IVendedoresService service
+@inject ToastService ToastService
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modalUpdate" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
+    <HeaderTemplate><Icon Name="IconName.PencilSquare" Size="IconSize.x3" /><strong> Modificar Vendedor.</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="vendedorLocal" OnValidSubmit="UpdateVendedor">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="uptxt_vendedorcode"><strong>Código del Vendedor :</strong></label>
+                <input class="form-control" id="uptxt_vendedorcode" value="@vendedorLocal.vendedor_code" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="uptxt_vendedornombre"><strong>Nombre del Vendedor :</strong></label>
+                <InputText class="form-control" id="uptxt_vendedornombre" @bind-Value="vendedorLocal.vendedor_name" />
+                <ValidationMessage For="@(() => vendedorLocal.vendedor_name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="uptxt_vendedortelefono"><strong>Teléfono :</strong></label>
+                <InputText class="form-control" id="uptxt_vendedortelefono" @bind-Value="vendedorLocal.telefono" />
+            </div>
+
+            <div class="mb-3">
+                <label for="uptxt_vendedoremail"><strong>Email :</strong></label>
+                <InputText class="form-control" id="uptxt_vendedoremail" @bind-Value="vendedorLocal.email" />
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modalUpdate = default!;
+    private string errorMessage = string.Empty;
+
+    private Vendedor vendedorLocal = new();
+
+    [Parameter]
+    public EventCallback<Vendedor> OnVendedorUpdate { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    public async Task ShowAsyncWithId(int vendedorId)
+    {
+        errorMessage = string.Empty;
+
+        var loaded = await service.GetVendedorByIdAsync(vendedorId);
+        if (loaded == null || loaded.vendedor_id == 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo cargar el vendedor {vendedorId}."));
+            return;
+        }
+
+        vendedorLocal = new Vendedor
+        {
+            vendedor_id = loaded.vendedor_id,
+            vendedor_code = loaded.vendedor_code,
+            vendedor_name = loaded.vendedor_name,
+            telefono = loaded.telefono,
+            email = loaded.email
+        };
+
+        StateHasChanged();
+        await modalUpdate.ShowAsync();
+    }
+
+    private async Task UpdateVendedor()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.UpdateVendedorAsync(vendedorLocal.vendedor_id, vendedorLocal);
+            if (!success)
+            {
+                errorMessage = "No se pudo actualizar el vendedor. Intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            ToastService.Notify(new(ToastType.Success, $"Vendedor {vendedorLocal.vendedor_code} actualizado correctamente."));
+            await OnVendedorUpdate.InvokeAsync(vendedorLocal);
+            await modalUpdate.HideAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar los cambios: {ex.Message}";
+            Console.WriteLine($"Error updating vendedor: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        await modalUpdate.HideAsync();
+    }
+}

@@ -1,853 +1,264 @@
 @page "/CargaInicial"
-@implements IDisposable
-@inject ICargasInicialesService service
+@inject ICargasInicialesService servicio
+@inject ToastService ToastService
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
+@using WEB.Services.CargasIniciales
 @using Shared.Dtos.CargasIniciales
+@using Microsoft.AspNetCore.Components.QuickGrid
 
-<h1 class="mb-3"><Icon Name="IconName.FileExcel" Size="IconSize.x1" /> Carga de Iniciales</h1>
+<ModalDetailsCargaInicial @ref="modalDetails" />
 
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link @(activeTab == TabEnum.Registrar ? "active" : "")" @onclick="() => SetTab(TabEnum.Registrar)" style="cursor:pointer;">
-            <Icon Name="IconName.PencilSquare" /> Registrar Documento
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(activeTab == TabEnum.Index ? "active" : "")" @onclick="() => SetTab(TabEnum.Index)" style="cursor:pointer;">
-            <Icon Name="IconName.Folder2Open" /> Documentos (<span>@(cargas?.Count ?? 0)</span>)
-        </a>
-    </li>
-</ul>
-
-@if (activeTab == TabEnum.Registrar)
-{
-    <div class="mb-2 d-flex gap-2 justify-content-end">
-        <Button Color="ButtonColor.Primary" @onclick="CreateNew"><Icon Name="IconName.Plus" /> Nueva Carga</Button>
-        <Button Color="ButtonColor.Success" @onclick="SaveDocument"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
-        <Button Color="ButtonColor.Danger" @onclick="DeleteDocument"><Icon Name="IconName.Trash" /> Eliminar</Button>
-    </div>
-
-    <!-- Zona 1: Dropzone de drag & drop -->
-    <div id="dropZone" class="alert @(isDragOver ? "alert-warning" : "alert-success") d-flex align-items-center justify-content-between p-3 mt-1 mb-3"
-         style="border: 2px dashed @(isDragOver ? "#ffc107" : "#c3e6cb"); background-color: @(isDragOver ? "#fff3cd" : "#d4edda"); color: #155724; cursor: pointer;"
-         @ondragover:preventDefault
-         @ondragenter="() => isDragOver = true"
-         @ondragleave="() => isDragOver = false">
-
-        <div class="d-flex align-items-center">
-            <Icon Name="@(isDragOver ? IconName.FileEarmarkCheck : IconName.FileEarmarkArrowUp)" Size="IconSize.x3" class="me-3" />
-            <div>
-                <strong>@(isDragOver ? "Suelta el archivo aquí" : "Carga inicial desde Excel")</strong>
-                <p class="mb-0 small">Arrastra y suelta tu archivo Excel aquí o haz clic para subir. Columnas: product_code, product_name, cantidad, ubicacion, costo, categoria, unidad, nota.</p>
+<Modal @ref="modalProcesarResult" Title="Resultado del procesamiento" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (procesarResult != null)
+        {
+            <div class="alert @(procesarResult.Success ? "alert-success" : "alert-danger")">
+                <Icon Name="@(procesarResult.Success ? IconName.CheckCircle : IconName.XCircle)" /> @procesarResult.Message
             </div>
-        </div>
-        <div class="d-flex gap-2">
-            <Button Color="ButtonColor.Secondary" @onclick="DownloadTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar Plantilla</Button>
-            <InputFile OnChange="HandleFileImport" class="form-control" accept=".xlsx,.xls" />
-        </div>
-    </div>
-
-    @if (isImporting)
-    {
-        <div class="alert alert-info">Importando archivo, espere...</div>
-    }
-
-    <!-- Zona 2: Header del documento -->
-    <div class="card mb-3">
-        <div class="card-header bg-primary text-white">
-            <Icon Name="IconName.FileTypeDoc" /> Datos del Documento
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label"><strong>Número:</strong></label>
-                    <input type="text" class="form-control" @bind="inicial.Numero" readonly />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label"><strong>Fecha y Hora de Creación:</strong></label>
-                    <input type="text" class="form-control" value="@inicial.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss")" readonly />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label"><strong>Comentario:</strong></label>
-                    <input type="text" class="form-control" @bind="inicial.Comentario" placeholder="Comentario de la carga..." />
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Zona 3: Grid de detalle -->
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><Icon Name="IconName.List" /> Detalle (@inicial.Detalles.Count)</span>
-            <Button Color="ButtonColor.Primary" @onclick="StartNewDetail"><Icon Name="IconName.Plus" /> Agregar Línea</Button>
-        </div>
-        <div class="card-body">
-
-            <!-- Reconteo desde device Zebra -->
-            <div class="alert alert-secondary mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <Icon Name="IconName.UpcScan" Size="IconSize.x2" />
-                    <strong>Reconteo con Zebra:</strong>
-                    <input @ref="barcodeInput"
-                           id="barcodeInput"
-                           type="text"
-                           class="form-control"
-                           style="max-width:300px;"
-                           placeholder="Escanea el código del producto..."
-                           @bind="scanCode"
-                           @bind:event="oninput"
-                           @onkeyup="OnScanKeyUp"
-                           autocomplete="off" />
-                    <Button Color="ButtonColor.Success" @onclick="SetFisicoManual"><Icon Name="IconName.Check" /> Fijar</Button>
-                    <Button Color="ButtonColor.Info" @onclick="OpenIntegrateModal"><Icon Name="IconName.DatabaseFillDown" /> Integrar</Button>
-                </div>
-                @if (!string.IsNullOrEmpty(scanMessage))
-                {
-                    <small class="d-block mt-2 text-info">@scanMessage</small>
-                }
-                <small class="text-muted d-block mt-2">
-                    Al escanear un código, se suma 1 al conteo físico (Cant. Física) del ítem que corresponda. La diferencia se calcula automáticamente (Física - Lógica).
-                </small>
-            </div>
-
-            @if (editingDetail)
+            @if (procesarResult.Errors.Count > 0)
             {
-                <div class="card mb-3 border-primary">
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <div class="col-md-3">
-                                <label class="form-label small"><strong>Código:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.ProductCode" placeholder="product_code" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small"><strong>Nombre:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.ProductName" placeholder="product_name" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Cantidad:</strong></label>
-                                <input type="number" class="form-control form-control-sm" @bind="detailEdit.Cantidad" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Cant. Física:</strong></label>
-                                <input type="number" class="form-control form-control-sm" @bind="detailEdit.CantidadFisica" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Ubicación:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Ubicacion" placeholder="ubicacion" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Costo:</strong></label>
-                                <input type="number" class="form-control form-control-sm" step="0.01" @bind="detailEdit.Costo" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Categoría:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Categoria" placeholder="categoria" />
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small"><strong>Unidad:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Unidad" placeholder="unidad" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small"><strong>Nota:</strong></label>
-                                <input type="text" class="form-control form-control-sm" @bind="detailEdit.Nota" placeholder="nota" />
-                            </div>
-                            <div class="col-12 d-flex gap-2 mt-2">
-                                <Button Color="ButtonColor.Success" @onclick="SaveDetail"><Icon Name="IconName.Check" /> Guardar Línea</Button>
-                                <Button Color="ButtonColor.Secondary" @onclick="CancelDetail"><Icon Name="IconName.XCircle" /> Cancelar</Button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <h6>Errores:</h6>
+                <pre style="white-space:pre-wrap;font-family:inherit;max-height:200px;overflow-y:auto;">@(string.Join(Environment.NewLine, procesarResult.Errors.Select(e => e.Message)))</pre>
             }
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseProcesarModal">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
 
-            <QuickGrid Items="inicial.Detalles.AsQueryable()" ItemsPerPage="10" class="table table-hover table-bordered table-striped" Pagination="@paginationDetalle" Style="font-size:0.9rem;">
-                <PropertyColumn Property="@(d => d.ProductCode)" Title="Código" Sortable="true" />
-                <PropertyColumn Property="@(d => d.ProductName)" Title="Nombre" Sortable="true" />
-                <TemplateColumn Title="Cant. Lógica" Sortable="true">
-                    @context.Cantidad
-                </TemplateColumn>
-                <TemplateColumn Title="Cant. Física" Sortable="true">
-                    @context.CantidadFisica
-                </TemplateColumn>
-                <TemplateColumn Title="Diferencia" Sortable="true">
-                    <Badge Color="@(context.Diferencia == 0 ? BadgeColor.Success : BadgeColor.Danger)" VisuallyHiddenText="Diferencia">
-                        @(context.Diferencia > 0 ? "+" : "")@context.Diferencia
-                    </Badge>
-                </TemplateColumn>
-                <PropertyColumn Property="@(d => d.Ubicacion)" Title="Ubicación" Sortable="true" />
-                <PropertyColumn Property="@(d => d.Costo)" Title="Costo" Sortable="true" />
-                <TemplateColumn Title="Subtotal" Sortable="true">
-                    @((context.Cantidad * context.Costo).ToString("N2"))
-                </TemplateColumn>
-                <PropertyColumn Property="@(d => d.Categoria)" Title="Categoría" Sortable="true" />
-                <PropertyColumn Property="@(d => d.Unidad)" Title="Unidad" Sortable="true" />
-                <PropertyColumn Property="@(d => d.Nota)" Title="Nota" Sortable="true" />
-                <TemplateColumn Title="Acciones">
-                    <a @onclick="() => StartEditDetail(context)" style="cursor:pointer" title="Editar línea">
-                        <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
-                    </a>
-                    <a @onclick="() => DeleteDetail(context)" style="cursor:pointer;margin-left:10px;" title="Eliminar línea">
-                        <Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Danger" />
-                    </a>
-                </TemplateColumn>
-            </QuickGrid>
-            <div class="mt-2">
-                <Paginator State="@paginationDetalle" />
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Carga de Iniciales</h2>
+    <button class="btn btn-primary" type="button" @onclick="NuevaCarga">
+        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Carga
+    </button>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+        <form id="formbusqueda" class="d-flex align-items-center gap-2 w-100" @onsubmit="buscar" @onsubmit:preventDefault>
+            <strong class="text-nowrap">buscar por filtro:</strong>
+            <div class="d-flex flex-grow-1">
+                <input id="txt_busqueda" type="text" class="form-control me-2" placeholder="Buscar por numero, comentario, producto o ubicacion..."
+                       @bind-value="searchText"
+                       @bind-value:event="oninput" />
+                <Button Type="ButtonType.Submit" class="btn btn-primary">
+                    <Icon Name="IconName.Search" />
+                </Button>
             </div>
-        </div>
+            <strong class="text-nowrap" style="width: 100px;">@cargasFiltered?.Count().ToString() Items.</strong>
+        </form>
     </div>
+</nav>
 
-    <!-- Zona 4: Resumen -->
-    <div class="card">
-        <div class="card-header bg-info text-white">
-            <Icon Name="IconName.Calculator" /> Resumen
-        </div>
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <div class="text-muted small">Total de Ítems</div>
-                        <div class="h4 mb-0">@inicial.Detalles.Count</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <div class="text-muted small">Cantidad Lógica (Excel)</div>
-                        <div class="h4 mb-0">@inicial.Detalles.Sum(d => d.Cantidad).ToString("N0")</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border rounded p-3">
-                        <div class="text-muted small">Cantidad Física (Zebra)</div>
-                        <div class="h4 mb-0">@inicial.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border rounded p-3" style="background-color:@(inicial.Detalles.Sum(d => d.Diferencia) == 0 ? "#f8f9fa" : "#fdf1f1");">
-                        <div class="text-muted small">Diferencia Total</div>
-                        <div class="h4 mb-0 @(inicial.Detalles.Sum(d => d.Diferencia) == 0 ? "text-success" : "text-danger")">@((inicial.Detalles.Sum(d => d.Diferencia) > 0 ? "+" : "") + inicial.Detalles.Sum(d => d.Diferencia).ToString("N0"))</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+@if (Cargas == null)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else if (!cargasFiltered!.Any())
+{
+    <div class="text-center py-5">
+        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
+        <p class="text-muted">Presiona "Nueva Carga" para crear la primera carga inicial.</p>
     </div>
 }
 else
 {
-    <!-- PESTAÑA INDEX: todos los documentos registrados -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><Icon Name="IconName.Folder2Open" /> Documentos registrados (@cargasFiltered?.Count())</span>
-            <div class="d-flex gap-2">
-                <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Buscar..." @bind="searchText" @bind:event="oninput" @onkeydown="HandleEnterKey" />
-                <Button Color="ButtonColor.Primary" @onclick="buscar"><Icon Name="IconName.Search" /></Button>
-            </div>
-        </div>
-        <div class="card-body">
-            @if (cargas == null)
-            {
-                <div class="d-flex justify-content-center align-items-center p-5">
-                    <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
-                </div>
+    <QuickGrid Items="cargasFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
+        <TemplateColumn Title="Numero" Sortable="true">
+            <strong>@context.Numero</strong>
+        </TemplateColumn>
+        <TemplateColumn Title="Fecha Doc." Sortable="true">
+            <Icon Name="IconName.CalendarDate" />
+            @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
+        </TemplateColumn>
+        <PropertyColumn Property="@(c => c.Comentario)" Title="Comentario" Sortable="true" />
+        <TemplateColumn Title="Items" Sortable="true">
+            <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
+                @context.Detalles.Count
+            </Badge>
+        </TemplateColumn>
+        <TemplateColumn Title="Cant. Teórica">
+            <span class="fw-semibold">@context.Detalles.Sum(d => d.Cantidad).ToString("N0")</span>
+        </TemplateColumn>
+        <TemplateColumn Title="Cant. Física">
+            <span class="fw-semibold">@context.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</span>
+        </TemplateColumn>
+        <TemplateColumn Title="Diferencia">
+            @{
+                var dif = context.Detalles.Sum(d => d.Diferencia);
             }
-            else if (cargasFiltered!.Count() == 0)
+            <Badge Color="@(dif == 0 ? BadgeColor.Success : BadgeColor.Danger)" VisuallyHiddenText="Diferencia">
+                @(dif > 0 ? "+" : "")@dif.ToString("N0")
+            </Badge>
+        </TemplateColumn>
+        <TemplateColumn Title="Total">
+            <span class="fw-semibold">@($"${context.Detalles.Sum(d => d.Cantidad * d.Costo):N2}")</span>
+        </TemplateColumn>
+        <TemplateColumn Title="Status">
+            @if (context.Status == 0)
             {
-                <div class="text-center py-5">
-                    <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos registrados</h6>
-                    <p class="text-muted">Ve a la pestaña "Registrar Documento" para crear el primero.</p>
-                </div>
+                <Badge Color="BadgeColor.Info">Creado</Badge>
+            }
+            else if (context.Status == 1)
+            {
+                <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+            }
+            else if (context.Status == 2)
+            {
+                <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+            }
+            else if (context.Status == 4)
+            {
+                <Badge Color="BadgeColor.Success">Procesado</Badge>
+            }
+            else if (context.Status == 5)
+            {
+                <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
             }
             else
             {
-                <QuickGrid Items="cargasFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
-                    <TemplateColumn Title="Número" Sortable="true">
-                        <strong>@context.Numero</strong>
-                    </TemplateColumn>
-                    <TemplateColumn Title="Fecha y Hora" Sortable="true">
-                        <Icon Name="IconName.CalendarDate" />
-                        @context.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss")
-                    </TemplateColumn>
-                    <PropertyColumn Property="@(c => c.Comentario)" Title="Comentario" Sortable="true" />
-                    <TemplateColumn Title="Líneas">
-                        <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
-                            @context.Detalles.Count
-                        </Badge>
-                    </TemplateColumn>
-                    <TemplateColumn Title="Total General">
-                        <span class="text-success fw-bold">@((context.Detalles.Sum(d => d.Cantidad * d.Costo)).ToString("N2"))</span>
-                    </TemplateColumn>
-                    <TemplateColumn Title="Acciones">
-                        <Tooltip Title="Abrir en el editor" Placement="TooltipPlacement.Top">
-                            <a @onclick="() => OpenInEditor(context)" style="cursor:pointer">
-                                <Icon Name="IconName.FolderSymlink" Size="IconSize.x5" Color="IconColor.Dark" />
-                            </a>
-                        </Tooltip>
-                        <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
-                            <a @onclick="() => DeleteCarga(context)" style="cursor:pointer;margin-left:10px;">
-                                <Icon Name="IconName.XLg" Size="IconSize.x5" Color="IconColor.Danger" />
-                            </a>
-                        </Tooltip>
-                    </TemplateColumn>
-                </QuickGrid>
-                <div class="mt-2">
-                    <Paginator State="@paginationIndex" />
-                </div>
+                <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
             }
-        </div>
+        </TemplateColumn>
+        <TemplateColumn Title="Acciones">
+            @if (context.Status != 4 && context.Status != 5)
+            {
+                <Tooltip Title="Editar" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer">
+                        <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                    </a>
+                </Tooltip>
+            }
+            <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer; margin-left:10px;">
+                    <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
+            @if (context.Status != 4 && context.Status != 5)
+            {
+                <Tooltip Title="Procesar" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => Procesar(context)" style="cursor: pointer; margin-left:10px;">
+                        <Icon Name="IconName.PlayCircleFill" Size="IconSize.x5" Color="IconColor.Success" />
+                    </a>
+                </Tooltip>
+            }
+            @if (context.Status != 4 && context.Status != 5)
+            {
+                <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => Eliminar(context)" style="cursor: pointer; margin-left:10px;">
+                        <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Danger" />
+                    </a>
+                </Tooltip>
+            }
+        </TemplateColumn>
+    </QuickGrid>
+    <div class="mt-2">
+        <Paginator State="@paginationIndex" />
     </div>
 }
 
-<Modal @ref="modalIntegrate" Title="Integrar documento escaneado en Zebra">
-    <BodyTemplate>
-        @if (documentosZebra == null)
-        {
-            <div class="d-flex justify-content-center align-items-center p-4">
-                <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando...</strong>
-            </div>
-        }
-        else if (documentosZebra!.Count == 0)
-        {
-            <div class="text-center py-4">
-                <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos escaneados disponibles.</h6>
-            </div>
-        }
-        else
-        {
-            <div class="mb-2">Selecciona el documento escaneado para integrarlo en el detalle actual:</div>
-            @if (!string.IsNullOrEmpty(integrateMessage))
-            {
-                <div class="alert alert-warning py-2">@integrateMessage</div>
-            }
-            <table class="table table-sm table-hover table-striped">
-                <thead>
-                    <tr><th></th><th>Número</th><th>Fecha</th><th>Ítems</th><th>Total Físico</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var doc in documentosZebra)
-                    {
-                        <tr>
-                            <td>
-                                <input type="radio" name="zebraDoc" checked="@(doc.Numero == selectedDocNumero)" @onchange="() => selectedDocNumero = doc.Numero" />
-                            </td>
-                            <td><strong>@doc.Numero</strong></td>
-                            <td>@doc.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss")</td>
-                            <td>@doc.Detalles.Count</td>
-                            <td>@doc.Detalles.Sum(d => d.CantidadFisica)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <div class="d-flex gap-2 mt-2">
-                <Button Color="ButtonColor.Primary" @onclick="IntegrateSelectedDocument"><Icon Name="IconName.DatabaseFillDown" /> Integrar selección</Button>
-                <Button Color="ButtonColor.Secondary" @onclick="CloseIntegrateModal">Cancelar</Button>
-            </div>
-        }
-    </BodyTemplate>
-</Modal>
-
-<Modal @ref="modalImportResult" Title="Resultado de la importación">
-    <BodyTemplate>
-        <pre style="white-space:pre-wrap;font-family:inherit;margin-bottom:0;">@importResultMessage</pre>
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="CloseImportModal">Cerrar</Button>
-    </FooterTemplate>
-</Modal>
-
 @code {
-    private enum TabEnum { Registrar, Index }
 
-    private TabEnum activeTab = TabEnum.Registrar;
-
-    private List<Inicial>? cargas;
-    IEnumerable<Inicial>? cargasFiltered;
+    private List<Inicial>? Cargas;
+    private IEnumerable<Inicial>? cargasFiltered;
     private string searchText = "";
-    PaginationState paginationDetalle = new PaginationState { ItemsPerPage = 10 };
-    PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
-    int pageSize = 15;
-
-    private Inicial inicial = new();
-
-    private bool editingDetail;
-    private DetalleInicial detailEdit = new();
-
-    private ElementReference barcodeInput;
-    private string scanCode = "";
-    private string scanMessage = "";
-
-    private bool isDragOver;
-    private bool isImporting;
-    private DotNetObjectReference<Index>? dotNetRef;
-
-    private Modal? modalImportResult;
-    private string importResultMessage = "";
-
-    private Modal? modalIntegrate;
-    private List<Inicial>? documentosZebra;
-    private string selectedDocNumero = "";
-    private string integrateMessage = "";
-
-    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
+    private int pageSize = 15;
+    private ModalDetailsCargaInicial modalDetails = default!;
+    private Modal? modalProcesarResult;
+    private CargaInicialSaveResult? procesarResult;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCargas();
-        NewDocument();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            dotNetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initProductDropZone", dotNetRef);
-            await FocusBarcode();
-        }
-        else if (activeTab == TabEnum.Registrar && scanMessage != _lastScanMessage)
-        {
-            _lastScanMessage = scanMessage;
-            await FocusBarcode();
-        }
-    }
-
-    private string _lastScanMessage = "";
-
-    private async Task FocusBarcode()
-    {
-        await Task.Delay(100);
-        await barcodeInput.FocusAsync();
-    }
-
-    private void SetTab(TabEnum tab)
-    {
-        activeTab = tab;
-        if (tab == TabEnum.Index && cargas == null)
-            _ = LoadCargas();
-        StateHasChanged();
-    }
-
-    private void NewDocument()
-    {
-        inicial = new Inicial
-        {
-            Numero = "Nuevo",
-            FechaCreacion = DateTime.Now,
-            Detalles = []
-        };
-        editingDetail = false;
-    }
-
-    private async Task CreateNew()
-    {
-        NewDocument();
-        StateHasChanged();
-    }
-
-    private async Task OpenInEditor(Inicial item)
-    {
-        await LoadDocument(item);
-        activeTab = TabEnum.Registrar;
-        StateHasChanged();
-    }
-
-    private async Task LoadDocument(Inicial item)
-    {
-        inicial = new Inicial
-        {
-            Id = item.Id,
-            Numero = item.Numero,
-            FechaCreacion = item.FechaCreacion,
-            Comentario = item.Comentario,
-            Detalles = item.Detalles.Select(d => new DetalleInicial
-            {
-                Id = d.Id,
-                ProductCode = d.ProductCode,
-                ProductName = d.ProductName,
-                Cantidad = d.Cantidad,
-                CantidadFisica = d.CantidadFisica,
-                Ubicacion = d.Ubicacion,
-                Costo = d.Costo,
-                Categoria = d.Categoria,
-                Unidad = d.Unidad,
-                Nota = d.Nota
-            }).ToList()
-        };
-        editingDetail = false;
-    }
-
-    private async Task SaveDocument()
-    {
-        PreloadService.Show(SpinnerColor.Dark, "Guardando...");
-        try
-        {
-            bool ok;
-            if (inicial.Id > 0)
-                ok = await service.UpdateAsync(inicial.Id, inicial);
-            else
-            {
-                inicial.Numero = "";
-                ok = await service.CreateAsync(inicial);
-            }
-
-            await LoadCargas();
-
-            if (ok)
-            {
-                if (inicial.Id > 0)
-                    await JS.InvokeVoidAsync("alert", "Carga inicial actualizada correctamente.");
-                else
-                {
-                    NewDocument();
-                    await JS.InvokeVoidAsync("alert", "Carga inicial guardada correctamente.");
-                }
-            }
-            else
-                await JS.InvokeVoidAsync("alert", "Error al guardar la carga inicial.");
-
-            StateHasChanged();
-        }
-        finally
-        {
-            PreloadService.Hide();
-        }
-    }
-
-    private async Task DeleteDocument()
-    {
-        if (inicial.Id <= 0)
-        {
-            NewDocument();
-            StateHasChanged();
-            return;
-        }
-
-        var confirm = await JS.InvokeAsync<bool>("confirm",
-            $"¿Estás seguro de que deseas eliminar la carga inicial {inicial.Numero}? Esta acción no se puede deshacer.");
-        if (!confirm) return;
-
-        var ok = await service.DeleteAsync(inicial.Id);
-        if (ok)
-        {
-            await LoadCargas();
-            NewDocument();
-            StateHasChanged();
-        }
-    }
-
-    private async Task DeleteCarga(Inicial item)
-    {
-        var confirm = await JS.InvokeAsync<bool>("confirm",
-            $"¿Estás seguro de que deseas eliminar la carga inicial {item.Numero}? Esta acción no se puede deshacer.");
-        if (!confirm) return;
-
-        var ok = await service.DeleteAsync(item.Id);
-        if (ok)
-            await LoadCargas();
     }
 
     private async Task LoadCargas()
     {
-        cargas = await service.GetAllAsync();
-        cargasFiltered = cargas.AsQueryable();
+        Cargas = await servicio.GetAllAsync();
+        buscar();
     }
 
     private void buscar()
     {
-        if (cargas == null) return;
+        if (Cargas == null) return;
 
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            cargasFiltered = cargas.AsEnumerable();
-            StateHasChanged();
-            return;
-        }
-
-        cargasFiltered = cargas.Where(c =>
-            c.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            c.Comentario.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            c.Detalles.Any(d => d.ProductCode.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                d.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                d.Ubicacion.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                                d.Categoria.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
-        StateHasChanged();
-    }
-
-    private void HandleEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            buscar();
-    }
-
-    private void StartNewDetail()
-    {
-        detailEdit = new DetalleInicial();
-        editingDetail = true;
-    }
-
-    private void StartEditDetail(DetalleInicial d)
-    {
-        detailEdit = new DetalleInicial
-        {
-            Id = d.Id,
-            ProductCode = d.ProductCode,
-            ProductName = d.ProductName,
-            Cantidad = d.Cantidad,
-            CantidadFisica = d.CantidadFisica,
-            Ubicacion = d.Ubicacion,
-            Costo = d.Costo,
-            Categoria = d.Categoria,
-            Unidad = d.Unidad,
-            Nota = d.Nota
-        };
-        editingDetail = true;
-    }
-
-    private void SaveDetail()
-    {
-        var existing = inicial.Detalles.FirstOrDefault(x => x.Id == detailEdit.Id && detailEdit.Id != 0);
-        if (existing != null)
-        {
-            existing.ProductCode = detailEdit.ProductCode;
-            existing.ProductName = detailEdit.ProductName;
-            existing.Cantidad = detailEdit.Cantidad;
-            existing.CantidadFisica = detailEdit.CantidadFisica;
-            existing.Ubicacion = detailEdit.Ubicacion;
-            existing.Costo = detailEdit.Costo;
-            existing.Categoria = detailEdit.Categoria;
-            existing.Unidad = detailEdit.Unidad;
-            existing.Nota = detailEdit.Nota;
+            cargasFiltered = Cargas
+                .OrderByDescending(c => c.FechaCreacion)
+                .ThenByDescending(c => c.Numero);
         }
         else
         {
-            detailEdit.Id = inicial.Detalles.Count == 0 ? -1 : inicial.Detalles.Min(d => d.Id) - 1;
-            inicial.Detalles.Add(detailEdit);
+            cargasFiltered = Cargas.Where(c =>
+                (c.Numero != null && c.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (c.Comentario != null && c.Comentario.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                c.Detalles.Any(d =>
+                    (d.ProductCode != null && d.ProductCode.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.ProductName != null && d.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.Ubicacion != null && d.Ubicacion.Contains(searchText, StringComparison.OrdinalIgnoreCase))))
+                .OrderByDescending(c => c.FechaCreacion)
+                .ThenByDescending(c => c.Numero);
         }
-
-        editingDetail = false;
         StateHasChanged();
     }
 
-    private void DeleteDetail(DetalleInicial d)
+    private void NuevaCarga()
     {
-        inicial.Detalles.Remove(d);
-        StateHasChanged();
+        Navigation.NavigateTo("/CargaInicial/nueva");
     }
 
-    private void CancelDetail()
+    private void Editar(Inicial carga)
     {
-        editingDetail = false;
+        Navigation.NavigateTo($"/CargaInicial/editar/{carga.Id}");
     }
 
-    private async Task OnScanKeyUp(KeyboardEventArgs e)
+    private async Task ShowDetails(Inicial carga)
     {
-        if (e.Key == "Enter")
-            await ProcessScan(scanCode);
+        await modalDetails.ShowAsync(carga);
     }
 
-    private async Task ProcessScan(string code)
+    private async Task Eliminar(Inicial carga)
     {
-        var codigo = code?.Trim();
-        if (string.IsNullOrEmpty(codigo))
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Estás seguro de que deseas eliminar la carga inicial {carga.Numero}? Esta acción no se puede deshacer.");
+        if (!confirm) return;
+
+        var ok = await servicio.DeleteAsync(carga.Id);
+        if (ok)
         {
-            await barcodeInput.FocusAsync();
-            return;
-        }
-
-        var item = inicial.Detalles.FirstOrDefault(d =>
-            d.ProductCode.Equals(codigo, StringComparison.OrdinalIgnoreCase));
-
-        if (item == null)
-        {
-            scanMessage = $"Código {codigo} no encontrado en el detalle.";
-            StateHasChanged();
-            await barcodeInput.FocusAsync();
-            return;
-        }
-
-        item.CantidadFisica++;
-        scanMessage = $"✓ {item.ProductName}: físico ahora = {item.CantidadFisica}";
-        scanCode = "";
-        StateHasChanged();
-        await barcodeInput.FocusAsync();
-    }
-
-    private async Task SetFisicoManual()
-    {
-        await ProcessScan(scanCode);
-    }
-
-    private async Task OpenIntegrateModal()
-    {
-        documentosZebra = null;
-        selectedDocNumero = "";
-        integrateMessage = "";
-        documentosZebra = await service.GetDocumentsInitialsInventoryAsync();
-        if (documentosZebra != null && documentosZebra.Count > 0)
-            selectedDocNumero = documentosZebra[0].Numero;
-        if (modalIntegrate != null)
-            await modalIntegrate.ShowAsync();
-        StateHasChanged();
-    }
-
-    private async Task CloseIntegrateModal()
-    {
-        if (modalIntegrate != null)
-            await modalIntegrate.HideAsync();
-    }
-
-    private async Task IntegrateSelectedDocument()
-    {
-        var doc = documentosZebra?.FirstOrDefault(d => d.Numero == selectedDocNumero);
-        if (doc == null)
-        {
-            integrateMessage = "Selecciona un documento.";
-            StateHasChanged();
-            return;
-        }
-
-        var emparejados = 0;
-        var agregados = 0;
-
-        foreach (var scanItem in doc.Detalles)
-        {
-            var existente = inicial.Detalles.FirstOrDefault(d =>
-                d.ProductCode.Equals(scanItem.ProductCode, StringComparison.OrdinalIgnoreCase));
-
-            if (existente != null)
-            {
-                existente.CantidadFisica = scanItem.CantidadFisica;
-                emparejados++;
-            }
-            else
-            {
-                inicial.Detalles.Add(new DetalleInicial
-                {
-                    Id = inicial.Detalles.Count == 0 ? -1 : inicial.Detalles.Min(x => x.Id) - 1,
-                    ProductCode = scanItem.ProductCode,
-                    ProductName = scanItem.ProductName,
-                    Cantidad = 0,
-                    CantidadFisica = scanItem.CantidadFisica,
-                    Ubicacion = scanItem.Ubicacion,
-                    Categoria = scanItem.Categoria,
-                    Unidad = scanItem.Unidad,
-                    Nota = scanItem.Nota
-                });
-                agregados++;
-            }
-        }
-
-        scanMessage = $"Integrado {doc.Numero}: {emparejados} ítems actualizados, {agregados} agregados.";
-        await CloseIntegrateModal();
-        StateHasChanged();
-        await FocusBarcode();
-    }
-
-    private async Task DownloadTemplate()
-    {
-        var bytes = await service.DownloadTemplateAsync();
-        await JS.InvokeVoidAsync("downloadFile", "PlantillaCargaInicial.xlsx", Convert.ToBase64String(bytes));
-    }
-
-    private async Task CloseImportModal()
-    {
-        if (modalImportResult != null)
-            await modalImportResult.HideAsync();
-    }
-
-    public void Dispose()
-    {
-        dotNetRef?.Dispose();
-        GC.SuppressFinalize(this);
-    }
-
-    [JSInvokable]
-    public async Task OnFileDropped(string fileName, long fileSize, string contentType, string base64Data)
-    {
-        isDragOver = false;
-        if (!IsValidExcelFile(fileName))
-        {
-            await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
-            return;
-        }
-        await ProcessFile(new BrowserFile(fileName, fileSize, contentType, base64Data));
-        StateHasChanged();
-    }
-
-    [JSInvokable]
-    public async Task OnInvalidFileDropped()
-    {
-        isDragOver = false;
-        await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
-    }
-
-    private static bool IsValidExcelFile(string fileName)
-    {
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        return extension is ".xlsx" or ".xls";
-    }
-
-    private async Task HandleFileImport(InputFileChangeEventArgs e)
-    {
-        await ProcessFile(e.File);
-    }
-
-    private async Task ProcessFile(IBrowserFile file)
-    {
-        if (!IsValidExcelFile(file.Name))
-        {
-            await ShowImportResult("El archivo debe ser un Excel (.xlsx o .xls).");
-            return;
-        }
-
-        PreloadService.Show(SpinnerColor.Dark, "Importando carga inicial...");
-        isImporting = true;
-
-        try
-        {
-            var result = await service.ImportAsync(file);
-
-            var sb = new System.Text.StringBuilder();
-            if (!result.Success)
-                sb.AppendLine("La importación falló y no se guardó ningún cambio.");
-            else
-                sb.AppendLine("Importación completada correctamente.");
-
-            sb.AppendLine($"Líneas insertadas: {result.Inserted}");
-            sb.AppendLine($"Filas omitidas: {result.Skipped}");
-
-            if (result.Errors.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine($"Errores ({result.Errors.Count}):");
-                foreach (var error in result.Errors.Take(50))
-                    sb.AppendLine($"  Fila {error.Row}: {error.Message}");
-                if (result.Errors.Count > 50)
-                    sb.AppendLine($"  ... y {result.Errors.Count - 50} error(es) más.");
-            }
-
-            importResultMessage = sb.ToString();
-
+            ToastService.Notify(new(ToastType.Success, $"Carga inicial {carga.Numero} eliminada."));
             await LoadCargas();
-
-            if (modalImportResult != null)
-                await modalImportResult.ShowAsync();
         }
-        catch (Exception ex)
+        else
         {
-            await ShowImportResult($"Error en la importación: {ex.Message}");
-        }
-        finally
-        {
-            isImporting = false;
-            PreloadService.Hide();
+            ToastService.Notify(new(ToastType.Danger, "No se pudo eliminar la carga inicial."));
         }
     }
 
-    private async Task ShowImportResult(string message)
+    private async Task Procesar(Inicial carga)
     {
-        importResultMessage = message;
-        if (modalImportResult != null)
-            await modalImportResult.ShowAsync();
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Estás seguro de que deseas procesar la carga inicial {carga.Numero}? El stock de los productos se incrementará.");
+        if (!confirm) return;
+
+        procesarResult = null;
+        if (modalProcesarResult != null)
+            await modalProcesarResult.ShowAsync();
+
+        procesarResult = await servicio.ProcesarAsync(carga.Id);
+        await LoadCargas();
         StateHasChanged();
+    }
+
+    private async Task CloseProcesarModal()
+    {
+        if (modalProcesarResult != null)
+            await modalProcesarResult.HideAsync();
     }
 }

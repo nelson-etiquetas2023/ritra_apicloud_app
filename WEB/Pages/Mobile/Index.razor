@@ -1,142 +1,271 @@
 ﻿@inject IOrdenCompraService servicio
+@inject ICargasInicialesService cargaServicio
+@inject ToastService ToastService
+@inject IJSRuntime JS
 @page "/mobile"
-
-<Preload LoadingText="Cargando..." />
+@using WEB.Pages.CargaInicial
+@using Shared.Dtos.CargasIniciales
 
 <ModalDetailsOrdenCompra @ref="modalDetails" />
 <ModalProcesarOrdenCompra @ref="modalProcesar" OnProcesado="OnProcesado" />
+<ModalDetailsCargaInicial @ref="modalDetailsCarga" />
 
+<Modal @ref="modalProcesarCarga" Title="Resultado del procesamiento" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (procesarCargaResult != null)
+        {
+            <div class="alert @(procesarCargaResult.Success ? "alert-success" : "alert-danger")">
+                <Icon Name="@(procesarCargaResult.Success ? IconName.CheckCircle : IconName.XCircle)" /> @procesarCargaResult.Message
+            </div>
+            @if (procesarCargaResult.Errors.Count > 0)
+            {
+                <h6>Errores:</h6>
+                <pre style="white-space:pre-wrap;font-family:inherit;max-height:200px;overflow-y:auto;">@(string.Join(Environment.NewLine, procesarCargaResult.Errors.Select(e => e.Message)))</pre>
+            }
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseProcesarCargaModal">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
 
 <h3>Conexion con Aplicacion movil.</h3>
-<button class="btn btn-primary" @onclick="LoadOrders">Sincronizar</button>
+<button class="btn btn-primary" @onclick="LoadActiveTab">Sincronizar</button>
 
-<h5>Documentos sincronizados</h5>
+<ul class="nav nav-tabs mt-3">
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == 0 ? "active" : "")" href="javascript:void(0)" @onclick="() => SetTab(0)">
+            <Icon Name="IconName.CartCheck" /> Compras
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(activeTab == 1 ? "active" : "")" href="javascript:void(0)" @onclick="() => SetTab(1)">
+            <Icon Name="IconName.BoxSeam" /> Stock Inicial
+        </a>
+    </li>
+</ul>
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <span class="text-muted small">Numero de Documentos: @Ordenes?.Count</span>
-    <div class="d-flex gap-2">
-        <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Buscar por numero, fecha, descripcion o proveedor..." value="@searchText" @oninput="OnSearchInput" @onkeydown="HandleEnterKey" />
-        <Button Color="ButtonColor.Primary" @onclick="buscar"><Icon Name="IconName.Search" /></Button>
-    </div>
-</div>
-
-@if (Ordenes == null)
+@if (activeTab == 0)
 {
-    <div class="d-flex justify-content-center align-items-center p-5">
-        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    <h5 class="mt-3">Documentos de compra sincronizados</h5>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small">Numero de Documentos: @Ordenes?.Count</span>
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Buscar por numero, fecha, descripcion o proveedor..." value="@searchComprasText" @oninput="OnSearchComprasInput" @onkeydown="HandleEnterComprasKey" />
+            <Button Color="ButtonColor.Primary" @onclick="buscarCompras"><Icon Name="IconName.Search" /></Button>
+        </div>
     </div>
-}
-else if (ordenesFiltered == null || !ordenesFiltered.Any())
-{
-    <div class="text-center py-5">
-        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
-        <p class="text-muted">Presiona "Sincronizar" para descargar los documentos desde la aplicacion movil.</p>
-    </div>
+
+    @if (Ordenes == null)
+    {
+        <div class="d-flex justify-content-center align-items-center p-5">
+            <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+        </div>
+    }
+    else if (ordenesFiltered == null || !ordenesFiltered.Any())
+    {
+        <div class="text-center py-5">
+            <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
+            <p class="text-muted">Presiona "Sincronizar" para descargar los documentos desde la aplicacion movil.</p>
+        </div>
+    }
+    else
+    {
+        <QuickGrid Items="ordenesFiltered.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
+            <!--Numero de Orden-->
+            <TemplateColumn Title="Numero" Sortable="true">
+                <strong>@context.Numero</strong>
+            </TemplateColumn>
+            <!--Fecha del Documento-->
+            <TemplateColumn Title="Fecha Doc." Sortable="true">
+                <Icon Name="IconName.CalendarDate" />
+                @context.Fecha.ToString("dd-MM-yyyy HH:mm:ss")
+            </TemplateColumn>
+            <!--Descripcion de trasaccion-->
+            <PropertyColumn Property="@(o => o.Description)" Title="Descripcion" Sortable="true" />
+            <!--Proveedor-->
+            <PropertyColumn Property="@(o => o.Supply_Name)" Title="Proveedor" Sortable="true" />
+            <!--device-->
+            <TemplateColumn Title="Dispositivo" Sortable="true">
+                <Icon Name="IconName.PhoneFill" />
+                @context.DeviceName
+            </TemplateColumn>
+            <!--Usuario-->
+            <TemplateColumn Title="Usuario" Sortable="true">
+                <Icon Name="IconName.PersonFill" />
+                @context.UserName
+            </TemplateColumn>
+            <!--Tipo hidden="documento-->
+            <PropertyColumn Property="@(o => o.Tipo_Documento)" Title="Tipo Doc." />
+            <!--total costo-->
+            <TemplateColumn Title="Total Costo">
+                @($"${context.Total:N2}")
+            </TemplateColumn>
+            <!--status-->
+            <TemplateColumn Title="Status">
+                @if (context.Status == 0)
+                {
+                    <Badge Color="BadgeColor.Info">Publicado-Iniciado</Badge>
+                }
+                else if (context.Status == 1)
+                {
+                    <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+                }
+                else if (context.Status == 2)
+                {
+                    <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+                }
+                else if (context.Status == 3)
+                {
+                    <Badge Color="BadgeColor.Secondary">Cerrado</Badge>
+                }
+                else if (context.Status == 4)
+                {
+                    <Badge Color="BadgeColor.Success">Procesado</Badge>
+                }
+                else if (context.Status == 5)
+                {
+                    <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
+                }
+            </TemplateColumn>
+            <!--Fecha de creacion-->
+            <TemplateColumn Title="Fecha de Creacion" Sortable="true">
+                <Icon Name="IconName.ClockHistory" />
+                @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
+            </TemplateColumn>
+            <TemplateColumn Title="Inventario">
+                @if (context.Status != 4)
+                {
+                    <Button class="@(context.Status == 5 ? "btn btn-warning btn-sm" : "btn btn-primary btn-sm")" @onclick="() => Procesar(context)">
+                        @(context.Status == 5 ? "Re-procesar" : "Procesar")
+                    </Button>
+                }
+            </TemplateColumn>
+            <TemplateColumn Title="Acciones">
+                @if (context.Status != 4 && context.Status != 5)
+                {
+                    <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
+                        <a href="#" style="text-decoration:none">
+                            <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                        </a>
+                    </Tooltip>
+                }
+                <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer">
+                        <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                    </a>
+                </Tooltip>
+                @if (context.Status != 4 && context.Status != 5)
+                {
+                    <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
+                        <a href="#" style="text-decoration:none">
+                            <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                        </a>
+                    </Tooltip>
+                }
+            </TemplateColumn>
+
+        </QuickGrid>
+        <div class="mt-2">
+            <Paginator State="@paginationIndex" />
+        </div>
+    }
 }
 else
 {
-    <QuickGrid Items="ordenesFiltered.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
-        <!--Numero de Orden-->
-        <TemplateColumn Title="Numero" Sortable="true">
-            <strong>@context.Numero</strong>
-        </TemplateColumn>
-        <!--Fecha del Documento-->
-        <TemplateColumn Title="Fecha Doc." Sortable="true">
-            <Icon Name="IconName.CalendarDate" />
-            @context.Fecha.ToString("dd-MM-yyyy HH:mm:ss")
-        </TemplateColumn>
-        <!--Descripcion de trasaccion-->
-        <PropertyColumn Property="@(o => o.Description)" Title="Descripcion" Sortable="true" />
-        <!--Proveedor-->
-        <PropertyColumn Property="@(o => o.Supply_Name)" Title="Proveedor" Sortable="true" />
-        <!--device-->
-        <TemplateColumn Title="Dispositivo" Sortable="true">
-            <Icon Name="IconName.PhoneFill" />
-            @context.DeviceName
-        </TemplateColumn>
-        <!--Usuario-->
-        <TemplateColumn Title="Usuario" Sortable="true">
-            <Icon Name="IconName.PersonFill" />
-            @context.UserName
-        </TemplateColumn>
-        <!--Tipo hidden="documento-->
-        <PropertyColumn Property="@(o => o.Tipo_Documento)" Title="Tipo Doc." />
-        <!--total costo-->
-        <TemplateColumn Title="Total Costo">
-            @($"${context.Total:N2}")
-        </TemplateColumn>
-        <!--status-->
-        <TemplateColumn Title="Status">
-            @if (context.Status == 0)
-            {
-                <Badge Color="BadgeColor.Danger">Iniciado</Badge>
-            }
-            else if (context.Status == 1)
-            {
-                <Badge Color="BadgeColor.Warning">Actualizado</Badge>
-            }
-            else if (context.Status == 2)
-            {
-                <Badge Color="BadgeColor.Success">Sincronizado</Badge>
-            }
-            else if (context.Status == 3)
-            {
-                <Badge Color="BadgeColor.Secondary">Cerrado</Badge>
-            }
-            else if (context.Status == 4)
-            {
-                <Badge Color="BadgeColor.Success">Procesado</Badge>
-            }
-            else if (context.Status == 5)
-            {
-                <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
-            }
-            else
-            {
-                <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
-            }
-        </TemplateColumn>
-        <!--Fecha de creacion-->
-        <TemplateColumn Title="Fecha de Creacion" Sortable="true">
-            <Icon Name="IconName.ClockHistory" />
-            @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
-        </TemplateColumn>
-        <TemplateColumn Title="Inventario">
-            @if (context.Status != 4)
-            {
-                <Button class="@(context.Status == 5 ? "btn btn-warning btn-sm" : "btn btn-primary btn-sm")" @onclick="() => Procesar(context)">
-                    @(context.Status == 5 ? "Re-procesar" : "Procesar")
-                </Button>
-            }
-        </TemplateColumn>
-        <TemplateColumn Title="Acciones">
-            @if (context.Status != 4 && context.Status != 5)
-            {
-                <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
-                    <a href="#" style="text-decoration:none">
-                        <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
-                    </a>
-                </Tooltip>
-            }
-            <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
-                <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer">
-                    <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
-                </a>
-            </Tooltip>
-            @if (context.Status != 4 && context.Status != 5)
-            {
-                <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
-                    <a href="#" style="text-decoration:none">
-                        <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Dark" />
-                    </a>
-                </Tooltip>
-            }
-        </TemplateColumn>
-        
-    </QuickGrid>
-    <div class="mt-2">
-        <Paginator State="@paginationIndex" />
+    <h5 class="mt-3">Documentos de stock inicial sincronizados</h5>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small">Numero de Documentos: @CargasIniciales?.Count</span>
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Buscar por numero, comentario, producto o ubicacion..." value="@searchCargasText" @oninput="OnSearchCargasInput" @onkeydown="HandleEnterCargasKey" />
+            <Button Color="ButtonColor.Primary" @onclick="buscarCargas"><Icon Name="IconName.Search" /></Button>
+        </div>
     </div>
+
+    @if (CargasIniciales == null)
+    {
+        <div class="d-flex justify-content-center align-items-center p-5">
+            <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+        </div>
+    }
+    else if (cargasFiltered == null || !cargasFiltered.Any())
+    {
+        <div class="text-center py-5">
+            <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
+            <p class="text-muted">Presiona "Sincronizar" para descargar los documentos desde la aplicacion movil.</p>
+        </div>
+    }
+    else
+    {
+        <QuickGrid Items="cargasFiltered.AsQueryable()" ItemsPerPage="@pageSizeCarga" class="table table-hover table-bordered table-striped" Pagination="@paginationIndexCarga" Style="font-size:0.9rem;">
+            <TemplateColumn Title="Numero" Sortable="true">
+                <strong>@context.Numero</strong>
+            </TemplateColumn>
+            <TemplateColumn Title="Fecha Doc." Sortable="true">
+                <Icon Name="IconName.CalendarDate" />
+                @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
+            </TemplateColumn>
+            <PropertyColumn Property="@(c => c.Comentario)" Title="Comentario" Sortable="true" />
+            <TemplateColumn Title="Items" Sortable="true">
+                <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
+                    @context.Detalles.Count
+                </Badge>
+            </TemplateColumn>
+            <TemplateColumn Title="Cant. Física">
+                <span class="fw-semibold">@context.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</span>
+            </TemplateColumn>
+            <TemplateColumn Title="Status">
+                @if (context.Status == 0)
+                {
+                    <Badge Color="BadgeColor.Info">Creado</Badge>
+                }
+                else if (context.Status == 1)
+                {
+                    <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+                }
+                else if (context.Status == 2)
+                {
+                    <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+                }
+                else if (context.Status == 4)
+                {
+                    <Badge Color="BadgeColor.Success">Procesado</Badge>
+                }
+                else if (context.Status == 5)
+                {
+                    <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
+                }
+            </TemplateColumn>
+            <TemplateColumn Title="Acciones">
+                @if (context.Status != 4 && context.Status != 5)
+                {
+                    <Tooltip Title="Procesar" Placement="TooltipPlacement.Top">
+                        <a href="javascript:void(0)" @onclick="() => ProcesarCarga(context)" style="cursor: pointer; margin-left:10px;">
+                            <Icon Name="IconName.PlayCircleFill" Size="IconSize.x5" Color="IconColor.Success" />
+                        </a>
+                    </Tooltip>
+                }
+                <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => ShowCargaDetails(context)" style="cursor: pointer; margin-left:10px;">
+                        <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                    </a>
+                </Tooltip>
+            </TemplateColumn>
+        </QuickGrid>
+        <div class="mt-2">
+            <Paginator State="@paginationIndexCarga" />
+        </div>
+    }
 }
 
 <br />
@@ -145,43 +274,56 @@ else
 
 @code {
 
-    [Inject]
-    protected PreloadService PreloadService { get; set; } = default!;
     ModalDetailsOrdenCompra modalDetails { get; set; } = default!;
     ModalProcesarOrdenCompra modalProcesar { get; set; } = default!;
+    ModalDetailsCargaInicial modalDetailsCarga { get; set; } = default!;
+    private Modal? modalProcesarCarga;
+    private CargaInicialSaveResult? procesarCargaResult;
+
+    private int activeTab = 0;
 
     private List<OrdenCompra>? Ordenes;
     private IEnumerable<OrdenCompra>? ordenesFiltered;
-    private string searchText = "";
+    private string searchComprasText = "";
     private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
     private int pageSize = 15;
 
+    private List<Inicial>? CargasIniciales;
+    private IEnumerable<Inicial>? cargasFiltered;
+    private string searchCargasText = "";
+    private PaginationState paginationIndexCarga = new PaginationState { ItemsPerPage = 15 };
+    private int pageSizeCarga = 15;
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadOrders();
+        await LoadActiveTab();
+    }
+
+    private async Task SetTab(int tab)
+    {
+        activeTab = tab;
+        await LoadActiveTab();
+    }
+
+    private async Task LoadActiveTab()
+    {
+        if (activeTab == 0)
+            await LoadOrders();
+        else
+            await LoadCargas();
     }
 
     private async Task LoadOrders()
     {
-        try
-        {
-            PreloadService.Show(SpinnerColor.Dark);
-            await Task.Delay(1000);
-            Ordenes = await servicio.GetOrdersAsync();
-            buscar();
-        }
-        finally
-        {
-            PreloadService.Hide();
-        }
-
+        Ordenes = await servicio.GetOrdersAsync();
+        buscarCompras();
     }
 
-    private void buscar()
+    private void buscarCompras()
     {
         if (Ordenes == null) return;
 
-        if (string.IsNullOrWhiteSpace(searchText))
+        if (string.IsNullOrWhiteSpace(searchComprasText))
         {
             ordenesFiltered = Ordenes
                 .OrderByDescending(o => o.FechaCreacion)
@@ -192,11 +334,11 @@ else
         else
         {
             ordenesFiltered = Ordenes.Where(o =>
-                (o.Numero != null && o.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.Fecha.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.Description != null && o.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.Supply_Name != null && o.Supply_Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                (o.Numero != null && o.Numero.Contains(searchComprasText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Fecha.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchComprasText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchComprasText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Description != null && o.Description.Contains(searchComprasText, StringComparison.OrdinalIgnoreCase)) ||
+                (o.Supply_Name != null && o.Supply_Name.Contains(searchComprasText, StringComparison.OrdinalIgnoreCase)))
                 .OrderByDescending(o => o.FechaCreacion)
                 .ThenByDescending(o => o.Fecha)
                 .ThenByDescending(o => o.Numero);
@@ -204,16 +346,60 @@ else
         StateHasChanged();
     }
 
-    private void HandleEnterKey(KeyboardEventArgs e)
+    private void HandleEnterComprasKey(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
-            buscar();
+            buscarCompras();
     }
 
-    private void OnSearchInput(ChangeEventArgs e)
+    private void OnSearchComprasInput(ChangeEventArgs e)
     {
-        searchText = e.Value?.ToString() ?? "";
-        buscar();
+        searchComprasText = e.Value?.ToString() ?? "";
+        buscarCompras();
+    }
+
+    private async Task LoadCargas()
+    {
+        CargasIniciales = await cargaServicio.GetAllAsync();
+        buscarCargas();
+    }
+
+    private void buscarCargas()
+    {
+        if (CargasIniciales == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchCargasText))
+        {
+            cargasFiltered = CargasIniciales
+                .OrderByDescending(c => c.FechaCreacion)
+                .ThenByDescending(c => c.Numero)
+                .AsEnumerable();
+        }
+        else
+        {
+            cargasFiltered = CargasIniciales.Where(c =>
+                (c.Numero != null && c.Numero.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
+                (c.Comentario != null && c.Comentario.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
+                c.Detalles.Any(d =>
+                    (d.ProductCode != null && d.ProductCode.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.ProductName != null && d.ProductName.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.Ubicacion != null && d.Ubicacion.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase))))
+                .OrderByDescending(c => c.FechaCreacion)
+                .ThenByDescending(c => c.Numero);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleEnterCargasKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            buscarCargas();
+    }
+
+    private void OnSearchCargasInput(ChangeEventArgs e)
+    {
+        searchCargasText = e.Value?.ToString() ?? "";
+        buscarCargas();
     }
 
     private async Task ShowDetails(OrdenCompra oc)
@@ -229,6 +415,32 @@ else
     private async Task OnProcesado()
     {
         await LoadOrders();
+    }
+
+    private async Task ShowCargaDetails(Inicial carga)
+    {
+        await modalDetailsCarga.ShowAsync(carga);
+    }
+
+    private async Task ProcesarCarga(Inicial carga)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Estás seguro de que deseas procesar la carga inicial {carga.Numero}? El stock de los productos se incrementará.");
+        if (!confirm) return;
+
+        procesarCargaResult = null;
+        if (modalProcesarCarga != null)
+            await modalProcesarCarga.ShowAsync();
+
+        procesarCargaResult = await cargaServicio.ProcesarAsync(carga.Id);
+        await LoadCargas();
+        StateHasChanged();
+    }
+
+    private async Task CloseProcesarCargaModal()
+    {
+        if (modalProcesarCarga != null)
+            await modalProcesarCarga.HideAsync();
     }
 
 }

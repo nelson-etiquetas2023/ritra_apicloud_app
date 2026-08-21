@@ -33,5 +33,27 @@ namespace WEB.Services.Inventario
                 return null;
             }
         }
+
+        public async Task<Shared.Dtos.Inventario.MovimientosProductoResult?> GetMovimientosProductoAsync(string codigo)
+        {
+            var url = $"api/inventario/movimientos/{Uri.EscapeDataString(codigo)}";
+            var clienteHttp = HttpFactory.CreateClient("ritrama");
+
+            try
+            {
+                var response = await clienteHttp.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return null;
+
+                var contentString = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(contentString)) return null;
+
+                return JsonSerializer.Deserialize<Shared.Dtos.Inventario.MovimientosProductoResult>(contentString, jsonOptions);
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error al obtener movimientos de {codigo}: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

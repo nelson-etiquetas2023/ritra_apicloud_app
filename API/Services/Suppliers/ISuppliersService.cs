@@ -9,6 +9,7 @@ namespace API.Services.Suppliers
         Task<Supplier?> CreateSupplierAsync(Supplier supplier);
         Task<Supplier?> UpdateSupplierAsync(int id, Supplier supplier);
         Task<bool> DeleteSupplierAsync(int id);
+        Task<string> GetNextNumAsync();
         Task<SupplierImportResult> ImportFromExcelAsync(Stream excelStream);
     }
 }

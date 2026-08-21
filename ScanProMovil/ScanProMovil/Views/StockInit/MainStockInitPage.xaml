@@ -9,14 +9,33 @@
         <NavigationPage>
             <x:Arguments>
                 <ContentPage Title="Stock Inicial" BackgroundColor="#F5F7FA">
+                    <ContentPage.ToolbarItems>
+                        <ToolbarItem Text=""
+                                     IconImageSource="back_arrow_32px.png"
+                                     Order="Primary"
+                                     Priority="0"
+                                     Clicked="OnBackClicked" />
+                    </ContentPage.ToolbarItems>
                     <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="8">
 
-                        <VerticalStackLayout Grid.Row="0" Spacing="2">
-                            <Label x:Name="SummaryLabel"
-                                   TextColor="#5A6A7A"
-                                   FontSize="13"
-                                   LineBreakMode="TailTruncation" />
-                        </VerticalStackLayout>
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <VerticalStackLayout Spacing="2">
+                                <Label x:Name="SummaryLabel"
+                                       TextColor="#5A6A7A"
+                                       FontSize="13"
+                                       LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+                            <ImageButton Grid.Column="1"
+                                         Source="upload_to_the_cloud_32px.png"
+                                         WidthRequest="32"
+                                         HeightRequest="32"
+                                         BackgroundColor="Transparent"
+                                         Padding="0"
+                                         Clicked="OnSyncAllClicked"
+                                         HorizontalOptions="End"
+                                         VerticalOptions="Center"
+                                         ToolTipProperties.Text="Sincronizar documentos pendientes" />
+                        </Grid>
 
                         <Border Grid.Row="1"
                                 Padding="10"
@@ -102,21 +121,37 @@
                                                        FontSize="12" />
                                             </VerticalStackLayout>
 
-                                            <VerticalStackLayout Grid.Row="2" Grid.Column="1"
-                                                                 Spacing="6"
-                                                                 HorizontalOptions="End">
-                                                <Label Text="{Binding Items.Count, StringFormat='{0} ítems'}"
-                                                       TextColor="#5A6A7A"
-                                                       FontSize="12"
-                                                       HorizontalOptions="End" />
-                                                <ImageButton Source="database_daily_export_50px.png"
-                                                             WidthRequest="18"
-                                                             HeightRequest="18"
-                                                             BackgroundColor="Transparent"
-                                                             Padding="0"
-                                                             CommandParameter="{Binding .}"
-                                                             Clicked="OnSyncItemClicked"
-                                                             HorizontalOptions="End" />
+<VerticalStackLayout Grid.Row="2" Grid.Column="1"
+                                                              Spacing="6"
+                                                              HorizontalOptions="End">
+<Label Text="{Binding ItemsSummary}"
+                                               TextColor="#5A6A7A"
+                                               FontSize="12"
+                                               HorizontalOptions="End" />
+<HorizontalStackLayout Spacing="12" HorizontalOptions="End">
+                                                      <ImageButton Source="upload_to_the_cloud_32px.png"
+                                                                 WidthRequest="24"
+                                                                 HeightRequest="24"
+                                                                 BackgroundColor="Transparent"
+                                                                 Padding="0"
+                                                                 CommandParameter="{Binding .}"
+                                                                 Clicked="OnSyncItemClicked"
+                                                                 ToolTipProperties.Text="Sincronizar este documento" />
+                                                      <ImageButton Source="lock.png"
+                                                                 WidthRequest="24"
+                                                                 HeightRequest="24"
+                                                                 BackgroundColor="Transparent"
+                                                                 Padding="0"
+                                                                 CommandParameter="{Binding .}"
+                                                                 Clicked="OnCloseDocClicked"
+                                                                 ToolTipProperties.Text="Cerrar documento (no más ediciones)">
+                                                          <ImageButton.Triggers>
+                                                              <DataTrigger TargetType="ImageButton" Binding="{Binding Status}" Value="Cerrado">
+                                                                  <Setter Property="IsVisible" Value="False" />
+                                                              </DataTrigger>
+                                                          </ImageButton.Triggers>
+                                                      </ImageButton>
+                                                  </HorizontalStackLayout>
                                             </VerticalStackLayout>
                                         </Grid>
                                     </Border>

@@ -135,7 +135,7 @@ namespace ScanProMovil.Services.StockInicial
 
         public async Task<string> GetNextNumberAsync()
         {
-            const string prefix = "SI";
+            const string prefix = "DIF-";
             var numeros = await _context.StockInits
                 .AsNoTracking()
                 .Select(d => d.Numero)
@@ -187,7 +187,7 @@ namespace ScanProMovil.Services.StockInicial
             {
                 for (var i = 1; i <= 10; i++)
                 {
-                    var numero = $"SI{i:D4}";
+                    var numero = $"DIF-{i:D4}";
                     var rng = new Random(i * 7 + 3);
                     var itemCount = 2 + i % 4;
 
@@ -257,7 +257,6 @@ namespace ScanProMovil.Services.StockInicial
             try
             {
                 var doc = await _context.StockInits
-                    .AsNoTracking()
                     .Include(d => d.Items)
                     .FirstOrDefaultAsync(d => d.Numero == numero);
 
@@ -273,13 +272,21 @@ namespace ScanProMovil.Services.StockInicial
                     return result;
                 }
 
+                var pendientes = doc.Items.Where(i => !i.Enviado).ToList();
+                if (pendientes.Count == 0)
+                {
+                    result.Success = true;
+                    result.Message = "Todos los ítems del documento ya fueron sincronizados.";
+                    return result;
+                }
+
                 var payload = new InicialDto
                 {
                     Numero = doc.Numero,
                     FechaCreacion = doc.Fecha,
                     Comentario = doc.Description,
-                    Status = string.Equals(doc.Status, "Sincronizado", StringComparison.OrdinalIgnoreCase) ? 2 : 1,
-                    Detalles = doc.Items.Select(i => new DetalleInicialDto
+                    Status = 1,
+                    Detalles = pendientes.Select(i => new DetalleInicialDto
                     {
                         ProductCode = i.Product_Code,
                         ProductName = i.Product_Name,
@@ -317,15 +324,19 @@ namespace ScanProMovil.Services.StockInicial
                     return result;
                 }
 
-                var local = await _context.StockInits.FirstOrDefaultAsync(d => d.Numero == numero);
-                if (local is not null)
+                foreach (var item in pendientes)
                 {
-                    local.Status = "Sincronizado";
-                    await _context.SaveChangesAsync();
+                    item.Enviado = true;
                 }
 
+                doc.Status = doc.Items.All(i => i.Enviado) ? "Sincronizado" : "Actualizado";
+                await _context.SaveChangesAsync();
+
+                var restantes = doc.Items.Count(i => !i.Enviado);
                 result.Success = true;
-                result.Message = $"El documento {numero} fue sincronizado correctamente.";
+                result.Message = restantes == 0
+                    ? $"El documento {numero} fue sincronizado correctamente ({pendientes.Count} ítems)."
+                    : $"Se sincronizaron {pendientes.Count} ítems. Quedan {restantes} pendientes.";
                 return result;
             }
             catch (Exception ex)

@@ -102,6 +102,17 @@ namespace WEB.Services.Suppliers
             }
         }
 
+        public async Task<string> GetNextNumAsync()
+        {
+            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var response = await clientHttp.GetAsync("api/suppliers/getnextnum");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json)) return "P000001";
+            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "P000001";
+        }
+
         public async Task<SupplierImportResult> ImportSuppliersFromExcelAsync(IBrowserFile file)
         {
             try

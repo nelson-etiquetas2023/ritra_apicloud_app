@@ -1,0 +1,107 @@
+@inject IInventarioService inventarioService
+@using WEB.Services.Inventario
+@using Shared.Dtos
+@using Shared.Dtos.Inventario
+
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <Icon Name="IconName.ArrowLeftRight" Size="IconSize.x3" /><strong>Movimiento de Inventario de Producto:</strong>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        @if (cargando)
+        {
+            <div class="d-flex justify-content-center align-items-center p-5">
+                <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando movimientos...</strong>
+            </div>
+        }
+        else if (resultado is null)
+        {
+            <div class="alert alert-danger">No se pudieron obtener los movimientos del producto.</div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small">Product Name: <strong>@resultado.ProductName</strong></span>
+                <span class="text-muted small">Código: <strong>@resultado.ProductCode</strong></span>
+                <span class="fw-semibold">Stock Actual: <strong class="text-success">@resultado.StockActual.ToString("N2")</strong></span>
+            </div>
+
+            @if (resultado.Movimientos.Count == 0)
+            {
+                <div class="text-center py-4">
+                    <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay movimientos registrados</h6>
+                    <p class="text-muted">Este producto aún no tiene compras procesadas.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table table-bordered table-striped" Style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th colspan="7" class="text-center bg-secondary text-white">Compras</th>
+                        </tr>
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha Compra</th>
+                            <th>Proveedor</th>
+                            <th>Fecha Procesado</th>
+                            <th class="text-end">Cant.</th>
+                            <th class="text-end">Costo</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mov in resultado.Movimientos)
+                        {
+                            <tr>
+                                <td>@mov.Numero</td>
+                                <td>@mov.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td>@mov.Proveedor</td>
+                                <td>@(mov.FechaProcesado?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                                <td class="text-end">@mov.Cantidad.ToString("N0")</td>
+                                <td class="text-end">@($"${mov.Costo:N2}")</td>
+                                <td class="text-end">@($"${mov.Subtotal:N2}")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="4">Total</td>
+                            <td class="text-end">@resultado.TotalCantidad.ToString("N0")</td>
+                            <td></td>
+                            <td class="text-end">@($"${resultado.TotalSubtotal:N2}")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
+        }
+    </BodyTemplate>
+
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync"><Icon Name="IconName.XCircle" /> Cerrar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    private Modal modal = default!;
+    private MovimientosProductoResult? resultado;
+    private bool cargando;
+
+    public async Task ShowAsync(string codigo)
+    {
+        resultado = null;
+        cargando = true;
+        await modal.ShowAsync();
+
+        resultado = await inventarioService.GetMovimientosProductoAsync(codigo);
+        cargando = false;
+        StateHasChanged();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

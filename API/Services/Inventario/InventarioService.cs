@@ -2,6 +2,7 @@ using API.Data;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
 using Shared.Dtos.Compras;
+using Shared.Dtos.Inventario;
 using System.Diagnostics;
 
 namespace API.Services.Inventario
@@ -35,6 +36,16 @@ namespace API.Services.Inventario
                 stopwatch.Stop();
                 result.Success = false;
                 result.Message = $"El documento {numero} ya fue procesado y no puede volver a procesarse.";
+                result.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+                result.StatusFinal = oc.Status;
+                return result;
+            }
+
+            if (oc.Status == 6)
+            {
+                stopwatch.Stop();
+                result.Success = false;
+                result.Message = $"El documento {numero} está anulado y no puede procesarse.";
                 result.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
                 result.StatusFinal = oc.Status;
                 return result;
@@ -90,6 +101,7 @@ namespace API.Services.Inventario
             itemResult.StockAnterior = producto.Stock;
             producto.Stock += item.Cantidad;
             item.Procesado = true;
+            item.FechaProcesado = DateTime.Now;
             itemResult.StockNuevo = producto.Stock;
             itemResult.Ok = true;
 
@@ -123,6 +135,73 @@ namespace API.Services.Inventario
         #endregion
 
         #region CONTEO-INVENTARIO
+
+        public async Task<MovimientosProductoResult> GetMovimientosProductoAsync(string codigo)
+        {
+            var result = new MovimientosProductoResult();
+
+            if (string.IsNullOrWhiteSpace(codigo)) return result;
+
+            var normalized = codigo.Trim();
+            var producto = await context.Productos.FirstOrDefaultAsync(p =>
+                (p.Codebar != null && p.Codebar.ToLower() == normalized.ToLower()) ||
+                (p.Product_Code != null && p.Product_Code.ToLower() == normalized.ToLower()));
+
+            result.ProductId = producto?.Product_id ?? 0;
+            result.ProductCode = codigo;
+            result.ProductName = producto?.Product_Name ?? "";
+
+            var codigoA = producto?.Codebar?.Trim() ?? "";
+            var codigoB = producto?.Product_Code?.Trim() ?? "";
+
+            var lineas = await context.DetalleCompra
+                .Where(d => d.Procesado &&
+                    (d.Product_id.Trim().ToLower() == normalized.ToLower() ||
+                     (!string.IsNullOrWhiteSpace(codigoA) && d.Product_id.Trim().ToLower() == codigoA.ToLower()) ||
+                     (!string.IsNullOrWhiteSpace(codigoB) && d.Product_id.Trim().ToLower() == codigoB.ToLower())))
+                .Join(context.Compra,
+                      d => d.Numero,
+                      o => o.Numero,
+                      (d, o) => new { d, o })
+                .OrderBy(x => x.o.FechaCreacion)
+                .ThenBy(x => x.o.Numero)
+                .ToListAsync();
+
+            double stockActual = 0;
+            int totalCantidad = 0;
+            decimal totalSubtotal = 0;
+
+            foreach (var linea in lineas)
+            {
+                var anterior = stockActual;
+                stockActual += linea.d.Cantidad;
+                totalCantidad += linea.d.Cantidad;
+                totalSubtotal += linea.d.Subtotal;
+
+                result.Movimientos.Add(new MovimientoInventario
+                {
+                    Numero = linea.o.Numero,
+                    TipoDocumento = string.IsNullOrWhiteSpace(linea.o.Tipo_Documento) ? "OC" : linea.o.Tipo_Documento,
+                    Fecha = linea.o.Fecha,
+                    FechaProcesado = linea.d.FechaProcesado,
+                    Proveedor = linea.o.Supply_Name,
+                    TipoMovimiento = "Entrada",
+                    ProductCode = linea.d.Product_id,
+                    ProductName = linea.d.Product_name,
+                    Cantidad = linea.d.Cantidad,
+                    Costo = linea.d.Costo,
+                    Subtotal = linea.d.Subtotal,
+                    StockAnterior = anterior,
+                    StockNuevo = stockActual,
+                    Usuario = linea.o.UserName
+                });
+            }
+
+            result.TotalCantidad = totalCantidad;
+            result.TotalSubtotal = totalSubtotal;
+            result.StockActual = producto?.Stock ?? stockActual;
+            return result;
+        }
 
         #endregion
 

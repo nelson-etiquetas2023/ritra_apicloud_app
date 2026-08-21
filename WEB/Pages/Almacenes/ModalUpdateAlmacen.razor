@@ -1,0 +1,114 @@
+@inject IAlmacenesService service
+@inject ToastService ToastService
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modalUpdate" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
+    <HeaderTemplate><Icon Name="IconName.PencilSquare" Size="IconSize.x3" /><strong> Modificar Almacén.</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="almacenLocal" OnValidSubmit="UpdateAlmacen">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="uptxt_almacencode"><strong>Código del Almacén :</strong></label>
+                <input class="form-control" id="uptxt_almacencode" value="@almacenLocal.almacen_code" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="uptxt_almacennombre"><strong>Nombre del Almacén :</strong></label>
+                <InputText class="form-control" id="uptxt_almacennombre" @bind-Value="almacenLocal.almacen_name" />
+                <ValidationMessage For="@(() => almacenLocal.almacen_name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="uptxt_almacendescripcion"><strong>Descripción :</strong></label>
+                <InputText class="form-control" id="uptxt_almacendescripcion" @bind-Value="almacenLocal.descripcion" />
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:limegreen"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    private Modal modalUpdate = default!;
+    private string errorMessage = string.Empty;
+
+    private Almacen almacenLocal = new();
+
+    [Parameter]
+    public EventCallback<Almacen> OnAlmacenUpdate { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    public async Task ShowAsyncWithId(int almacenId)
+    {
+        errorMessage = string.Empty;
+
+        var loaded = await service.GetAlmacenByIdAsync(almacenId);
+        if (loaded == null || loaded.almacen_id == 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo cargar el almacén {almacenId}."));
+            return;
+        }
+
+        almacenLocal = new Almacen
+        {
+            almacen_id = loaded.almacen_id,
+            almacen_code = loaded.almacen_code,
+            almacen_name = loaded.almacen_name,
+            descripcion = loaded.descripcion
+        };
+
+        StateHasChanged();
+        await modalUpdate.ShowAsync();
+    }
+
+    private async Task UpdateAlmacen()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.UpdateAlmacenAsync(almacenLocal.almacen_id, almacenLocal);
+            if (!success)
+            {
+                errorMessage = "No se pudo actualizar el almacén. Intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            ToastService.Notify(new(ToastType.Success, $"Almacén {almacenLocal.almacen_code} actualizado correctamente."));
+            await OnAlmacenUpdate.InvokeAsync(almacenLocal);
+            await modalUpdate.HideAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar los cambios: {ex.Message}";
+            Console.WriteLine($"Error updating almacen: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        await modalUpdate.HideAsync();
+    }
+}

@@ -1,0 +1,164 @@
+@page "/almacenes"
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject IAlmacenesService service
+@using WEB.Services.Almacenes
+@using Shared.Dtos
+
+<ModalCreateAlmacen @ref="modalCreate" OnAlmacenCreated="LoadAlmacenes" />
+<ModalUpdateAlmacen @ref="modalUpdate" OnAlmacenUpdate="ActualizarLista" />
+<ConfirmDialog @ref="dialog" />
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h2 class="mb-0"><Icon Name="IconName.Boxes" Size="IconSize.x2" /> Almacenes</h2>
+    <button class="btn btn-primary" type="button" @onclick="CrearAlmacen">
+        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nuevo Almacén
+    </button>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+        <form id="formbusqueda" class="d-flex align-items-center gap-2 w-100" @onsubmit="buscar" @onsubmit:preventDefault>
+            <strong class="text-nowrap">buscar por filtro:</strong>
+            <div class="d-flex flex-grow-1">
+                <input id="txt_busqueda" type="text" class="form-control me-2" placeholder="Buscar por codigo, nombre o descripcion..."
+                       @bind-value="searchText"
+                       @bind-value:event="oninput" />
+                <Button Type="ButtonType.Submit" class="btn btn-primary">
+                    <Icon Name="IconName.Search" />
+                </Button>
+            </div>
+            <strong class="text-nowrap" style="width: 100px;">@almacenesFiltered?.Count().ToString() Items.</strong>
+        </form>
+    </div>
+</nav>
+
+@if (almacenes == null)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else if (!almacenesFiltered!.Any())
+{
+    <div class="text-center py-5">
+        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay almacenes</h6>
+        <p class="text-muted">Presiona "Nuevo Almacén" para crear el primero.</p>
+    </div>
+}
+else
+{
+    <QuickGrid Items="@almacenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" Pagination="@pagination"
+               class="table table-hover table-bordered table-striped mt-2" Style="font-size:0.9rem;">
+        <TemplateColumn Title="Codigo" Sortable="true">
+            <strong>@context.almacen_code</strong>
+        </TemplateColumn>
+        <PropertyColumn Property="@(a => a.almacen_name)" Title="Nombre" Sortable="true" />
+        <PropertyColumn Property="@(a => a.descripcion)" Title="Descripcion" Sortable="true" />
+        <TemplateColumn Title="Acciones">
+            <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer">
+                    <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
+            <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Eliminar(context)" style="cursor: pointer; margin-left:10px;">
+                    <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Danger" />
+                </a>
+            </Tooltip>
+        </TemplateColumn>
+    </QuickGrid>
+    <div class="mt-2">
+        <Paginator State="@pagination" />
+    </div>
+}
+
+@code {
+
+    private List<Almacen>? almacenes;
+    private IEnumerable<Almacen>? almacenesFiltered;
+    private string searchText = "";
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    private int pageSize = 15;
+    private ModalCreateAlmacen modalCreate = default!;
+    private ModalUpdateAlmacen modalUpdate = default!;
+    private ConfirmDialog dialog = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAlmacenes();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            JS.InvokeVoidAsync("PreventEnterKey", "formbusqueda");
+    }
+
+    private async Task LoadAlmacenes()
+    {
+        almacenes = await service.GetAlmacenesAsync();
+        buscar();
+    }
+
+    private void buscar()
+    {
+        if (almacenes == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            almacenesFiltered = almacenes.OrderBy(a => a.almacen_name);
+        }
+        else
+        {
+            almacenesFiltered = almacenes.Where(a =>
+                (a.almacen_code != null && a.almacen_code.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (a.almacen_name != null && a.almacen_name.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (a.descripcion != null && a.descripcion.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(a => a.almacen_name);
+        }
+        StateHasChanged();
+    }
+
+    private async Task CrearAlmacen()
+    {
+        await modalCreate.ShowAsync();
+    }
+
+    private async Task Editar(Almacen almacen)
+    {
+        await modalUpdate.ShowAsyncWithId(almacen.almacen_id);
+    }
+
+    private async Task ActualizarLista(Almacen almacenActualizado)
+    {
+        if (almacenes != null)
+        {
+            var index = almacenes.FindIndex(a => a.almacen_id == almacenActualizado.almacen_id);
+            if (index >= 0)
+                almacenes[index] = almacenActualizado;
+        }
+        buscar();
+    }
+
+    private async Task Eliminar(Almacen almacen)
+    {
+        var confirm = await dialog.ShowAsync(title: "¿Está seguro de borrar este almacén?",
+            message1: "Este registro se borrará. Una vez borrado no podrá revertirlo.",
+            message2: "¿Está seguro de proceder?");
+
+        if (!confirm) return;
+
+        var ok = await service.DeleteAlmacenAsync(almacen.almacen_id);
+        if (ok)
+        {
+            almacenes?.Remove(almacen);
+            ToastService.Notify(new(ToastType.Success, $"Almacén {almacen.almacen_code} eliminado."));
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo eliminar el almacén {almacen.almacen_code}."));
+        }
+        buscar();
+    }
+}

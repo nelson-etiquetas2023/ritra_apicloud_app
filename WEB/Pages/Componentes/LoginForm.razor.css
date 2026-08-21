@@ -134,22 +134,6 @@
     z-index: 1;
 }
 
-.input-border {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #2563eb, #3b82f6);
-    transition: all 0.3s ease;
-    transform: translateX(-50%);
-    border-radius: 2px;
-}
-
-.input-wrapper ::deep .form-input:focus ~ .input-border {
-    width: 100%;
-}
-
 .password-wrapper ::deep .form-input {
     padding-right: 50px;
 }

@@ -53,8 +53,11 @@
                 <Entry x:Name="txt_codebar" Text="{Binding Producto.CodeBar}"/>
                 <Label Text="Descripcion del Producto:" FontAttributes="Bold" />
                 <Entry x:Name="txt_productname" Text="{Binding Producto.Product_Name}" />
+                <Label Text="Estado:" FontAttributes="Bold" IsVisible="True" />
+                <Label Text="{Binding StatusMessage}" TextColor="DodgerBlue" FontAttributes="Bold" HorizontalTextAlignment="Center" Margin="0,0,0,10"/>
+                <ActivityIndicator IsRunning="{Binding IsSaving}" IsVisible="{Binding IsSaving}" Color="DodgerBlue" HorizontalOptions="Center"/>
             </VerticalStackLayout>
-            <Button Text="Guardar" Command="{Binding SaveProductsCommand}" />
+            <Button Text="Guardar" Command="{Binding SaveProductsCommand}" IsEnabled="{Binding IsSaving, Converter={StaticResource InvertedBoolConverter}}" />
         </VerticalStackLayout>
     </ScrollView>
     

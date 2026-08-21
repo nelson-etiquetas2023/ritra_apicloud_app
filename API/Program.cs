@@ -1,4 +1,5 @@
-using API.Data;
+﻿using API.Data;
+using API.Services.Almacenes;
 using API.Services.AppMovil;
 using API.Services.Auth;
 using API.Services.CargasIniciales;
@@ -12,6 +13,8 @@ using API.Services.Products;
 using API.Services.Reports;
 using API.Services.Suppliers;
 using API.Services.Users;
+using API.Services.Vendedores;
+using API.Services.Ventas;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -23,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 //Escucha en todas las interfaces para que la app movil (LAN) pueda sincronizar.
 //builder.WebHost.UseUrls("http://0.0.0.0:5220");
 
-//Confguraci�n de CORS.
+//Confguraci´┐¢n de CORS.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -47,7 +50,7 @@ try
     var connectionString = builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA");
     if (string.IsNullOrEmpty(connectionString))
     {
-        throw new InvalidOperationException("Cadena de conexi�n 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
+        throw new InvalidOperationException("Cadena de conexi´┐¢n 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
     }
 
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -74,6 +77,9 @@ builder.Services.AddScoped<IAppMovilService, AppMovilService>();
 builder.Services.AddScoped<IOcMovilService, OcMovilService>();
 builder.Services.AddScoped<ICargasInicialesService, CargasInicialesService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
+builder.Services.AddScoped<IVentasService, VentasService>();
+builder.Services.AddScoped<IAlmacenesService, AlmacenesService>();
+builder.Services.AddScoped<IVendedoresService, VendedoresService>();
 
 builder.Services.AddLogging(config =>
 {

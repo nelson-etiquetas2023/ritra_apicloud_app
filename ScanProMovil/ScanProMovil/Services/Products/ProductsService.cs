@@ -182,6 +182,17 @@ namespace ScanProMovil.Services.Products
                 .FirstOrDefault(p => p.product_code == productid) ?? new Product();
         }
 
+        public async Task<bool> UpdateProductLocal(Product producto)
+        {
+            if (producto is null) return false;
+
+            var local = await _context.Products.FirstOrDefaultAsync(p => p.Product_Id == producto.Product_Id);
+            if (local is null) return false;
+
+            local.CodeBar = producto.CodeBar?.Trim() ?? "";
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         public async Task<bool> UpdateProducts(int id, Product producto)
         {
             //utilizo una tupla para pasar 2 parametros a la api.

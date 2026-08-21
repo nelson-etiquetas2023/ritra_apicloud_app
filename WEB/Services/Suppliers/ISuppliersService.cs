@@ -10,6 +10,7 @@ namespace WEB.Services.Suppliers
         Task<bool> CreateSupplierAsync(Supplier supplier);
         Task<bool> UpdateSupplierAsync(int id, Supplier supplier);
         Task<bool> DeleteSupplierAsync(int id);
+        Task<string> GetNextNumAsync();
         Task<SupplierImportResult> ImportSuppliersFromExcelAsync(IBrowserFile file);
     }
 }

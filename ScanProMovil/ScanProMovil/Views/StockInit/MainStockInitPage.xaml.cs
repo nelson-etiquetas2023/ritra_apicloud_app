@@ -21,8 +21,13 @@ public partial class MainStockInitPage : FlyoutPage
             new() { Title = "Crear Nuevo", Icon = "add.png", Action = async _ => await CreateNewAsync() },
             new() { Title = "Inicio", Icon = "warehouse_50px.png", Action = _ => GoToMain() },
             new() { Title = "Parámetros", Icon = "settings_50px.png", Message = "Módulo en construcción" },
-            new() { Title = "Sincronizar", Icon = "database_daily_export_50px.png", Message = "Módulo en construcción" },
+            new() { Title = "Sincronizar", Icon = "database_daily_export_50px.png", Action = async _ => await OnSyncAllClickedAsync() },
         ]);
+    }
+
+    private void OnBackClicked(object? sender, EventArgs e)
+    {
+        GoToMain();
     }
 
     private void GoToMain()
@@ -81,7 +86,14 @@ public partial class MainStockInitPage : FlyoutPage
         var page = MauiProgram.Services!.GetService<CreateStockInitPage>();
         if (page is null) return;
 
+        page.Disappearing += OnCreatePageDisappearing;
         await nav.PushAsync(page);
+    }
+
+    private async void OnCreatePageDisappearing(object? sender, EventArgs e)
+    {
+        if (sender is Page page)
+            page.Disappearing -= OnCreatePageDisappearing;
         await LoadDocsAsync();
     }
 
@@ -93,8 +105,52 @@ public partial class MainStockInitPage : FlyoutPage
             $"¿Desea sincronizar el documento {doc.Numero} al servidor?", "Sí", "No");
         if (!confirmed) return;
 
+        await SyncDocAsync(doc);
+        await LoadDocsAsync();
+    }
+
+    private async Task SyncDocAsync(StockInitEntity doc)
+    {
         var result = await _service.SincronizarAsync(doc.Numero);
         await DisplayAlertAsync(result.Success ? "Sincronizado" : "Error", result.Message, "OK");
+    }
+
+    private async void OnSyncAllClicked(object? sender, EventArgs e)
+        => await OnSyncAllClickedAsync();
+
+    private async Task OnSyncAllClickedAsync()
+    {
+        var pendientes = _allDocs
+            .Where(d => d.Status is not "Sincronizado" && d.Status is not "Cerrado")
+            .ToList();
+
+        if (pendientes.Count == 0)
+        {
+            await DisplayAlertAsync("Sincronizar", "No hay documentos pendientes de sincronizar.", "OK");
+            return;
+        }
+
+        var confirmed = await DisplayAlertAsync("Sincronizar todo",
+            $"Se sincronizarán {pendientes.Count} documento(s) con ítems pendientes. ¿Continuar?", "Sí", "No");
+        if (!confirmed) return;
+
+        var okCount = 0;
+        var failCount = 0;
+        foreach (var doc in pendientes)
+        {
+            var result = await _service.SincronizarAsync(doc.Numero);
+            if (result.Success)
+                okCount++;
+            else
+                failCount++;
+        }
+
+        await DisplayAlertAsync("Sincronización",
+            okCount > 0 ? $"{okCount} documento(s) sincronizados correctamente." : "",
+            "OK");
+        if (failCount > 0)
+            await DisplayAlertAsync("Atención", $"{failCount} documento(s) no se pudieron sincronizar.", "OK");
+
         await LoadDocsAsync();
     }
 
@@ -108,15 +164,41 @@ public partial class MainStockInitPage : FlyoutPage
         detail.SetNumero(doc.Numero);
         if (Detail is NavigationPage nav)
         {
-            detail.Disappearing += OnDetailDisappearing;
+            EventHandler<NavigationEventArgs> handler = null;
+            handler = (s, e) =>
+            {
+                if (e.Page == detail)
+                {
+                    nav.Popped -= handler;
+                    MainThread.BeginInvokeOnMainThread(async () => await LoadDocsAsync());
+                }
+            };
+            nav.Popped += handler;
             await nav.PushAsync(detail);
         }
     }
 
-    private async void OnDetailDisappearing(object? sender, EventArgs e)
+    private async void OnCloseDocClicked(object? sender, EventArgs e)
     {
-        if (sender is Page page)
-            page.Disappearing -= OnDetailDisappearing;
-        await LoadDocsAsync();
+        if ((sender as BindableObject)?.BindingContext is not StockInitEntity doc) return;
+
+        var confirm = await DisplayAlertAsync("Cerrar documento",
+            $"¿Cerrar el documento {doc.Numero}? No se podrán agregar más productos ni sincronizar.",
+            "Cerrar", "Cancelar");
+        if (!confirm) return;
+
+        doc.Status = "Cerrado";
+
+        var ok = await _service.UpdateAsync(doc);
+
+        if (ok)
+        {
+            await DisplayAlertAsync("Cerrado", $"El documento {doc.Numero} ha sido cerrado.", "OK");
+            await LoadDocsAsync();
+        }
+        else
+        {
+            await DisplayAlertAsync("Error", "No se pudo cerrar el documento.", "OK");
+        }
     }
 }

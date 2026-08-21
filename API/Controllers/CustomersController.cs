@@ -95,5 +95,13 @@ namespace API.Controllers
                 });
             }
         }
+
+        [HttpGet]
+        [Route("getnextnum")]
+        public async Task<IActionResult> GetNextNumAsync()
+        {
+            var next = await service.GetNextNumAsync();
+            return Ok(new { numero = next });
+        }
     }
 }

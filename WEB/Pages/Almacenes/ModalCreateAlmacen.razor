@@ -1,0 +1,103 @@
+@inject IAlmacenesService service
+@inject ToastService ToastService
+@using Shared.Dtos
+
+<Preload LoadingText="Guardando..." />
+
+<Modal @ref="modal" Size="ModalSize.Large" UseStaticBackdrop="true" CloseOnEscape="false" CloseButton="false">
+    <HeaderTemplate><Icon Name="IconName.Boxes" Size="IconSize.x3" /><strong> Crear Almacén</strong></HeaderTemplate>
+    <BodyTemplate>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty" aria-label="Close"></button>
+            </div>
+        }
+        <EditForm Model="@almacen" OnValidSubmit="CreateAlmacen">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="txt_almacencode"><strong>Código del Almacén :</strong></label>
+                <input class="form-control" id="txt_almacencode" value="@almacen.almacen_code" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_almacennombre"><strong>Nombre del Almacén :</strong></label>
+                <InputText class="form-control" id="txt_almacennombre" @bind-Value="almacen.almacen_name" />
+                <ValidationMessage For="@(() => almacen.almacen_name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_almacendescripcion"><strong>Descripción :</strong></label>
+                <InputText class="form-control" id="txt_almacendescripcion" @bind-Value="almacen.descripcion" />
+            </div>
+
+            <div class="mb-3">
+                <Button Type="ButtonType.Submit" Style="background-color:green;color:white" class="btn-save"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+                <Button Style="background-color:black;color:white" @onclick="HideAsync" class="btn-cancel"><Icon Name="IconName.XCircle" /> Cancelar</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public EventCallback OnAlmacenCreated { get; set; }
+
+    [Inject]
+    protected PreloadService PreloadService { get; set; } = default!;
+
+    private Modal modal = default!;
+    private Almacen almacen = new();
+    private string errorMessage = string.Empty;
+
+    public async Task ShowAsync()
+    {
+        errorMessage = string.Empty;
+        almacen = new Almacen
+        {
+            almacen_code = await service.GetNextNumAsync()
+        };
+        await modal.ShowAsync();
+    }
+
+    private async Task CreateAlmacen()
+    {
+        PreloadService.Show(SpinnerColor.Dark);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var success = await service.CreateAlmacenAsync(almacen);
+            if (!success)
+            {
+                errorMessage = "No se pudo crear el almacén. Verifique los datos e intente de nuevo.";
+                PreloadService.Hide();
+                return;
+            }
+
+            ToastService.Notify(new(ToastType.Success, $"Almacén {almacen.almacen_code} creado correctamente."));
+            almacen = new Almacen();
+            await modal.HideAsync();
+            await Task.Delay(300);
+            await OnAlmacenCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al crear el almacén: {ex.Message}";
+            Console.WriteLine($"Error general en CreateAlmacen: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task HideAsync()
+    {
+        almacen = new Almacen();
+        await modal.HideAsync();
+    }
+}

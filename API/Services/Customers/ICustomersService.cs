@@ -10,5 +10,6 @@ namespace API.Services.Customers
         Task<Customer?> UpdateCustomerAsync(int customerId, Customer customer);
         Task<bool> DeleteCustomerAsync(int customerId);
         Task<CustomerImportResult> ImportFromExcelAsync(Stream excelStream);
+        Task<string> GetNextNumAsync();
     }
 }

@@ -22,6 +22,37 @@ namespace API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Shared.Dtos.Almacen", b =>
+                {
+                    b.Property<int>("almacen_id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("almacen_id"));
+
+                    b.Property<string>("almacen_code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("almacen_name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("descripcion")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.HasKey("almacen_id");
+
+                    b.HasIndex("almacen_code")
+                        .IsUnique();
+
+                    b.ToTable("Almacenes");
+                });
+
             modelBuilder.Entity("Shared.Dtos.AppMovil.OrderPurchase", b =>
                 {
                     b.Property<string>("OrderId")
@@ -95,12 +126,18 @@ namespace API.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("FechaProcesado")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("InicialId")
                         .HasColumnType("int");
 
                     b.Property<string>("Nota")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Procesado")
+                        .HasColumnType("bit");
 
                     b.Property<string>("ProductCode")
                         .IsRequired()
@@ -144,6 +181,9 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.ToTable("CargasIniciales");
@@ -186,9 +226,16 @@ namespace API.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("int");
 
+                    b.Property<string>("Comentario")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Costo")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("FechaProcesado")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Numero")
                         .IsRequired()
@@ -221,6 +268,10 @@ namespace API.Migrations
                     b.Property<string>("Numero")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Comentario")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -241,6 +292,10 @@ namespace API.Migrations
 
                     b.Property<double>("Impuesto")
                         .HasColumnType("float");
+
+                    b.Property<string>("Prioridad")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Reference")
                         .IsRequired()
@@ -298,7 +353,7 @@ namespace API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("customer_id"));
 
-                    b.Property<string>("Correo")
+                    b.Property<string>("Contacto")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -320,7 +375,7 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Registro_Fiscal")
+                    b.Property<string>("RNC")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -964,6 +1019,170 @@ namespace API.Migrations
                     b.ToTable("Suppliers");
                 });
 
+            modelBuilder.Entity("Shared.Dtos.Vendedor", b =>
+                {
+                    b.Property<int>("vendedor_id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("vendedor_id"));
+
+                    b.Property<string>("email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("telefono")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("vendedor_code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("vendedor_name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("vendedor_id");
+
+                    b.HasIndex("vendedor_code")
+                        .IsUnique();
+
+                    b.ToTable("Vendedores");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Ventas.DetalleVenta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Comentario")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("FechaProcesado")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PedidoVentaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Precio")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("Procesado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Product_id")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Product_name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Stock")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoVentaId");
+
+                    b.ToTable("PedidoVentaDetalles");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Ventas.PedidoVenta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cliente_Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Cliente_Nombre")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Cliente_RNC")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DireccionEntrega")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Impuesto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Prioridad")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Vendedor")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WarehouseName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PedidoVenta");
+                });
+
             modelBuilder.Entity("Shared.Dtos.Warehouse", b =>
                 {
                     b.Property<int>("WarehouseId")
@@ -1074,6 +1293,17 @@ namespace API.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Shared.Dtos.Ventas.DetalleVenta", b =>
+                {
+                    b.HasOne("Shared.Dtos.Ventas.PedidoVenta", "PedidoVenta")
+                        .WithMany("Items")
+                        .HasForeignKey("PedidoVentaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PedidoVenta");
+                });
+
             modelBuilder.Entity("Shared.Dtos.CargasIniciales.Inicial", b =>
                 {
                     b.Navigation("Detalles");
@@ -1097,6 +1327,11 @@ namespace API.Migrations
             modelBuilder.Entity("Shared.Dtos.Product", b =>
                 {
                     b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("Shared.Dtos.Ventas.PedidoVenta", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

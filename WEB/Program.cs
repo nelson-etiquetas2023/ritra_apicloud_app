@@ -14,11 +14,15 @@ using WEB.Services.Enterprises;
 using WEB.Services.LocalStorage;
 using WEB.Services.OrdenCompra;
 using WEB.Services.Suppliers;
+using WEB.Services.Ventas;
+using WEB.Services.Almacenes;
+using WEB.Services.Vendedores;
 using WEB.Services.Versioning;
 
 //var server_local = "http://localhost:5220/";
 //var Deploy_Server = "https://scanapi.dpdns.org:443";
 var server_etiquetas = "http://192.168.10.10:8080";
+//var server_etiquetas = server_local;
 
 // Alternativa: si la API está en otro puerto, usa:
 // var ritrama_local = "https://localhost:7000/"; // Para HTTPS en desarrollo
@@ -51,6 +55,9 @@ builder.Services.AddScoped<ILocalStorage>(sp => new LocalStorage(sp.GetRequiredS
 builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<ICargasInicialesService, CargasInicialesService>();
+builder.Services.AddScoped<IVentasService, VentasService>();
+builder.Services.AddScoped<IAlmacenesService, AlmacenesService>();
+builder.Services.AddScoped<IVendedoresService, VendedoresService>();
 builder.Services.AddSingleton<AppVersionInfo>();
 builder.Services.AddTransient<AuthMessageHandler>();
 

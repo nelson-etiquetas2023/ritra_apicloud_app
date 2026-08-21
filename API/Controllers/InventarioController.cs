@@ -34,6 +34,13 @@ namespace API.Controllers
 
         #region CONTEO-INVENTARIO
 
+        [HttpGet("movimientos/{codigo}")]
+        public async Task<IActionResult> GetMovimientosProducto(string codigo)
+        {
+            var result = await inventario.GetMovimientosProductoAsync(codigo);
+            return Ok(result);
+        }
+
         #endregion
 
         #region FACTURACION

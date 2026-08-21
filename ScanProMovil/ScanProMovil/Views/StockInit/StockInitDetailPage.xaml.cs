@@ -76,7 +76,15 @@ public partial class StockInitDetailPage : ContentPage
 
     private void OnAddLineClicked(object? sender, EventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine("[SCAN] OnAddLineClicked called");
         if (_doc is null) return;
+        
+        if (string.Equals(_doc.Status, "Cerrado", StringComparison.OrdinalIgnoreCase))
+        {
+            DisplayAlertAsync("Documento cerrado", "Este documento está cerrado. No se pueden agregar más productos.", "OK");
+            return;
+        }
+        
         ShowScanRow();
         ShowSaveButton();
     }
@@ -100,6 +108,7 @@ public partial class StockInitDetailPage : ContentPage
 
     private void ShowScanRow()
     {
+        System.Diagnostics.Debug.WriteLine("[SCAN] ShowScanRow called");
         _productScan = null;
         SearchRow.IsVisible = false;
         ScanRow.IsVisible = true;
@@ -162,6 +171,7 @@ public partial class StockInitDetailPage : ContentPage
     private async void OnScanTextChanged(object? sender, TextChangedEventArgs e)
     {
         var text = e.NewTextValue;
+        System.Diagnostics.Debug.WriteLine($"[SCAN] OnScanTextChanged: '{text}'");
         if (string.IsNullOrWhiteSpace(text))
         {
             _scanDebounceCts?.Cancel();
@@ -203,11 +213,14 @@ public partial class StockInitDetailPage : ContentPage
 
     private async Task ResolveProductAsync(string codebar)
     {
+        System.Diagnostics.Debug.WriteLine($"[SCAN] ResolveProductAsync called with: '{codebar}'");
+        
         _productScan = await _productsService.GetProductLocalById(codebar)
             ?? await _productsService.GetProductLocalByCode(codebar);
 
         if (_productScan is not null)
         {
+            System.Diagnostics.Debug.WriteLine($"[SCAN] Producto encontrado: {_productScan.Product_Name} (CodeBar={_productScan.CodeBar}, product_code={_productScan.product_code})");
             ScanProductLabel.Text = _productScan.Product_Name;
             ScanProductLabel.TextColor = Color.FromArgb("#0D6EFD");
             ScanProductLabel.IsVisible = true;
@@ -215,6 +228,7 @@ public partial class StockInitDetailPage : ContentPage
         }
         else
         {
+            System.Diagnostics.Debug.WriteLine($"[SCAN] Producto NO encontrado para: '{codebar}'");
             _productScan = null;
             ScanProductLabel.Text = $"Producto {codebar} no encontrado";
             ScanProductLabel.TextColor = Color.FromArgb("#B02A37");
@@ -274,10 +288,10 @@ public partial class StockInitDetailPage : ContentPage
     {
         if (_doc is null) return;
 
-        if (_doc.Status is "Sincronizado" or "Cerrado")
+        if (string.Equals(_doc.Status, "Cerrado", StringComparison.OrdinalIgnoreCase))
         {
-            await DisplayAlertAsync("Documento no editable",
-                $"El documento {_doc.Numero} está {_doc.Status}, no se pueden agregar productos.", "OK");
+            await DisplayAlertAsync("Documento cerrado",
+                $"El documento {_doc.Numero} está cerrado. No se pueden agregar productos.", "OK");
             return;
         }
 

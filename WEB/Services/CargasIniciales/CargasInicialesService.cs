@@ -10,12 +10,14 @@ namespace WEB.Services.CargasIniciales
     {
         Task<List<Inicial>> GetAllAsync();
         Task<Inicial> GetByIdAsync(int id);
-        Task<bool> CreateAsync(Inicial inicial);
-        Task<bool> UpdateAsync(int id, Inicial inicial);
+        Task<CargaInicialSaveResult> CreateAsync(Inicial inicial);
+        Task<CargaInicialSaveResult> UpdateAsync(int id, Inicial inicial);
         Task<bool> DeleteAsync(int id);
         Task<CargaInicialImportResult> ImportAsync(IBrowserFile file);
         Task<byte[]> DownloadTemplateAsync();
         Task<List<Inicial>> GetDocumentsInitialsInventoryAsync();
+        Task<string> GetNextNumAsync();
+        Task<CargaInicialSaveResult> ProcesarAsync(int id);
     }
 
     public class CargasInicialesService(IHttpClientFactory httpFactory) : ICargasInicialesService
@@ -51,7 +53,7 @@ namespace WEB.Services.CargasIniciales
                 new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? new Inicial();
         }
 
-        public async Task<bool> CreateAsync(Inicial inicial)
+        public async Task<CargaInicialSaveResult> CreateAsync(Inicial inicial)
         {
             try
             {
@@ -59,16 +61,21 @@ namespace WEB.Services.CargasIniciales
                 var json = JsonSerializer.Serialize(inicial, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync("api/cargasIniciales/create", content);
-                return response.IsSuccessStatusCode;
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new CargaInicialSaveResult { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                return await JsonSerializer.DeserializeAsync<CargaInicialSaveResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new CargaInicialSaveResult { Success = false, Message = "No se pudo guardar la carga inicial." };
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Excepción]: No se pudo conectar con el servidor. Detalle: {ex.Message}");
-                return false;
+                return new CargaInicialSaveResult { Success = false, Message = $"No se pudo conectar con el servidor: {ex.Message}" };
             }
         }
 
-        public async Task<bool> UpdateAsync(int id, Inicial inicial)
+        public async Task<CargaInicialSaveResult> UpdateAsync(int id, Inicial inicial)
         {
             try
             {
@@ -76,12 +83,17 @@ namespace WEB.Services.CargasIniciales
                 var json = JsonSerializer.Serialize(inicial, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PutAsync($"api/cargasIniciales/update/{id}", content);
-                return response.IsSuccessStatusCode;
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new CargaInicialSaveResult { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                return await JsonSerializer.DeserializeAsync<CargaInicialSaveResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new CargaInicialSaveResult { Success = false, Message = "No se pudo actualizar la carga inicial." };
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Excepción]: No se pudo conectar con el servidor. Detalle: {ex.Message}");
-                return false;
+                return new CargaInicialSaveResult { Success = false, Message = $"No se pudo conectar con el servidor: {ex.Message}" };
             }
         }
 
@@ -146,6 +158,37 @@ namespace WEB.Services.CargasIniciales
             if (string.IsNullOrWhiteSpace(json)) return [];
             return await JsonSerializer.DeserializeAsync<List<Inicial>>(
                 new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+        }
+
+        public async Task<string> GetNextNumAsync()
+        {
+            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var response = await clientHttp.GetAsync("api/cargasIniciales/getnextnum");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json)) return "0001";
+            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "0001";
+        }
+
+        public async Task<CargaInicialSaveResult> ProcesarAsync(int id)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var response = await clientHttp.PostAsync($"api/cargasIniciales/procesar/{id}", null);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new CargaInicialSaveResult { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                return await JsonSerializer.DeserializeAsync<CargaInicialSaveResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new CargaInicialSaveResult { Success = false, Message = "No se pudo procesar el documento." };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Excepción]: No se pudo conectar con el servidor. Detalle: {ex.Message}");
+                return new CargaInicialSaveResult { Success = false, Message = $"No se pudo conectar con el servidor: {ex.Message}" };
+            }
         }
     }
 }

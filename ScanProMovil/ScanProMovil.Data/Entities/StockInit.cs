@@ -12,5 +12,13 @@ namespace ScanProMovil.Entities
         public string Status { get; set; } = null!;
         [JsonIgnore]
         public List<StockItem> Items { get; set; } = new();
+
+        [JsonIgnore]
+        public int PendientesCount => Items?.Count(i => !i.Enviado) ?? 0;
+
+        [JsonIgnore]
+        public string ItemsSummary => Items is { Count: > 0 }
+            ? $"{Items.Count} ítems / {Items.Count - PendientesCount} Sincronizado"
+            : "0 ítems / 0 Sincronizado";
     }
 }

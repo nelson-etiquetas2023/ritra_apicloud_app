@@ -3,6 +3,7 @@ using Shared.Dtos;
 using Shared.Dtos.AppMovil;
 using Shared.Dtos.CargasIniciales;
 using Shared.Dtos.Compras;
+using Shared.Dtos.Ventas;
 using Shared.Security;
 
 namespace API.Data
@@ -30,6 +31,10 @@ namespace API.Data
         public DbSet<DetalleCompras> DetalleCompra { get; set; }
         public DbSet<Inicial> CargasIniciales { get; set; }
         public DbSet<DetalleInicial> CargasInicialesDetalles { get; set; }
+        public DbSet<PedidoVenta> PedidoVenta { get; set; }
+        public DbSet<DetalleVenta> PedidoVentaDetalles { get; set; }
+        public DbSet<Almacen> Almacenes { get; set; }
+        public DbSet<Vendedor> Vendedores { get; set; }
 
 
 
@@ -65,6 +70,16 @@ namespace API.Data
             // Índice único para CustomerCode (C######)
             modelBuilder.Entity<Customer>()
                 .HasIndex(c => c.CustomerCode)
+                .IsUnique();
+
+            // Índice único para almacen_code (ALM-####)
+            modelBuilder.Entity<Almacen>()
+                .HasIndex(a => a.almacen_code)
+                .IsUnique();
+
+            // Índice único para vendedor_code (VEN-####)
+            modelBuilder.Entity<Vendedor>()
+                .HasIndex(v => v.vendedor_code)
                 .IsUnique();
 
 
@@ -109,6 +124,36 @@ namespace API.Data
 
             modelBuilder.Entity<DetalleInicial>()
                 .HasIndex(d => d.InicialId);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .HasMany(p => p.Items)
+                .WithOne(d => d.PedidoVenta)
+                .HasForeignKey(d => d.PedidoVentaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .Property(p => p.Subtotal).HasPrecision(18, 2);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .Property(p => p.Descuento).HasPrecision(18, 2);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .Property(p => p.Impuesto).HasPrecision(18, 2);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .Property(p => p.Total).HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleVenta>()
+                .Property(d => d.Precio).HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleVenta>()
+                .Property(d => d.Descuento).HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleVenta>()
+                .Property(d => d.Stock).HasPrecision(18, 2);
+
+            modelBuilder.Entity<DetalleVenta>()
+                .HasIndex(d => d.PedidoVentaId);
 
 
         }

@@ -135,5 +135,16 @@ namespace WEB.Services.Customers
                 };
             }
         }
+
+        public async Task<string> GetNextNumAsync()
+        {
+            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var response = await clientHttp.GetAsync("api/customers/getnextnum");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json)) return "C000001";
+            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "C000001";
+        }
     }
 }
