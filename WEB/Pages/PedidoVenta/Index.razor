@@ -106,37 +106,6 @@ else
                 <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
             }
         </TemplateColumn>
-        <TemplateColumn Title="Prioridad" Sortable="true">
-            @switch (context.Prioridad)
-            {
-                case "Urgente":
-                    <Badge Color="BadgeColor.Danger">Urgente</Badge>
-                    break;
-                case "Alta":
-                    <Badge Color="BadgeColor.Warning">Alta</Badge>
-                    break;
-                case "Media":
-                    <Badge Color="BadgeColor.Info">Media</Badge>
-                    break;
-                default:
-                    <Badge Color="BadgeColor.Secondary">Normal</Badge>
-                    break;
-            }
-        </TemplateColumn>
-        <TemplateColumn Title="Cumplimiento">
-            @if (EstaAtrasado(context))
-            {
-                <Tooltip Title="@TextoCumplimiento(context)" Placement="TooltipPlacement.Top">
-                    <Badge Color="BadgeColor.Danger">Atrasado</Badge>
-                </Tooltip>
-            }
-            else
-            {
-                <Tooltip Title="@TextoCumplimiento(context)" Placement="TooltipPlacement.Top">
-                    <Badge Color="BadgeColor.Success">Normal</Badge>
-                </Tooltip>
-            }
-        </TemplateColumn>
         <TemplateColumn Title="Acciones">
             <div style="white-space:nowrap;">
                 @if (context.Status != 4 && context.Status != 5 && context.Status != 6)
@@ -156,7 +125,7 @@ else
         </TemplateColumn>
     </QuickGrid>
     <div class="mt-2">
-        <Paginator State="@paginationIndex" />
+        <GridPaginator State="@paginationIndex" />
     </div>
 }
 
@@ -205,19 +174,6 @@ else
     private void Editar(PedidoVenta pv)
     {
         Navigation.NavigateTo($"/pedidoventa/editar/{pv.Id}");
-    }
-
-    private bool EstaAtrasado(PedidoVenta pv)
-    {
-        return pv.Status != 4 && DateTime.Today > pv.Fecha.Date;
-    }
-
-    private string TextoCumplimiento(PedidoVenta pv)
-    {
-        var dias = (pv.Fecha.Date - DateTime.Today).Days;
-        return EstaAtrasado(pv)
-            ? $"Venció hace {Math.Abs(dias)} día(s) desde su creación ({pv.FechaCreacion:dd-MM-yyyy})."
-            : $"Dentro del plazo: {dias} día(s) para la entrega tentativa.";
     }
 
     private async Task ShowDetails(PedidoVenta pv)

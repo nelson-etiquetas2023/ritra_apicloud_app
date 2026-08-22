@@ -26,7 +26,7 @@ namespace WEB.Services.Almacenes
 
         public async Task<List<Almacen>> GetAlmacenesAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/almacenes/get");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -37,7 +37,7 @@ namespace WEB.Services.Almacenes
 
         public async Task<Almacen?> GetAlmacenByIdAsync(int id)
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync($"api/almacenes/getbyid/{id}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -50,7 +50,7 @@ namespace WEB.Services.Almacenes
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(almacen, jsonOptions);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync("api/almacenes/create", content);
@@ -67,7 +67,7 @@ namespace WEB.Services.Almacenes
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(almacen, jsonOptions);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 var response = await clientHttp.PutAsync($"api/almacenes/update/{id}", content);
@@ -84,7 +84,7 @@ namespace WEB.Services.Almacenes
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.DeleteAsync($"api/almacenes/delete/{id}");
                 return response.IsSuccessStatusCode;
             }
@@ -97,7 +97,7 @@ namespace WEB.Services.Almacenes
 
         public async Task<string> GetNextNumAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/almacenes/getnextnum");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();

@@ -14,7 +14,7 @@ namespace WEB.Services.Inventario
         public async Task<Shared.Dtos.Compras.ProcesarOrdenResult?> ProcesarOrdenAsync(string numero)
         {
             var url = $"api/inventario/process-compra/{numero}";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -37,7 +37,7 @@ namespace WEB.Services.Inventario
         public async Task<Shared.Dtos.Inventario.MovimientosProductoResult?> GetMovimientosProductoAsync(string codigo)
         {
             var url = $"api/inventario/movimientos/{Uri.EscapeDataString(codigo)}";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {

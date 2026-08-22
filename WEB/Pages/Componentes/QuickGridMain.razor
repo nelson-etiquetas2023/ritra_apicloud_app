@@ -1,4 +1,4 @@
-﻿<div>
+<div>
     <QuickGrid Items="filteredOrders!.AsQueryable()" ItemsPerPage="@pageSize" style="margin-top:10px;" class="table table-hover table-bordered table-striped" Pagination="@pagination">
         <PropertyColumn Property="@(p => p.Renglon)" Title="Rg." />
         <TemplateColumn Title="Documento" Align="Align.Center" Sortable="true">
@@ -49,7 +49,7 @@
 
 </div>
 <div class="mt-2">
-    <Paginator State="@pagination" />
+    <GridPaginator State="@pagination" />
 </div>
 
 @code {

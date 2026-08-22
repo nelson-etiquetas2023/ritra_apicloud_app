@@ -1,0 +1,66 @@
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+<div class="gp-wrap">
+    <button type="button" class="gp-btn" disabled="@(!CanGoBack)" title="Ir a la primera página" @onclick="IrPrimera">
+        <Icon Name="IconName.ChevronDoubleLeft" Size="IconSize.x4" />
+    </button>
+    <button type="button" class="gp-btn" disabled="@(!CanGoBack)" title="Página anterior" @onclick="IrAnterior">
+        <Icon Name="IconName.ChevronLeft" Size="IconSize.x4" />
+    </button>
+    <span class="gp-text">Página @PaginaActual de @TotalPaginas</span>
+    <button type="button" class="gp-btn" disabled="@(!CanGoForward)" title="Página siguiente" @onclick="IrSiguiente">
+        <Icon Name="IconName.ChevronRight" Size="IconSize.x4" />
+    </button>
+    <button type="button" class="gp-btn" disabled="@(!CanGoForward)" title="Ir a la última página" @onclick="IrUltima">
+        <Icon Name="IconName.ChevronDoubleRight" Size="IconSize.x4" />
+    </button>
+</div>
+
+@code {
+    [Parameter] public PaginationState? State { get; set; }
+
+    private PaginationState? _suscripto;
+
+    private int PaginaActual => (State?.CurrentPageIndex ?? 0) + 1;
+
+    private int TotalPaginas => (State?.LastPageIndex ?? 0) + 1;
+
+    private bool CanGoBack => (State?.CurrentPageIndex ?? 0) > 0;
+
+    private bool CanGoForward => State is not null && State.LastPageIndex is int last && State.CurrentPageIndex < last;
+
+    private Task IrPrimera() => Navegar(0);
+
+    private Task IrAnterior() => Navegar((State?.CurrentPageIndex ?? 1) - 1);
+
+    private Task IrSiguiente() => Navegar((State?.CurrentPageIndex ?? 0) + 1);
+
+    private Task IrUltima() => Navegar(State?.LastPageIndex ?? 0);
+
+    private async Task Navegar(int pagina)
+    {
+        if (State is null) return;
+        await State.SetCurrentPageIndexAsync(pagina);
+        StateHasChanged();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (State is not null && !ReferenceEquals(State, _suscripto))
+        {
+            if (_suscripto is not null)
+                _suscripto.TotalItemCountChanged -= OnItemCountChanged;
+
+            State.TotalItemCountChanged += OnItemCountChanged;
+            _suscripto = State;
+        }
+    }
+
+    private void OnItemCountChanged(object? sender, int? total) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_suscripto is not null)
+            _suscripto.TotalItemCountChanged -= OnItemCountChanged;
+    }
+}

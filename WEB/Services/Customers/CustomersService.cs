@@ -20,7 +20,7 @@ namespace WEB.Services.Customers
         public async Task<List<Customer>> GetCustomersAsync()
         {
             var url = "api/customers/getcustomers";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -33,7 +33,7 @@ namespace WEB.Services.Customers
         public async Task<Customer?> GetCustomerByIdAsync(int id)
         {
             var url = $"api/customers/getcustomerbyid/{id}";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -48,7 +48,7 @@ namespace WEB.Services.Customers
             try
             {
                 var url = "api/customers/createcustomers";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(customer, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
@@ -69,7 +69,7 @@ namespace WEB.Services.Customers
                 var url = "api/customers/updatecustomers";
                 var json = JsonSerializer.Serialize(parametros, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PutAsync(url, jsonContent);
                 return response.IsSuccessStatusCode;
             }
@@ -85,7 +85,7 @@ namespace WEB.Services.Customers
             try
             {
                 var url = $"api/customers/deletecustomers/{id}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.DeleteAsync(url);
                 return response.IsSuccessStatusCode;
             }
@@ -101,7 +101,7 @@ namespace WEB.Services.Customers
             try
             {
                 var url = "api/customers/import-excel";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
 
                 using var content = new MultipartFormDataContent();
                 using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);
@@ -138,13 +138,21 @@ namespace WEB.Services.Customers
 
         public async Task<string> GetNextNumAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
-            var response = await clientHttp.GetAsync("api/customers/getnextnum");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(json)) return "C000001";
-            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
-            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "C000001";
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync("api/customers/getnextnum");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+                var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+                return obj != null && obj.TryGetValue("numero", out var numero) ? numero : string.Empty;
+            }
+            catch
+            {
+                // Si el endpoint no esta disponible, el API genera el codigo real al guardar.
+                return string.Empty;
+            }
         }
     }
 }

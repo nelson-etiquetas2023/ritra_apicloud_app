@@ -20,7 +20,7 @@ namespace WEB.Services.Auth
         public async Task<ServiceResponse<int>> Register(UserRegister user)
         {
             var url = $"api/auth/register";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var json = JsonSerializer.Serialize(user, jsonOptions);
             var jsonContent = new StringContent(json, System.Text.Encoding.UTF8,"application/json");
             var response = await clientHttp.PostAsync(url, jsonContent);
@@ -40,7 +40,7 @@ namespace WEB.Services.Auth
         public async Task<ServiceResponse<string>> Login(UserLogin user)
         {
             var url = $"api/auth/login";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
             var json = JsonSerializer.Serialize(user, jsonOptions);
             var jsonContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var response = await clienteHttp.PostAsync(url, jsonContent);

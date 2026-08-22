@@ -18,62 +18,41 @@
                 </div>
             }
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="txt_suppliername"><strong>Nombre del Proveedor :</strong> </label>
-                    <InputText class="form-control" id="txt_suppliername" @bind-Value="supplier.SupplierName" />
-                    <ValidationMessage For="@(() => supplier.SupplierName)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_suppliercode"><strong>Código del Proveedor :</strong></label>
+                <input class="form-control" id="txt_suppliercode" value="@supplier.SupplierCode" readonly
+                       placeholder="Se asignará automáticamente (P######)" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_suppliercode"><strong>Código del Proveedor :</strong></label>
-                    <input class="form-control" id="txt_suppliercode" value="@supplier.SupplierCode" readonly
-                           placeholder="Se asignará automáticamente (P######)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_suppliername"><strong>Nombre del Proveedor :</strong> </label>
+                <InputText class="form-control" id="txt_suppliername" @bind-Value="supplier.SupplierName" />
+                <ValidationMessage For="@(() => supplier.SupplierName)" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_ruc"><strong>RNC :</strong></label>
-                    <InputText class="form-control" id="txt_ruc" @bind-Value="supplier.Ruc" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_address"><strong>Dirección :</strong> </label>
+                <InputText class="form-control" id="txt_address" @bind-Value="supplier.Address" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_contact"><strong>Persona de Contacto :</strong></label>
-                    <InputText class="form-control" id="txt_contact" @bind-Value="supplier.ContactName" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_ruc"><strong>RNC :</strong></label>
+                <InputText class="form-control" id="txt_ruc" @bind-Value="supplier.Ruc" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_phone"><strong>Teléfono :</strong></label>
-                    <InputText class="form-control" id="txt_phone" @bind-Value="supplier.Phone" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_contact"><strong>Persona de Contacto :</strong></label>
+                <InputText class="form-control" id="txt_contact" @bind-Value="supplier.ContactName" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_email"><strong>Email :</strong></label>
-                    <InputText class="form-control" id="txt_email" @bind-Value="supplier.Email" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_phone"><strong>Teléfono :</strong></label>
+                <InputText class="form-control" id="txt_phone" @bind-Value="supplier.Phone" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_website"><strong>Sitio Web :</strong></label>
-                    <InputText class="form-control" id="txt_website" @bind-Value="supplier.Website" />
-                </div>
-
-                <div class="col-12 mb-3">
-                    <label for="txt_address"><strong>Dirección :</strong></label>
-                    <InputText class="form-control" id="txt_address" @bind-Value="supplier.Address" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="txt_city"><strong>Ciudad :</strong></label>
-                    <InputText class="form-control" id="txt_city" @bind-Value="supplier.City" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="txt_country"><strong>País :</strong></label>
-                    <InputText class="form-control" id="txt_country" @bind-Value="supplier.Country" />
-                </div>
-
-                <div class="col-12 mb-3">
-                    <Switch @bind-Value="supplier.IsActive" Label="Proveedor activo" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_email"><strong>Email :</strong></label>
+                <InputText class="form-control" id="txt_email" @bind-Value="supplier.Email" />
             </div>
 
             <div class="mb-3">
@@ -133,6 +112,22 @@
         supplier = new Supplier { IsActive = true };
         errorMessage = string.Empty;
         supplier.SupplierCode = await service.GetNextNumAsync();
+
+        // Respaldo: si el endpoint de numeracion no esta disponible,
+        // se calcula con la lista actual (el API revalida el codigo al guardar).
+        if (string.IsNullOrWhiteSpace(supplier.SupplierCode))
+        {
+            var proveedores = await service.GetSuppliersAsync();
+            var max = 0;
+            foreach (var p in proveedores)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(p.SupplierCode ?? "", @"P(\d+)$");
+                if (match.Success && int.TryParse(match.Groups[1].Value, out var n) && n > max)
+                    max = n;
+            }
+            supplier.SupplierCode = $"P{max + 1:D6}";
+        }
+
         await modal.ShowAsync();
     }
 

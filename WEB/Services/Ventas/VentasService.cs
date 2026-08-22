@@ -29,7 +29,7 @@ namespace WEB.Services.Ventas
 
         public async Task<List<PedidoVenta>> GetAllAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/ventas/get");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -40,7 +40,7 @@ namespace WEB.Services.Ventas
 
         public async Task<PedidoVenta> GetByIdAsync(int id)
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync($"api/ventas/getbyid/{id}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -53,7 +53,7 @@ namespace WEB.Services.Ventas
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(pedido, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync("api/ventas/create", content);
@@ -75,7 +75,7 @@ namespace WEB.Services.Ventas
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(pedido, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PutAsync($"api/ventas/update/{id}", content);
@@ -95,27 +95,35 @@ namespace WEB.Services.Ventas
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.DeleteAsync($"api/ventas/delete/{id}");
             return response.IsSuccessStatusCode;
         }
 
         public async Task<string> GetNextNumAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
-            var response = await clientHttp.GetAsync("api/ventas/getnextnum");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(json)) return "PV-0001";
-            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
-            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "PV-0001";
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync("api/ventas/getnextnum");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+                var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+                return obj != null && obj.TryGetValue("numero", out var numero) ? numero : string.Empty;
+            }
+            catch
+            {
+                // Si el endpoint no esta disponible, el API genera el numero real al guardar.
+                return string.Empty;
+            }
         }
 
         public async Task<ProcesarPedidoResult?> ProcesarPedidoAsync(string numero)
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PostAsync($"api/ventas/process/{numero}", null);
                 var responseJson = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(responseJson)) return null;
@@ -133,7 +141,7 @@ namespace WEB.Services.Ventas
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PostAsync($"api/ventas/anular/{id}", null);
                 return response.IsSuccessStatusCode;
             }

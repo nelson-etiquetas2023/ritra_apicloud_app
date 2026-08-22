@@ -18,56 +18,40 @@
         <EditForm Model="supplierLocal" OnValidSubmit="UpdateSupplier">
             <DataAnnotationsValidator />
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="txt_suppliername"><strong>Nombre del Proveedor :</strong></label>
-                    <InputText class="form-control" id="txt_suppliername" @bind-Value="supplierLocal.SupplierName" />
-                    <ValidationMessage For="@(() => supplierLocal.SupplierName)" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_suppliercode"><strong>Código del Proveedor :</strong></label>
+                <input class="form-control" id="txt_suppliercode" value="@supplierLocal.SupplierCode" readonly />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_ruc"><strong>RNC :</strong></label>
-                    <InputText class="form-control" id="txt_ruc" @bind-Value="supplierLocal.Ruc" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_suppliername"><strong>Nombre del Proveedor :</strong></label>
+                <InputText class="form-control" id="txt_suppliername" @bind-Value="supplierLocal.SupplierName" />
+                <ValidationMessage For="@(() => supplierLocal.SupplierName)" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_contact"><strong>Persona de Contacto :</strong></label>
-                    <InputText class="form-control" id="txt_contact" @bind-Value="supplierLocal.ContactName" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_address"><strong>Dirección :</strong></label>
+                <InputText class="form-control" id="txt_address" @bind-Value="supplierLocal.Address" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_phone"><strong>Teléfono :</strong></label>
-                    <InputText class="form-control" id="txt_phone" @bind-Value="supplierLocal.Phone" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_ruc"><strong>RNC :</strong></label>
+                <InputText class="form-control" id="txt_ruc" @bind-Value="supplierLocal.Ruc" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_email"><strong>Email :</strong></label>
-                    <InputText class="form-control" id="txt_email" @bind-Value="supplierLocal.Email" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_contact"><strong>Persona de Contacto :</strong></label>
+                <InputText class="form-control" id="txt_contact" @bind-Value="supplierLocal.ContactName" />
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="txt_website"><strong>Sitio Web :</strong></label>
-                    <InputText class="form-control" id="txt_website" @bind-Value="supplierLocal.Website" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_phone"><strong>Teléfono :</strong></label>
+                <InputText class="form-control" id="txt_phone" @bind-Value="supplierLocal.Phone" />
+            </div>
 
-                <div class="col-12 mb-3">
-                    <label for="txt_address"><strong>Dirección :</strong></label>
-                    <InputText class="form-control" id="txt_address" @bind-Value="supplierLocal.Address" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="txt_city"><strong>Ciudad :</strong></label>
-                    <InputText class="form-control" id="txt_city" @bind-Value="supplierLocal.City" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="txt_country"><strong>País :</strong></label>
-                    <InputText class="form-control" id="txt_country" @bind-Value="supplierLocal.Country" />
-                </div>
-
-                <div class="col-12 mb-3">
-                    <Switch @bind-Value="supplierLocal.IsActive" Label="Proveedor activo" />
-                </div>
+            <div class="mb-3">
+                <label for="txt_email"><strong>Email :</strong></label>
+                <InputText class="form-control" id="txt_email" @bind-Value="supplierLocal.Email" />
             </div>
 
             <div class="mb-3">

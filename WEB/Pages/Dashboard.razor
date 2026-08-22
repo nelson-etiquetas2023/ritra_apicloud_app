@@ -2,11 +2,13 @@
 @inject IOrdenCompraService compraService
 @inject IProductsService productsService
 @inject ICustomersService customersService
+@inject ISuppliersService suppliersService
 @inject IVentasService ventasService
 @inject NavigationManager Navigation
 @using WEB.Services.OrdenCompra
 @using WEB.Services.Products
 @using WEB.Services.Customers
+@using WEB.Services.Suppliers
 @using WEB.Pages.PedidoVenta
 @using Shared.Dtos.Compras
 
@@ -77,6 +79,16 @@
                     <span class="kpi-foot">Empresas y clientes</span>
                 </div>
             </div>
+            <div class="kpi-card" style="--accent:#d63384;" @onclick="IrAProveedores" title="Proveedores registrados">
+                <div class="kpi-icon" style="background:rgba(214,51,132,.12); color:#d63384;">
+                    <Icon Name="IconName.Truck" />
+                </div>
+                <div class="kpi-body">
+                    <span class="kpi-label">Proveedores</span>
+                    <span class="kpi-value">@proveedoresCount</span>
+                    <span class="kpi-foot">Registrados en catálogo</span>
+                </div>
+            </div>
         </div>
 
     }
@@ -96,6 +108,7 @@
 
     private int productosCount;
     private int clientesCount;
+    private int proveedoresCount;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,7 +116,8 @@
             CargarCompras(),
             CargarVentas(),
             CargarProductos(),
-            CargarClientes());
+            CargarClientes(),
+            CargarProveedores());
 
         cargando = false;
     }
@@ -163,8 +177,21 @@
         }
     }
 
+    private async Task CargarProveedores()
+    {
+        try
+        {
+            proveedoresCount = (await suppliersService.GetSuppliersAsync()).Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar proveedores en dashboard: {ex.Message}");
+        }
+    }
+
     private void IrACompras() => Navigation.NavigateTo("/ordencompra");
     private void IrAVentas() => Navigation.NavigateTo("/pedidoventa");
     private void IrAProductos() => Navigation.NavigateTo("/products");
     private void IrAClientes() => Navigation.NavigateTo("/customers");
+    private void IrAProveedores() => Navigation.NavigateTo("/suppliers");
 }

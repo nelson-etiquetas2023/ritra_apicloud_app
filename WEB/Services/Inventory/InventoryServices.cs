@@ -32,7 +32,7 @@ namespace WEB.Services.Inventory
             var url = $"api/orderfisico/savenumberconsecinventory";
             var json = JsonSerializer.Serialize(parametros, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var response = await clientHttp.PostAsync(url, jsonContent);
             response.EnsureSuccessStatusCode();
             if (response.IsSuccessStatusCode)
@@ -48,7 +48,7 @@ namespace WEB.Services.Inventory
         public async Task<DocumentSettings> LoadDataDocumentSetting(string filter)
         {
             var url = $"api/orderfisico/getconfigbyid/{filter}";
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -158,7 +158,7 @@ namespace WEB.Services.Inventory
         {
             var json = JsonSerializer.Serialize(scanproduct, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var url = $"api/orderfisico/updatedatascanproducts";
             var response = await clientHttp.PostAsync(url, jsonContent);
             response.EnsureSuccessStatusCode();
@@ -175,7 +175,7 @@ namespace WEB.Services.Inventory
         public async Task GenerateReportsScanProducts(string OrderId)
         {
             var url = $"api/orderfisico/generatereportscanproducts/{OrderId}";
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             
@@ -188,7 +188,7 @@ namespace WEB.Services.Inventory
         public async Task<bool> DeletescanProducts(Guid id)
         {
             var url = $"api/orderfisico/deletescanProducts/{id}";
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var response = await clientHttp.DeleteAsync(url);
             response.EnsureSuccessStatusCode();
             if (response.IsSuccessStatusCode)
@@ -203,7 +203,7 @@ namespace WEB.Services.Inventory
         public async Task<List<ScanProducts>> GetscanProducts(string OrderId) 
         {
             var url = $"api/orderfisico/getscanproducts/{OrderId}";
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -217,7 +217,7 @@ namespace WEB.Services.Inventory
         {
             var json = JsonSerializer.Serialize(products, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var url = $"api/orderfisico/savedatascanproducts";
             var response = await clientHttp.PostAsync(url, jsonContent);
             response.EnsureSuccessStatusCode();
@@ -233,7 +233,7 @@ namespace WEB.Services.Inventory
         public async Task<List<OrderFisicoHeader>> GetOrders()
         {
             var url = $"api/orderfisico/getorders";
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
 
             //adjuntar el token bearer de seguridad para
             //que los cors permita la conexion con la api.
@@ -263,7 +263,7 @@ namespace WEB.Services.Inventory
             //primero hay que serializar la orden a json.
             var json = JsonSerializer.Serialize(order, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var clientHttp = httpFactory.CreateClient("ritrama");
+            var clientHttp = httpFactory.CreateClient("scanpro");
             var url = $"api/orderfisico/createorder";
             var response = await clientHttp.PostAsync(url, jsonContent);
             response.EnsureSuccessStatusCode();

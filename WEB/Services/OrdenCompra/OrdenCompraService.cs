@@ -16,7 +16,7 @@ namespace WEB.Services.OrdenCompra
         public async Task<List<Shared.Dtos.Compras.OrdenCompra>> GetOrdersAsync()
         {
             var url = $"api/ordencompra/getorders";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -44,7 +44,7 @@ namespace WEB.Services.OrdenCompra
         public async Task<Shared.Dtos.Compras.OrdenCompra?> GetOrderByIdAsync(string numero)
         {
             var url = $"api/ordencompra/getorderbyid/{numero}";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -67,7 +67,7 @@ namespace WEB.Services.OrdenCompra
         public async Task<bool> AddOrderAsync(Shared.Dtos.Compras.OrdenCompra oc)
         {
             var url = $"api/ordencompra/addorder";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -86,7 +86,7 @@ namespace WEB.Services.OrdenCompra
         public async Task<bool> UpdateOrderAsync(string numero, Shared.Dtos.Compras.OrdenCompra oc)
         {
             var url = $"api/ordencompra/updateorder/{numero}";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -105,7 +105,7 @@ namespace WEB.Services.OrdenCompra
         public async Task<bool> DeleteOrderAsync(string numero)
         {
             var url = $"api/ordencompra/deleteorder/{numero}";
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
 
             try
             {
@@ -121,20 +121,51 @@ namespace WEB.Services.OrdenCompra
 
         public async Task<string> GetNextNumAsync()
         {
-            var clienteHttp = HttpFactory.CreateClient("ritrama");
-            var response = await clienteHttp.GetAsync("api/ordencompra/getnextnum");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(json)) return "OC-0001";
-            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
-            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "OC-0001";
+            try
+            {
+                var clienteHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clienteHttp.GetAsync("api/ordencompra/getnextnum");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return await CalcularSiguienteNumeroLocalAsync();
+                var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+                return obj != null && obj.TryGetValue("numero", out var numero) && !string.IsNullOrWhiteSpace(numero)
+                    ? numero
+                    : await CalcularSiguienteNumeroLocalAsync();
+            }
+            catch
+            {
+                // Si el endpoint no esta disponible, se calcula con las ordenes existentes.
+                // El API revalida/genera el numero definitivo al guardar.
+                return await CalcularSiguienteNumeroLocalAsync();
+            }
+        }
+
+        private async Task<string> CalcularSiguienteNumeroLocalAsync()
+        {
+            try
+            {
+                var ordenes = await GetOrdersAsync();
+                var max = 0;
+                foreach (var o in ordenes)
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(o.Numero ?? "", @"^OC-(\d+)$");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out var n) && n > max)
+                        max = n;
+                }
+                return $"OC-{max + 1:0000}";
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         public async Task<bool> AnularOrderAsync(string numero)
         {
             try
             {
-                var clienteHttp = HttpFactory.CreateClient("ritrama");
+                var clienteHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clienteHttp.PostAsync($"api/ordencompra/anular/{numero}", null);
                 return response.IsSuccessStatusCode;
             }

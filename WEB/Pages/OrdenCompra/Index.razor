@@ -13,7 +13,7 @@
 <div class="d-flex justify-content-between align-items-center mt-0">
     <h2 class="mb-0"><Icon Name="IconName.Cart" Size="IconSize.x2" /> Orden de Compra</h2>
     <button class="btn btn-primary" type="button" @onclick="NuevaOC">
-        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva OC
+        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Orden
     </button>
 </div>
 
@@ -44,7 +44,7 @@ else if (!ordenesFiltered!.Any())
 {
     <div class="text-center py-5">
         <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
-        <p class="text-muted">Presiona "Nueva OC" para crear la primera orden de compra.</p>
+        <p class="text-muted">Presiona "Nueva Orden" para crear la primera orden de compra.</p>
     </div>
 }
 else
@@ -65,7 +65,6 @@ else
             @context.Supply_Name
         </TemplateColumn>
         <PropertyColumn Property="@(o => o.Description)" Title="Descripcion" Sortable="true" />
-        <PropertyColumn Property="@(o => o.Tipo_Documento)" Title="Tipo Doc." Sortable="true" />
         <TemplateColumn Title="Items" Sortable="true">
             <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
                 @context.Items.Count
@@ -158,7 +157,7 @@ else
         </TemplateColumn>
     </QuickGrid>
     <div class="mt-2">
-        <Paginator State="@paginationIndex" />
+        <GridPaginator State="@paginationIndex" />
     </div>
 }
 

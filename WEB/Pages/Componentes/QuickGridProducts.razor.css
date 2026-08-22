@@ -74,8 +74,8 @@
     transition: all 0.3s ease;
     background-color: #f8f9fa;
     padding: 4px;
-    image-rendering: crisp-edges;
-    image-rendering: -webkit-optimize-contrast;
+    /* Escalado suave (bilinear): evita el efecto pixelado en fotos */
+    image-rendering: auto;
 }
 
 .product-thumbnail:hover {

@@ -1,4 +1,4 @@
-﻿@page "/CodebarDetails/{OrderId}"
+@page "/CodebarDetails/{OrderId}"
 @using WEB.Pages.Componentes
 @inject IInventoryServices service
 @inject NavigationManager navigation
@@ -158,7 +158,7 @@ else
         </TemplateColumn>
         <!--<PropertyColumn Property="@(p => p.guid)" Title="id guid" />-->
     </QuickGrid>
-    <Paginator State="@pagination" />
+    <GridPaginator State="@pagination" />
 }
 
 @code {

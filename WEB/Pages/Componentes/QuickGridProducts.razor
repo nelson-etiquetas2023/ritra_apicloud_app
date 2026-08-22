@@ -1,4 +1,4 @@
-﻿@using WEB.Pages.Products
+@using WEB.Pages.Products
 @inject IProductsService service
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
@@ -63,7 +63,7 @@
     </QuickGrid>
 </div>
 <div class="mt-2">
-    <Paginator State="@pagination" />
+    <GridPaginator State="@pagination" />
 </div>
 
 @code {
@@ -135,7 +135,7 @@
 
     private string GetImageUrl(int imageId, int productId)
     {
-        var client = HttpClientFactory.CreateClient("ritrama");
+        var client = HttpClientFactory.CreateClient("scanpro");
         var baseUrl = client.BaseAddress?.ToString().TrimEnd('/') ?? "http://localhost:5220";
         var version = imageVersions.ContainsKey(productId) ? imageVersions[productId] : baseVersion;
         var url = $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";

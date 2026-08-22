@@ -1,0 +1,52 @@
+.gp-wrap {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.gp-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.gp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 30px;
+    background-color: #28BB5B;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Icono mas pequeno y perfectamente centrado dentro del boton */
+.gp-btn ::deep i {
+    font-size: 0.7rem !important;
+    line-height: 1 !important;
+    vertical-align: baseline !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gp-btn:hover:not(:disabled) {
+    background-color: #22b956;
+    color: #fff;
+}
+
+.gp-btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.gp-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}

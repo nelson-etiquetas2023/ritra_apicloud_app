@@ -33,7 +33,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<List<Inicial>> GetAllAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/cargasIniciales/get");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -44,7 +44,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<Inicial> GetByIdAsync(int id)
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync($"api/cargasIniciales/getbyid/{id}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -57,7 +57,7 @@ namespace WEB.Services.CargasIniciales
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(inicial, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync("api/cargasIniciales/create", content);
@@ -79,7 +79,7 @@ namespace WEB.Services.CargasIniciales
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(inicial, jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PutAsync($"api/cargasIniciales/update/{id}", content);
@@ -99,7 +99,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.DeleteAsync($"api/cargasIniciales/delete/{id}");
             return response.IsSuccessStatusCode;
         }
@@ -108,7 +108,7 @@ namespace WEB.Services.CargasIniciales
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 using var content = new MultipartFormDataContent();
                 using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);
                 var streamContent = new StreamContent(stream);
@@ -143,7 +143,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<byte[]> DownloadTemplateAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/cargasIniciales/template");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsByteArrayAsync();
@@ -151,7 +151,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<List<Inicial>> GetDocumentsInitialsInventoryAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/cargasIniciales/getDocumentsInitialsInventory");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -162,7 +162,7 @@ namespace WEB.Services.CargasIniciales
 
         public async Task<string> GetNextNumAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync("api/cargasIniciales/getnextnum");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -175,7 +175,7 @@ namespace WEB.Services.CargasIniciales
         {
             try
             {
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PostAsync($"api/cargasIniciales/procesar/{id}", null);
                 var responseJson = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(responseJson))

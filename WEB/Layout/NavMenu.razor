@@ -19,14 +19,14 @@
             </NavLink>
         </div>
         <div class="nav-item px-3 has-submenu">
-            <NavLink class="nav-link d-flex align-items-center justify-content-between" href="/inventario">
+            <div class="nav-link submenu-parent d-flex align-items-center justify-content-between" role="button" tabindex="0" title="Mostrar opciones" @onclick="ToggleInventario" @onclick:stopPropagation="true" @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") ToggleInventario(); })">
                 <span class="d-flex align-items-center">
                     <Icon Name="IconName.CloudRain" Size="IconSize.x4" Style="margin-right:10px;" /> Inventario
                 </span>
-                <span class="submenu-caret @(GetCaretClass())" @onclick="ToggleInventario" @onclick:stopPropagation="true" title="Mostrar opciones">
+                <span class="submenu-caret @(GetCaretClass())">
                     <Icon Name="IconName.CaretRight" Size="IconSize.x4" />
                 </span>
-            </NavLink>
+            </div>
             <div class="submenu @(_inventarioAbierto ? "submenu-open" : null)">
                 <NavLink class="submenu-link" href="/products">
                     <Icon Name="IconName.Box" Size="IconSize.x4" Style="margin-right:8px;" /> Productos
@@ -39,29 +39,50 @@
                 </NavLink>
             </div>
         </div>
+        <div class="nav-item px-3 has-submenu">
+            <div class="nav-link submenu-parent d-flex align-items-center justify-content-between" role="button" tabindex="0" title="Mostrar opciones" @onclick="ToggleCompras" @onclick:stopPropagation="true" @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") ToggleCompras(); })">
+                <span class="d-flex align-items-center">
+                    <Icon Name="IconName.Bag" Size="IconSize.x4" Style="margin-right:10px;" /> Compras
+                </span>
+                <span class="submenu-caret @(GetComprasCaretClass())">
+                    <Icon Name="IconName.CaretRight" Size="IconSize.x4" />
+                </span>
+            </div>
+            <div class="submenu @(_comprasAbierto ? "submenu-open" : null)">
+                <NavLink class="submenu-link" href="/ordencompra">
+                    <Icon Name="IconName.Cart" Size="IconSize.x4" Style="margin-right:8px;" /> Orden de Compra
+                </NavLink>
+                <NavLink class="submenu-link" href="/suppliers">
+                    <Icon Name="IconName.Truck" Size="IconSize.x4" Style="margin-right:8px;" /> Proveedores
+                </NavLink>
+            </div>
+        </div>
+        <div class="nav-item px-3 has-submenu">
+            <div class="nav-link submenu-parent d-flex align-items-center justify-content-between" role="button" tabindex="0" title="Mostrar opciones" @onclick="ToggleVentas" @onclick:stopPropagation="true" @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") ToggleVentas(); })">
+                <span class="d-flex align-items-center">
+                    <Icon Name="IconName.Cart4" Size="IconSize.x4" Style="margin-right:10px;" /> Ventas
+                </span>
+                <span class="submenu-caret @(GetVentasCaretClass())">
+                    <Icon Name="IconName.CaretRight" Size="IconSize.x4" />
+                </span>
+            </div>
+            <div class="submenu @(_ventasAbierto ? "submenu-open" : null)">
+                <NavLink class="submenu-link" href="/pedidoventa">
+                    <Icon Name="IconName.Cart" Size="IconSize.x4" Style="margin-right:8px;" /> Pedidos de Venta
+                </NavLink>
+                <NavLink class="submenu-link" href="/customers">
+                    <Icon Name="IconName.People" Size="IconSize.x4" Style="margin-right:8px;" /> Clientes
+                </NavLink>
+            </div>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/mobile">
+                <Icon Name="IconName.Phone" Size="IconSize.x4" Style="margin-right:10px;" /> Integración Móvil
+            </NavLink>
+        </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/vendedores">
                 <Icon Name="IconName.PersonBadge" Size="IconSize.x4" Style="margin-right:10px;" /> Vendedores
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/ordencompra">
-                <Icon Name="IconName.Cart" Size="IconSize.x4" Style="margin-right:10px;" /> Orden de Compra
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/pedidoventa">
-                <Icon Name="IconName.Cart4" Size="IconSize.x4" Style="margin-right:10px;" /> Pedido de Venta
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/customers">
-                <Icon Name="IconName.People" Size="IconSize.x4" Style="margin-right:10px;" /> Clientes
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/suppliers">
-                <Icon Name="IconName.Truck" Size="IconSize.x4" Style="margin-right:10px;" /> Proveedores
             </NavLink>
         </div>
         <div class="nav-item px-3">
@@ -84,11 +105,6 @@
                 <Icon Name="IconName.FileEarmarkBarGraph" Size="IconSize.x4" Style="margin-right:10px;" /> Reportes
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/mobile">
-                <Icon Name="IconName.FileEarmarkBarGraph" Size="IconSize.x4" Style="margin-right:10px;" /> Integracion Movil
-            </NavLink>
-        </div>
 
         <hr class="version-divider" />
 
@@ -107,6 +123,8 @@
 @code {
     private bool collapseNavMenu = true;
     private bool _inventarioAbierto;
+    private bool _comprasAbierto;
+    private bool _ventasAbierto;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
@@ -120,8 +138,28 @@
         _inventarioAbierto = !_inventarioAbierto;
     }
 
+    private void ToggleCompras()
+    {
+        _comprasAbierto = !_comprasAbierto;
+    }
+
+    private void ToggleVentas()
+    {
+        _ventasAbierto = !_ventasAbierto;
+    }
+
     private string GetCaretClass()
     {
         return _inventarioAbierto ? "submenu-caret submenu-caret-open" : "submenu-caret";
+    }
+
+    private string GetComprasCaretClass()
+    {
+        return _comprasAbierto ? "submenu-caret submenu-caret-open" : "submenu-caret";
+    }
+
+    private string GetVentasCaretClass()
+    {
+        return _ventasAbierto ? "submenu-caret submenu-caret-open" : "submenu-caret";
     }
 }

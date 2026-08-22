@@ -1,6 +1,28 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Rubik', 'Segoe UI', Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
+
+/* Tablas estilo Tocly: 14px, peso normal, numeros alineados por columna */
+.table {
+    font-size: 0.875rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+.table th {
+    font-weight: 600;
+}
+
+/* QuickGrid: cada registro en una sola linea, sin saltos de texto */
+table.quickgrid th,
+table.quickgrid td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+
 
 h1:focus {
     outline: none;
@@ -173,33 +195,31 @@ code {
         transform: translateY(-8px);
     }
 }
-/* ===== Submenu Inventario (sidebar, acordeon) ===== */
-.nav-item.has-submenu .submenu-caret {
-    transition: transform 0.2s ease;
-    opacity: 0.7;
+/* ===== Submenu Inventario (sidebar, acordeon por clic) ===== */
+/* Titulos padre del sidebar: solo abren el submenu, no navegan */
+.nav-item.has-submenu .submenu-parent {
+    cursor: pointer;
+    user-select: none;
 }
-.nav-item.has-submenu:hover .submenu-caret {
-    transform: rotate(90deg);
-}
+
 .nav-item.has-submenu .submenu-caret {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
     color: inherit;
+    opacity: 0.7;
     transition: transform 0.2s ease;
 }
-.nav-item.has-submenu:hover .submenu-caret,
 .nav-item.has-submenu .submenu-caret.submenu-caret-open {
     transform: rotate(90deg);
+    opacity: 1;
 }
 .nav-item.has-submenu .submenu {
     display: none;
     flex-direction: column;
-    padding: 0.25rem 0 0.5rem 2.2rem;
+    padding: 0.25rem 0 0.5rem 1.4rem;
     border-left: 2px solid #28BB5B;
 }
-.nav-item.has-submenu:hover .submenu,
-.nav-item.has-submenu:focus-within .submenu,
 .nav-item.has-submenu .submenu.submenu-open {
     display: flex;
 }
@@ -210,6 +230,8 @@ code {
     display: flex;
     align-items: center;
     font-weight: bold;
+    font-size: 0.95rem;
+    white-space: nowrap;
     padding-left: 0.5rem;
     text-decoration: none;
     transition: background 0.15s ease, color 0.15s ease;

@@ -1,6 +1,6 @@
 # Plan de Pruebas
 
-Proyecto: RitramaCloud2026 (Blazor WEB + API .NET)
+Proyecto: ScanProCloud2026 (Blazor WEB + API .NET)
 Fecha: 2026-08-07
 Alcance: cambios recientes (HEAD `d721fe0` - productos con agentes, integración móvil/órdenes de compra)
 

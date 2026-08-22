@@ -51,7 +51,8 @@
         padding-bottom: 1rem;
     }
 
-    .nav-item ::deep a {
+    .nav-item ::deep a,
+    .nav-item .submenu-parent {
         color: #000000;
         border-radius: 4px;
         height: 3rem;
@@ -60,12 +61,14 @@
         line-height: 3rem;
         font-weight: bold;
     }
+
     .nav-item ::deep a.active {
             color: #28BB5B;
             font-weight: bold;
         }
 
-    .nav-item ::deep a:hover {
+    .nav-item ::deep a:hover,
+    .nav-item .submenu-parent:hover {
         background-color: #22b956;
         color: white;
     }

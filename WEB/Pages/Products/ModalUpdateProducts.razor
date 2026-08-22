@@ -231,7 +231,7 @@
 
     private string GetImageUrl(int imageId)
     {
-        var client = HttpClientFactory.CreateClient("ritrama");
+        var client = HttpClientFactory.CreateClient("scanpro");
         var baseUrl = client.BaseAddress?.ToString().TrimEnd('/') ?? "http://localhost:5220";
         return $"{baseUrl}/api/products/getproductimage/{imageId}";
     }

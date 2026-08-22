@@ -20,7 +20,7 @@ namespace WEB.Services.Suppliers
         public async Task<List<Supplier>> GetSuppliersAsync()
         {
             var url = "api/suppliers/getsuppliers";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -33,7 +33,7 @@ namespace WEB.Services.Suppliers
         public async Task<Supplier?> GetSupplierByIdAsync(int id)
         {
             var url = $"api/suppliers/getsupplierbyid/{id}";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -48,7 +48,7 @@ namespace WEB.Services.Suppliers
             try
             {
                 var url = "api/suppliers/createsuppliers";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(supplier, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
@@ -75,7 +75,7 @@ namespace WEB.Services.Suppliers
                 var url = "api/suppliers/updatesuppliers";
                 var json = JsonSerializer.Serialize(parametros, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PutAsync(url, jsonContent);
                 return response.IsSuccessStatusCode;
             }
@@ -91,7 +91,7 @@ namespace WEB.Services.Suppliers
             try
             {
                 var url = $"api/suppliers/deletesuppliers/{id}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.DeleteAsync(url);
                 return response.IsSuccessStatusCode;
             }
@@ -104,13 +104,21 @@ namespace WEB.Services.Suppliers
 
         public async Task<string> GetNextNumAsync()
         {
-            var clientHttp = HttpFactory.CreateClient("ritrama");
-            var response = await clientHttp.GetAsync("api/suppliers/getnextnum");
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(json)) return "P000001";
-            var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
-            return obj != null && obj.TryGetValue("numero", out var numero) ? numero : "P000001";
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync("api/suppliers/getnextnum");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+                var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+                return obj != null && obj.TryGetValue("numero", out var numero) ? numero : string.Empty;
+            }
+            catch
+            {
+                // Si el endpoint no esta disponible, el API genera el codigo real al guardar.
+                return string.Empty;
+            }
         }
 
         public async Task<SupplierImportResult> ImportSuppliersFromExcelAsync(IBrowserFile file)
@@ -118,7 +126,7 @@ namespace WEB.Services.Suppliers
             try
             {
                 var url = "api/suppliers/import-excel";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
 
                 using var content = new MultipartFormDataContent();
                 using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);

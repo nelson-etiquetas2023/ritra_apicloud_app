@@ -18,7 +18,7 @@ namespace WEB.Services.Enterprises
         public async Task<Enterprise?> GetEnterpriseAsync()
         {
             var url = "api/enterprises/getenterprise";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -33,7 +33,7 @@ namespace WEB.Services.Enterprises
             try
             {
                 var url = "api/enterprises/createenterprise";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(enterprise, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
@@ -54,7 +54,7 @@ namespace WEB.Services.Enterprises
                 var url = "api/enterprises/updateenterprise";
                 var json = JsonSerializer.Serialize(parametros, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PutAsync(url, jsonContent);
                 return response.IsSuccessStatusCode;
             }

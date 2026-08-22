@@ -22,7 +22,7 @@ namespace WEB.Services.Products
 
         public string GetImageUrl(int imageId, int productId)
         {
-            var client = HttpFactory.CreateClient("ritrama");
+            var client = HttpFactory.CreateClient("scanpro");
             var baseUrl = client.BaseAddress?.ToString().TrimEnd('/');
             var version = imageVersions.TryGetValue(productId, out long value) ? value : 0L;
             return $"{baseUrl}/api/products/getproductimage/{imageId}?v={version}";
@@ -33,7 +33,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/createproductwithfiles";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
 
                 using var content = new MultipartFormDataContent();
 
@@ -82,7 +82,7 @@ namespace WEB.Services.Products
         public async Task<List<Product>> GetProductAsync()
         {
             var url = $"api/products/getproducts";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -96,7 +96,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/createproducts";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(product, jsonOptions);
                 var jsonContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
@@ -125,7 +125,7 @@ namespace WEB.Services.Products
         public async Task<bool> DeleteProductAsync(int id)
         {
             var url = $"api/products/deleteproducts/{id}";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.DeleteAsync(url);
             response.EnsureSuccessStatusCode();
             if (response.IsSuccessStatusCode)
@@ -140,7 +140,7 @@ namespace WEB.Services.Products
         public async Task<Product> GetProductByIdAsync(int id)
         {
             var url = $"api/products/getproductbyid/{id}";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var response = await clientHttp.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
@@ -157,7 +157,7 @@ namespace WEB.Services.Products
                 var url = $"api/products/updateproducts";
                 var json = JsonSerializer.Serialize(parametros, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PutAsync(url, jsonContent);
                 var responseJson = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(responseJson))
@@ -185,7 +185,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/addproductimage/{productId}?imageIndex={imageIndex}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.PostAsync(url, content);
                 return response.IsSuccessStatusCode;
             }
@@ -200,7 +200,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/deleteproductimage/{imageId}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clientHttp.DeleteAsync(url);
                 return response.IsSuccessStatusCode;
             }
@@ -215,7 +215,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/getproductimage/{imageId}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 Console.WriteLine($"GetProductImageAsync: Fetching image {imageId} from {url}");
                 var response = await clientHttp.GetAsync(url);
 
@@ -240,7 +240,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/createproductwithimages";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(request, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PostAsync(url, jsonContent);
@@ -268,7 +268,7 @@ namespace WEB.Services.Products
         public async Task<int> BulkCreateProductsAsync(List<Product> products)
         {
             var url = $"api/products/bulkcreateproducts";
-            var clientHttp = HttpFactory.CreateClient("ritrama");
+            var clientHttp = HttpFactory.CreateClient("scanpro");
             var json = JsonSerializer.Serialize(products, jsonOptions);
             var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await clientHttp.PostAsync(url, jsonContent);
@@ -283,7 +283,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = "api/products/import-excel";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
 
                 using var content = new MultipartFormDataContent();
                 using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);
@@ -323,7 +323,7 @@ namespace WEB.Services.Products
             try
             {
                 var url = $"api/products/updateproductimage/{productId}";
-                var clientHttp = HttpFactory.CreateClient("ritrama");
+                var clientHttp = HttpFactory.CreateClient("scanpro");
                 var json = JsonSerializer.Serialize(imageData, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await clientHttp.PutAsync(url, jsonContent);

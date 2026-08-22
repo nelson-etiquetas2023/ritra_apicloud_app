@@ -25,9 +25,9 @@ var server_etiquetas = "http://192.168.10.10:8080";
 //var server_etiquetas = server_local;
 
 // Alternativa: si la API está en otro puerto, usa:
-// var ritrama_local = "https://localhost:7000/"; // Para HTTPS en desarrollo
+// var scanpro_local = "https://localhost:7000/"; // Para HTTPS en desarrollo
 
-//var ritrama_cloud = "...";
+//var scanpro_cloud = "...";
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -35,7 +35,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-builder.Services.AddHttpClient("ritrama", options => {
+builder.Services.AddHttpClient("scanpro", options => {
     options.BaseAddress = new Uri(server_etiquetas);
     options.Timeout = TimeSpan.FromSeconds(15);
     options.DefaultRequestHeaders.Add("User-Agent", "BlazorApp");
