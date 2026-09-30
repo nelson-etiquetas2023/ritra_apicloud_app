@@ -6,7 +6,7 @@ namespace ScanProMovil.Services.Auth
 {
     public interface IAuthService
     {
-        Task<LoginResult> LoginAsync(string email, string password);
+        Task<LoginResult> LoginAsync(string identifier, string password);
     }
 
     public class LoginResult
@@ -34,10 +34,10 @@ namespace ScanProMovil.Services.Auth
             _appSession = appSession;
         }
 
-        public async Task<LoginResult> LoginAsync(string email, string password)
+        public async Task<LoginResult> LoginAsync(string identifier, string password)
         {
             var client = _httpFactory.CreateClient("scanpro");
-            var payload = JsonSerializer.Serialize(new { email, password });
+            var payload = JsonSerializer.Serialize(new { Identifier = identifier, Password = password });
             var content = new StringContent(payload, Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync("api/auth/login", content);

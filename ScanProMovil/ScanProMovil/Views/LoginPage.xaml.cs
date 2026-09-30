@@ -18,7 +18,7 @@ namespace ScanProMovil.Views
         protected override void OnAppearing()
         {
             base.OnAppearing();
-            EntryEmail.Text = string.Empty;
+            EntryIdentifier.Text = string.Empty;
             EntryPassword.Text = string.Empty;
             LabelMessage.Text = string.Empty;
             LabelAttempts.TextColor = Colors.Gray;
@@ -41,7 +41,7 @@ namespace ScanProMovil.Views
                 Dispatcher.Dispatch(() =>
                 {
                     if (!_session.IsBlocked)
-                        EntryEmail.Focus();
+                        EntryIdentifier.Focus();
                 });
             });
         }
@@ -56,7 +56,7 @@ namespace ScanProMovil.Views
             EntryPassword.Focus();
         }
 
-        private void OnEmailCompleted(object? sender, EventArgs e)
+        private void OnIdentifierCompleted(object? sender, EventArgs e)
         {
             EntryPassword.Focus();
         }
@@ -112,13 +112,13 @@ namespace ScanProMovil.Views
 
         private async void BtnLogin_Clicked(object? sender, EventArgs e)
         {
-            var email = EntryEmail.Text?.Trim() ?? string.Empty;
+            var identifier = EntryIdentifier.Text?.Trim() ?? string.Empty;
             var password = EntryPassword.Text ?? string.Empty;
 
-            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(password))
             {
                 await DisplayAlertAsync("Datos incompletos",
-                    "Ingrese correo y contraseña.", "OK");
+                    "Ingrese correo o nickname y contraseña.", "OK");
                 return;
             }
 
@@ -135,7 +135,7 @@ namespace ScanProMovil.Views
             LoginResult result;
             try
             {
-                result = await _authService.LoginAsync(email, password);
+                result = await _authService.LoginAsync(identifier, password);
             }
             catch (Exception ex)
             {

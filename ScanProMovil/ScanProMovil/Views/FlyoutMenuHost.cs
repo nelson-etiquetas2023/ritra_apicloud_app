@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using ScanProMovil.Services.Session;
 
 namespace ScanProMovil.Views;
@@ -16,6 +18,9 @@ public static class FlyoutMenuHost
 
     private static async Task NavigateToAsync(FlyoutPage page, FlyoutMenuItem item)
     {
+        if (item.HasChildren)
+            return;
+
         page.IsPresented = false;
 
         if (item.TargetType is null)
@@ -47,11 +52,51 @@ public static class FlyoutMenuHost
     }
 }
 
-public class FlyoutMenuItem
+public class FlyoutMenuItem : INotifyPropertyChanged
 {
+    private List<FlyoutMenuItem> _children = [];
+    private bool _isExpanded;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public string Title { get; set; } = "";
     public string Icon { get; set; } = "";
     public Type? TargetType { get; set; }
     public string? Message { get; set; }
     public Action<FlyoutPage>? Action { get; set; }
+
+    public List<FlyoutMenuItem> Children
+    {
+        get => _children;
+        set
+        {
+            _children = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasChildren));
+        }
+    }
+
+    public bool HasChildren => _children.Count > 0;
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value)
+                return;
+
+            _isExpanded = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Nivel de anidamiento. 0 = raíz del menú, 1 = hijo de un grupo.</summary>
+    public int IndentLevel { get; set; }
+
+    /// <summary>Sangría visual según <see cref="IndentLevel"/>.</summary>
+    public Thickness MenuPadding => new(20 + (IndentLevel * 22), 13);
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

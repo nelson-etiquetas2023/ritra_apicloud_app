@@ -53,13 +53,33 @@
                         SelectionChanged="OnMenuItemSelected">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:FlyoutMenuItem">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14" Padding="20,13">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="14"
+                          Padding="{Binding MenuPadding}">
                         <Image Source="{Binding Icon}" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                Text="{Binding Title}"
                                TextColor="#1D3557"
                                FontSize="15"
-                               VerticalOptions="Center" />
+                               VerticalOptions="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding HasChildren}" Value="True">
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <Image Grid.Column="2"
+                               Source="chevron_right_50px.png"
+                               WidthRequest="18"
+                               HeightRequest="18"
+                               IsVisible="{Binding HasChildren}"
+                               VerticalOptions="Center">
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image" Binding="{Binding IsExpanded}" Value="True">
+                                    <Setter Property="Rotation" Value="90" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                        </Image>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

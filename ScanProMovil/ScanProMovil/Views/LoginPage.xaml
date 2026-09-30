@@ -24,11 +24,11 @@
                    FontSize="14"
                    TextColor="Gray"
                    HorizontalOptions="Center" />
-            <Entry x:Name="EntryEmail"
-                   Placeholder="Correo electrónico"
-                   Keyboard="Email"
+            <Entry x:Name="EntryIdentifier"
+                   Placeholder="Correo o nickname"
+                   Keyboard="Text"
                    ReturnType="Next"
-                   Completed="OnEmailCompleted"
+                   Completed="OnIdentifierCompleted"
                    BackgroundColor="White"
                    TextColor="Black" />
             <Grid>
