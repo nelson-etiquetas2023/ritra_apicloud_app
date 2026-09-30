@@ -25,7 +25,6 @@ public partial class CreateStockInitPage : ContentPage
         {
             Numero = numero,
             Fecha = DateTime.Today,
-            Document_Teorico = "DT-000",
             Description = string.Empty,
             Status = "Iniciado",
             Items = new System.Collections.Generic.List<ScanProMovil.Entities.StockItem>()
@@ -33,7 +32,6 @@ public partial class CreateStockInitPage : ContentPage
 
         NumeroLabel.Text = numero;
         FechaPicker.Date = DateTime.Today;
-        TeoricoEntry.Text = _doc.Document_Teorico;
     }
 
     private async void OnSaveClicked(object? sender, EventArgs e)
@@ -41,7 +39,6 @@ public partial class CreateStockInitPage : ContentPage
         if (_doc is null) return;
 
         _doc.Fecha = FechaPicker.Date ?? DateTime.Today;
-        _doc.Document_Teorico = string.IsNullOrWhiteSpace(TeoricoEntry.Text) ? "DT-000" : TeoricoEntry.Text.Trim();
         _doc.Description = DescriptionEditor.Text?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(_doc.Description))

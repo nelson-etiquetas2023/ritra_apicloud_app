@@ -136,7 +136,7 @@
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
-                                <Label Text="{Binding Cantidad, StringFormat='{0:N0} und'}"
+                                <Label Text="{Binding Cantidad, StringFormat='{0:N2} und'}"
                                        TextColor="#0D6EFD"
                                        FontSize="14"
                                        FontAttributes="Bold"

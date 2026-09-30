@@ -11,7 +11,6 @@ namespace ScanProMovil.Services.StockInicial
         Task<bool> UpdateAsync(StockInit doc);
         Task<bool> DeleteAsync(string numero);
         Task<string> GetNextNumberAsync();
-        Task<bool> SeedDummyDataAsync();
         Task<SincroStockInitResult> SincronizarAsync(string numero);
     }
 

@@ -14,6 +14,7 @@ namespace ScanProMovil.Data
         public DbSet<ProductImagen> ProductImages => Set<ProductImagen>();
         public DbSet<User> Users => Set<User>();
         public DbSet<ConsecutivoCompra> Consecutivos => Set<ConsecutivoCompra>();
+        public DbSet<ConsecutivoStockInit> ConsecutivosStockInit => Set<ConsecutivoStockInit>();
         public DbSet<StockInit> StockInits => Set<StockInit>();
         public DbSet<StockItem> StockItems => Set<StockItem>();
 
@@ -26,7 +27,7 @@ namespace ScanProMovil.Data
                 e.ToTable("Products");
                 e.HasKey(p => p.Product_Id);
                 e.HasIndex(p => p.product_code).IsUnique();
-                e.HasIndex(p => p.CodeBar);
+                e.HasIndex(p => p.CodeBar).IsUnique().HasFilter("CodeBar IS NOT NULL AND CodeBar <> ''");
                 e.Property(p => p.Price).HasConversion<double>();
                 e.HasMany(p => p.Images)
                     .WithOne()
@@ -83,6 +84,12 @@ namespace ScanProMovil.Data
             modelBuilder.Entity<ConsecutivoCompra>(e =>
             {
                 e.ToTable("ConsecutivosCompra");
+                e.HasKey(c => c.Tipo_Documento);
+            });
+
+            modelBuilder.Entity<ConsecutivoStockInit>(e =>
+            {
+                e.ToTable("ConsecutivosStockInit");
                 e.HasKey(c => c.Tipo_Documento);
             });
 

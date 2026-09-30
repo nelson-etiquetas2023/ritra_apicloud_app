@@ -42,7 +42,7 @@ public partial class StockInitDetailPage : ContentPage
         if (doc is null) return;
 
         _doc = doc;
-        NumeroLabel.Text = doc.Numero;
+        NumeroLabel.Text = doc.NumeroVisible;
         RefreshItems();
     }
 
@@ -165,7 +165,7 @@ public partial class StockInitDetailPage : ContentPage
         var filteredUnits = filtered.Sum(i => i.Cantidad);
         var totalUnits = _allItems.Sum(i => i.Cantidad);
         ItemsCountLabel.Text =
-            $"{filtered.Count} de {_allItems.Count} ítems · {filteredUnits:N0} de {totalUnits:N0} und";
+            $"{filtered.Count} de {_allItems.Count} ítems · {filteredUnits:N2} de {totalUnits:N2} und";
     }
 
     private async void OnScanTextChanged(object? sender, TextChangedEventArgs e)
@@ -297,6 +297,34 @@ public partial class StockInitDetailPage : ContentPage
 
         if (_productScan is null) return;
 
+        // Un producto contado en varias pasadas se acumula en una sola línea:
+        // el servidor fusiona por código, así que dos líneas locales
+        // dejarían fuera todas menos la última.
+        var existente = _doc.Items.FirstOrDefault(i =>
+            string.Equals(i.Product_Code?.Trim(), _productScan.product_code?.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+        if (existente is not null)
+        {
+            existente.Cantidad = Math.Round(existente.Cantidad + cantidad, 3);
+            existente.TotalCosto = Math.Round(existente.Cantidad * existente.Costo, 2);
+            existente.Enviado = false;
+            _doc.Status = "Actualizado";
+
+            if (await _service.UpdateAsync(_doc))
+            {
+                RefreshItems();
+                ResetScan();
+                ShowSaveButton();
+            }
+            else
+            {
+                await DisplayAlertAsync("Error", "No se pudo actualizar el producto.", "OK");
+            }
+
+            return;
+        }
+
         var item = new StockItemEntity
         {
             Numero = _doc.Numero,
@@ -335,6 +363,7 @@ public partial class StockInitDetailPage : ContentPage
         if (nota is null) return;
 
         item.Nota = nota.Trim();
+        item.Enviado = false;
 
         if (await _service.UpdateAsync(_doc))
         {

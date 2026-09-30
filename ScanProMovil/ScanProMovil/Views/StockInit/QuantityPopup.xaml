@@ -41,7 +41,7 @@
                        Text="1"
                        FontSize="32"
                        FontAttributes="Bold"
-                       Keyboard="Numeric"
+                       Keyboard="Decimal"
                        HorizontalTextAlignment="Center"
                        WidthRequest="100"
                        VerticalOptions="Center"

@@ -15,7 +15,7 @@ namespace ScanProMovil.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("ScanProMovil.Data.Entities.ConsecutivoCompra", b =>
                 {
@@ -28,6 +28,19 @@ namespace ScanProMovil.Migrations
                     b.HasKey("Tipo_Documento");
 
                     b.ToTable("ConsecutivosCompra", (string)null);
+                });
+
+            modelBuilder.Entity("ScanProMovil.Data.Entities.ConsecutivoStockInit", b =>
+                {
+                    b.Property<string>("Tipo_Documento")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UltimoNumero")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Tipo_Documento");
+
+                    b.ToTable("ConsecutivosStockInit", (string)null);
                 });
 
             modelBuilder.Entity("ScanProMovil.Data.Entities.DetalleCompra", b =>
@@ -270,7 +283,9 @@ namespace ScanProMovil.Migrations
 
                     b.HasKey("Product_Id");
 
-                    b.HasIndex("CodeBar");
+                    b.HasIndex("CodeBar")
+                        .IsUnique()
+                        .HasFilter("CodeBar IS NOT NULL AND CodeBar <> ''");
 
                     b.HasIndex("product_code")
                         .IsUnique();
@@ -337,11 +352,10 @@ namespace ScanProMovil.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Document_Teorico")
-                        .IsRequired()
+                    b.Property<DateTime>("Fecha")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("Fecha")
+                    b.Property<string>("NumeroServidor")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")

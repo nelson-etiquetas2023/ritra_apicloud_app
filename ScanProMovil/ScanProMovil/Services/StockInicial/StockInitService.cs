@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ScanProMovil.Data;
+using ScanProMovil.Data.Entities;
 using ScanProMovil.Entities;
 using System.Diagnostics;
 using System.Net.Http.Json;
@@ -86,7 +87,6 @@ namespace ScanProMovil.Services.StockInicial
                 if (existente is null) return false;
 
                 existente.Fecha = doc.Fecha;
-                existente.Document_Teorico = doc.Document_Teorico;
                 existente.Description = doc.Description;
                 existente.Status = doc.Status;
 
@@ -135,120 +135,43 @@ namespace ScanProMovil.Services.StockInicial
 
         public async Task<string> GetNextNumberAsync()
         {
-            const string prefix = "DIF-";
-            var numeros = await _context.StockInits
-                .AsNoTracking()
-                .Select(d => d.Numero)
-                .ToListAsync();
+            // Identidad local del conteo. No es el correlativo oficial: el
+            // servidor asigna el FIS-#### al crear el documento y se guarda en
+            // NumeroServidor. Asi dos dispositivos pueden contar sin conexión
+            // sin colisionar en el índice único del servidor.
+            const string tipo = "TMP";
 
-            var max = 0;
-            foreach (var numero in numeros)
+            using var tx = await _context.Database.BeginTransactionAsync();
+
+            var consecutivo = await _context.ConsecutivosStockInit
+                .FirstOrDefaultAsync(c => c.Tipo_Documento == tipo);
+
+            if (consecutivo is null)
             {
-                if (numero.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-                    int.TryParse(numero.AsSpan(prefix.Length), out var value))
+                // Primera vez: se toma como base el mayor correlativo ya existente
+                // para no repetir un número que ya se usó en este dispositivo.
+                var max = await _context.StockInits
+                    .AsNoTracking()
+                    .Where(d => d.Numero.StartsWith(tipo + "-"))
+                    .Select(d => d.Numero)
+                    .ToListAsync();
+
+                var ultimo = 0;
+                foreach (var numero in max)
                 {
-                    max = Math.Max(max, value);
+                    if (int.TryParse(numero.AsSpan(tipo.Length + 1), out var value))
+                        ultimo = Math.Max(ultimo, value);
                 }
+
+                consecutivo = new ConsecutivoStockInit { Tipo_Documento = tipo, UltimoNumero = ultimo };
+                _context.ConsecutivosStockInit.Add(consecutivo);
             }
 
-            return $"{prefix}{max + 1:D4}";
-        }
+            consecutivo.UltimoNumero += 1;
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
 
-        public async Task<bool> SeedDummyDataAsync()
-        {
-            var productos = new (string Code, string Name, double Costo, string Ubicacion)[]
-            {
-                ("P001", "Vive100 Original 850ml", 12.5, "A-01"),
-                ("P002", "Vive100 Manzana 850ml", 12.5, "A-02"),
-                ("P003", "Vive100 Cherry 850ml", 13.0, "B-01"),
-                ("P004", "Gatorade Lima 1L", 18.0, "B-02"),
-                ("P005", "Gatorade Naranja 1L", 18.0, "C-01"),
-                ("P006", "Coca Cola 2L", 25.0, "C-02"),
-                ("P007", "Pepsi 2L", 23.0, "D-01"),
-                ("P008", "Agua Cielo 1L", 8.0, "D-02"),
-            };
-
-            var estados = new[] { "Iniciado", "Actualizado", "Sincronizado", "Cerrado" };
-            var descripciones = new[]
-            {
-                "inventario de productos electrónicos bodega 1",
-                "inventario de bebidas y alimentos bodega 1",
-                "inventario de bebidas y alimentos bodega 2",
-                "inventario de gaseosas y agua bodega 1",
-                "inventario de energizantes y deportivas bodega 3",
-                "inventario de licores y vinos bodega 2",
-                "inventario de snacks y abarrotes bodega 1",
-                "inventario de lácteos y refrigerados bodega 2",
-                "inventario de productos de limpieza bodega 3",
-                "inventario de panadería y repostería bodega 1",
-            };
-
-            if (!await _context.StockInits.AnyAsync())
-            {
-                for (var i = 1; i <= 10; i++)
-                {
-                    var numero = $"DIF-{i:D4}";
-                    var rng = new Random(i * 7 + 3);
-                    var itemCount = 2 + i % 4;
-
-                    var doc = new StockInit
-                    {
-                        Numero = numero,
-                        Fecha = DateTime.Today.AddDays(-(11 - i)),
-                        Document_Teorico = $"DT-{i:D3}",
-                        Description = descripciones[(i - 1) % descripciones.Length],
-                        Status = estados[i % estados.Length],
-                        Items = new List<StockItem>()
-                    };
-
-                    for (var j = 0; j < itemCount; j++)
-                    {
-                        var p = productos[rng.Next(productos.Length)];
-                        var cantidad = rng.Next(5, 51);
-
-                        doc.Items.Add(new StockItem
-                        {
-                            Numero = numero,
-                            Product_Code = p.Code,
-                            Product_Name = p.Name,
-                            Cantidad = cantidad,
-                            Costo = p.Costo,
-                            TotalCosto = Math.Round(cantidad * p.Costo, 2),
-                            Ubicacion = p.Ubicacion
-                        });
-                    }
-
-                    _context.StockInits.Add(doc);
-                }
-
-                await _context.SaveChangesAsync();
-                return true;
-            }
-
-            // Backfill: los documentos viejos (descripcion numerica o vacia) reciben un texto real
-            // y el estado "Contado" se reemplaza por un estado valido.
-            var docs = await _context.StockInits.OrderBy(d => d.Numero).ToListAsync();
-            var changed = false;
-            for (var i = 0; i < docs.Count; i++)
-            {
-                if (string.IsNullOrWhiteSpace(docs[i].Description) ||
-                    double.TryParse(docs[i].Description, out _))
-                {
-                    docs[i].Description = descripciones[i % descripciones.Length];
-                    changed = true;
-                }
-
-                if (string.Equals(docs[i].Status, "Contado", StringComparison.OrdinalIgnoreCase))
-                {
-                    docs[i].Status = "Actualizado";
-                    changed = true;
-                }
-            }
-
-            if (changed)
-                await _context.SaveChangesAsync();
-
-            return false;
+            return $"{tipo}-{consecutivo.UltimoNumero:D4}";
         }
 
         public async Task<SincroStockInitResult> SincronizarAsync(string numero)
@@ -280,18 +203,19 @@ namespace ScanProMovil.Services.StockInicial
                     return result;
                 }
 
-                var payload = new InicialDto
+                var payload = new InventarioFisicoDto
                 {
-                    Numero = doc.Numero,
+                    // En la creación el servidor asigna el correlativo e ignora
+                    // este valor; en la actualización ya es el FIS-#### oficial.
+                    Numero = doc.NumeroServidor ?? doc.Numero,
                     FechaCreacion = doc.Fecha,
                     Comentario = doc.Description,
                     Status = 1,
-                    Detalles = pendientes.Select(i => new DetalleInicialDto
+                    Detalles = pendientes.Select(i => new InventarioFisicoDetalleDto
                     {
                         ProductCode = i.Product_Code,
                         ProductName = i.Product_Name,
-                        Cantidad = (int)Math.Round(i.Cantidad),
-                        CantidadFisica = (int)Math.Round(i.Cantidad),
+                        CantidadFisica = i.Cantidad,
                         Ubicacion = i.Ubicacion ?? "",
                         Costo = (decimal)i.Costo,
                         Nota = i.Nota ?? "",
@@ -301,14 +225,28 @@ namespace ScanProMovil.Services.StockInicial
 
                 var client = _httpFactory.CreateClient("scanpro");
 
-                var existentes = await client.GetFromJsonAsync<List<InicialDto>>("api/cargasIniciales/get", jsonOptions);
-                var existente = existentes?.FirstOrDefault(x => x.Numero == numero);
+                // Un conteo ya sincronizado se actualiza por su correlativo oficial.
+                // Uno que nunca se subio se crea: el servidor asigna el FIS-####.
+                InventarioFisicoDto? existente = null;
+                if (!string.IsNullOrWhiteSpace(doc.NumeroServidor))
+                {
+                    var existentes = await client.GetFromJsonAsync<List<InventarioFisicoDto>>("api/InventarioFisico/get", jsonOptions);
+                    existente = existentes?.FirstOrDefault(x =>
+                        string.Equals(x.Numero, doc.NumeroServidor, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (existente is not null && existente.Status == 4)
+                {
+                    result.Message = $"El conteo {doc.NumeroServidor} ya fue aplicado al inventario desde la web. " +
+                                     "Cree un nuevo conteo si necesita registrar cambios.";
+                    return result;
+                }
 
                 HttpResponseMessage response;
                 if (existente is not null)
-                    response = await client.PutAsJsonAsync($"api/cargasIniciales/update/{existente.Id}", payload, jsonOptions);
+                    response = await client.PutAsJsonAsync($"api/InventarioFisico/update/{existente.Id}", payload, jsonOptions);
                 else
-                    response = await client.PostAsJsonAsync("api/cargasIniciales/create", payload, jsonOptions);
+                    response = await client.PostAsJsonAsync("api/InventarioFisico/create", payload, jsonOptions);
 
                 var body = await response.Content.ReadAsStringAsync();
                 if (!response.IsSuccessStatusCode)
@@ -317,12 +255,17 @@ namespace ScanProMovil.Services.StockInicial
                     return result;
                 }
 
-                var serverResult = JsonSerializer.Deserialize<CargaInicialSaveResultDto>(body, jsonOptions);
+                var serverResult = JsonSerializer.Deserialize<FiscalSaveResultDto>(body, jsonOptions);
                 if (serverResult is null || !serverResult.Success)
                 {
                     result.Message = serverResult?.Message ?? "El servidor no confirmó la sincronización.";
                     return result;
                 }
+
+                // El servidor ignora el número local y asigna el correlativo oficial.
+                var numeroAsignado = serverResult.Data?.Numero;
+                if (existente is null && !string.IsNullOrWhiteSpace(numeroAsignado))
+                    doc.NumeroServidor = numeroAsignado;
 
                 foreach (var item in pendientes)
                 {
@@ -335,7 +278,7 @@ namespace ScanProMovil.Services.StockInicial
                 var restantes = doc.Items.Count(i => !i.Enviado);
                 result.Success = true;
                 result.Message = restantes == 0
-                    ? $"El documento {numero} fue sincronizado correctamente ({pendientes.Count} ítems)."
+                    ? $"El documento {doc.NumeroVisible} fue sincronizado correctamente ({pendientes.Count} ítems)."
                     : $"Se sincronizaron {pendientes.Count} ítems. Quedan {restantes} pendientes.";
                 return result;
             }
@@ -348,22 +291,22 @@ namespace ScanProMovil.Services.StockInicial
         }
     }
 
-    public class InicialDto
+    public class InventarioFisicoDto
     {
         public int Id { get; set; }
         public string Numero { get; set; } = "";
         public DateTime FechaCreacion { get; set; }
+        public string DocumentoTeorico { get; set; } = "";
         public string Comentario { get; set; } = "";
         public int Status { get; set; }
-        public ICollection<DetalleInicialDto> Detalles { get; set; } = new List<DetalleInicialDto>();
+        public ICollection<InventarioFisicoDetalleDto> Detalles { get; set; } = new List<InventarioFisicoDetalleDto>();
     }
 
-    public class DetalleInicialDto
+    public class InventarioFisicoDetalleDto
     {
         public string ProductCode { get; set; } = "";
         public string ProductName { get; set; } = "";
-        public int Cantidad { get; set; }
-        public int CantidadFisica { get; set; }
+        public double CantidadFisica { get; set; }
         public string Ubicacion { get; set; } = "";
         public decimal Costo { get; set; }
         public string Categoria { get; set; } = "";
@@ -372,9 +315,10 @@ namespace ScanProMovil.Services.StockInicial
         public bool Procesado { get; set; }
     }
 
-    public class CargaInicialSaveResultDto
+    public class FiscalSaveResultDto
     {
         public bool Success { get; set; }
         public string Message { get; set; } = "";
+        public InventarioFisicoDto? Data { get; set; }
     }
 }
