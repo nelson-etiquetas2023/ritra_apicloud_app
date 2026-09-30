@@ -52,8 +52,10 @@
                     <Grid 
                         Margin="0,1,0,2" 
                         BackgroundColor="LightGray" 
-                        ColumnSpacing="3" 
-                        >
+                        ColumnSpacing="3">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnProductTapped" CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width=".2*"/>
                             <ColumnDefinition Width=".8*"/>
@@ -72,9 +74,10 @@
                             <Label Text="{Binding CodeBar, StringFormat='Codigo de Barra: {0}'}" FontSize="10" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="2" VerticalOptions="Center">
-                            <Image Source="gear_24px.png" 
-                       WidthRequest="50" 
-                       HeightRequest="50" />
+                            <Image Source="chevron_right_50px.png" 
+                       WidthRequest="30" 
+                       HeightRequest="30"
+                       HorizontalOptions="Center" />
                         </VerticalStackLayout>
       
                     </Grid>

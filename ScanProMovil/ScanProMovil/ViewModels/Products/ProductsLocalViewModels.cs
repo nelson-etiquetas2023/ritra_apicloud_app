@@ -89,5 +89,20 @@ namespace ScanProMovil.ViewModels.Products
                 IsBusy = false;
             }
         }
+
+        // Búsqueda directa para scanner Zebra con * — sin IsBusy/delay, Enter automático
+        public async Task SearchProductsDirectAsync(string term)
+        {
+            try
+            {
+                IsBusy = true;
+                var filtered = await service.SearchProductsLocal(term);
+                Productos.Clear();
+                foreach (var it in filtered) Productos.Add(it);
+                TotalProducts = Productos.Count;
+                SearchText = term;
+            }
+            finally { IsBusy = false; }
+        }
     }
 }
