@@ -23,6 +23,7 @@ public partial class SettingPage : ContentPage
 		_session.InitializeDevice();
 		EntryDeviceName.Text = _session.DeviceName;
 		EntryWarehouseName.Text = _session.WarehouseName;
+		EntryApiUrl.Text = Preferences.Get("ApiBaseUrl", "http://192.168.10.10:8080");
 		LabelDeviceCode.Text = $" ({_session.DeviceCode})";
 		LabelDeviceCode.IsVisible = !string.IsNullOrWhiteSpace(_session.DeviceCode);
 		LabelMsg.IsVisible = false;
@@ -32,6 +33,7 @@ public partial class SettingPage : ContentPage
 	{
 		var deviceName = EntryDeviceName.Text?.Trim() ?? string.Empty;
 		var warehouseName = EntryWarehouseName.Text?.Trim() ?? string.Empty;
+		var apiUrl = EntryApiUrl.Text?.Trim().TrimEnd('/') ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(warehouseName))
 		{
@@ -41,10 +43,20 @@ public partial class SettingPage : ContentPage
 			return;
 		}
 
+		if (!Uri.TryCreate(apiUrl, UriKind.Absolute, out var uri)
+			|| (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+		{
+			LabelMsg.Text = "La URL del servidor API no es válida (debe iniciar con http:// o https://).";
+			LabelMsg.TextColor = Colors.Red;
+			LabelMsg.IsVisible = true;
+			return;
+		}
+
 		_session.DeviceName = deviceName;
 		_session.WarehouseName = warehouseName;
+		Preferences.Set("ApiBaseUrl", apiUrl);
 
-		LabelMsg.Text = "Configuración guardada correctamente.";
+		LabelMsg.Text = "Configuración guardada correctamente. Reinicia la aplicación para usar la nueva URL del API.";
 		LabelMsg.TextColor = Colors.Green;
 		LabelMsg.IsVisible = true;
 	}

@@ -31,8 +31,16 @@ namespace ScanProMovil
         public static MauiApp CreateMauiApp()
         {
 
-            var deployLocalApi = "http://192.168.10.10:8080";
-            Preferences.Set("ApiBaseUrl", deployLocalApi);
+            // URL de la API configurable: se lee de Preferences; solo se siembra el
+            // valor por defecto si nunca se ha guardado (no se sobreescribe en cada arranque).
+            const string defaultApiUrl = "http://192.168.10.10:8080";
+            const string apiBaseUrlKey = "ApiBaseUrl";
+            if (!Preferences.ContainsKey(apiBaseUrlKey) ||
+                string.IsNullOrWhiteSpace(Preferences.Get(apiBaseUrlKey, string.Empty)))
+            {
+                Preferences.Set(apiBaseUrlKey, defaultApiUrl);
+            }
+            var deployLocalApi = Preferences.Get(apiBaseUrlKey, defaultApiUrl).TrimEnd('/');
             var builder = MauiApp.CreateBuilder();
 
 

@@ -27,29 +27,60 @@ namespace ScanProMovil
             {
                 db = MauiProgram.Services!.GetService<AppDbContext>();
                 if (db is not null)
+                {
+                    // Respaldo previo a la migración: si algo falla, nunca se pierde la base.
+                    await BackupDatabaseAsync(db);
                     await db.Database.MigrateAsync();
+                }
             }
             catch (Exception ex)
             {
+                // NUNCA borrar la base automáticamente (EnsureDeleted) -> pérdida de datos
+                // en campo (conteos StockInit / OCs sin sincronizar). Solo se avisa.
                 System.Diagnostics.Debug.WriteLine($"Error aplicando migraciones EF: {ex.Message}");
-
-                if (db is not null && db.Database.IsSqlite())
+                await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    try
+                    var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+                    if (page is not null)
                     {
-                        await db.Database.EnsureDeletedAsync();
-                        await db.Database.MigrateAsync();
-                        System.Diagnostics.Debug.WriteLine("Base de datos recreada con el esquema actual.");
+                        await page.DisplayAlertAsync(
+                            "Error de base de datos",
+                            "No se pudieron aplicar las actualizaciones de la base de datos local. " +
+                            "Los datos capturados se conservan; reintenta o contacta soporte.\n\nDetalle: " + ex.Message,
+                            "OK");
                     }
-                    catch (Exception exRec)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error reconstruyendo la base: {exRec.Message}");
-                    }
-                }
+                });
             }
 
             if (db is not null)
                 await BackfillTotalesAsync(db);
+        }
+
+        /// <summary>
+        /// Respalda scanpro.db a scanpro.db.bak antes de migrar. Solo se crea una copia
+        /// si aún no existe (así siempre queda la última base "sana" conocida).
+        /// </summary>
+        private static async Task BackupDatabaseAsync(AppDbContext db)
+        {
+            try
+            {
+                var conn = db.Database.GetDbConnection() as Microsoft.Data.Sqlite.SqliteConnection;
+                var dbPath = conn?.DataSource;
+                if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath))
+                    return;
+
+                var bakPath = dbPath + ".bak";
+                if (File.Exists(bakPath))
+                    return;
+
+                await Task.Run(() => File.Copy(dbPath, bakPath, overwrite: false));
+                System.Diagnostics.Debug.WriteLine($"Respaldo de base creado: {bakPath}");
+            }
+            catch (Exception ex)
+            {
+                // Un fallo de respaldo no debe bloquear el arranque.
+                System.Diagnostics.Debug.WriteLine($"No se pudo crear respaldo de la base: {ex.Message}");
+            }
         }
 
         private static async Task BackfillTotalesAsync(AppDbContext db)
