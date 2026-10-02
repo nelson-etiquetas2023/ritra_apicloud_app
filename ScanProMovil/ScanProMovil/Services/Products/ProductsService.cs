@@ -11,7 +11,8 @@ namespace ScanProMovil.Services.Products
 {
     public class ProductsService : IProductsService
     {
-        private readonly AppDbContext _context;
+        // Factory: cada operación crea su propio DbContext (EF Core no es thread-safe).
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
         private readonly IHttpClientFactory httpClient;
 
         private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
@@ -20,10 +21,10 @@ namespace ScanProMovil.Services.Products
             WriteIndented = true
         };
 
-        public ProductsService(IHttpClientFactory httpClient, AppDbContext context)
+        public ProductsService(IHttpClientFactory httpClient, IDbContextFactory<AppDbContext> contextFactory)
         {
             this.httpClient = httpClient;
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<Product?> GetProductLocalById(string codebar)
@@ -31,6 +32,7 @@ namespace ScanProMovil.Services.Products
             //esta busqueda es por codigo de barra.
             if (string.IsNullOrEmpty(codebar)) return null;
 
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Products.AsNoTracking()
                 .FirstOrDefaultAsync(p => p.CodeBar == codebar);
         }
@@ -41,6 +43,7 @@ namespace ScanProMovil.Services.Products
             if (string.IsNullOrWhiteSpace(code)) return null;
 
             var term = code.Trim();
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Products.AsNoTracking()
                 .FirstOrDefaultAsync(p => p.CodeBar == term || p.product_code == term);
         }
@@ -51,6 +54,7 @@ namespace ScanProMovil.Services.Products
 
             var term = searchText.Trim();
             var termLower = term.ToLower();
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Products.AsNoTracking()
                 .Where(p => p.Product_Name.ToLower().Contains(termLower)
                     || p.product_code.ToLower().Contains(termLower)
@@ -60,6 +64,7 @@ namespace ScanProMovil.Services.Products
 
         public async Task<List<Product>> GetProductsLocal()
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Products.AsNoTracking().ToListAsync();
         }
 
@@ -70,6 +75,7 @@ namespace ScanProMovil.Services.Products
             await _syncLock.WaitAsync();
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 // Normaliza y deduplica CodeBar para no violar índice único filtrado
                 var seenCodeBar = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var seenCode = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -218,6 +224,7 @@ namespace ScanProMovil.Services.Products
 
         public Product AddProducts(Product producto)
         {
+            using var _context = _contextFactory.CreateDbContext();
             _context.Products.Add(producto);
             _context.SaveChanges();
             return producto;
@@ -225,6 +232,7 @@ namespace ScanProMovil.Services.Products
 
         public bool DeleteProducts(string productid)
         {
+            using var _context = _contextFactory.CreateDbContext();
             var producto = _context.Products.FirstOrDefault(p => p.product_code == productid);
             if (producto is null) return false;
             _context.Products.Remove(producto);
@@ -233,6 +241,7 @@ namespace ScanProMovil.Services.Products
 
         public Product GetPorductById(string productid)
         {
+            using var _context = _contextFactory.CreateDbContext();
             return _context.Products.AsNoTracking()
                 .FirstOrDefault(p => p.product_code == productid) ?? new Product();
         }
@@ -241,6 +250,7 @@ namespace ScanProMovil.Services.Products
         {
             if (producto is null) return false;
 
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             var local = await _context.Products.FirstOrDefaultAsync(p => p.Product_Id == producto.Product_Id);
             if (local is null) return false;
 

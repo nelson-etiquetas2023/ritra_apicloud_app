@@ -9,7 +9,8 @@ namespace ScanProMovil.Services.Compras
 {
     public class ComprasService : IComprasService
     {
-        private readonly AppDbContext _context;
+        // Factory: cada operación crea su propio DbContext (EF Core no es thread-safe).
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
         public IHttpClientFactory httpFactory { get; set; }
         private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
@@ -17,16 +18,17 @@ namespace ScanProMovil.Services.Compras
             WriteIndented = true
         };
 
-        public ComprasService(IHttpClientFactory HttpFactory, AppDbContext context)
+        public ComprasService(IHttpClientFactory HttpFactory, IDbContextFactory<AppDbContext> contextFactory)
         {
             this.httpFactory = HttpFactory;
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<bool> SaveOrdersLocalSqliteAsync(OrdenCompra order)
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 _context.PurchaseOrders.Add(order);
                 await _context.SaveChangesAsync();
                 _context.Entry(order).State = EntityState.Detached;
@@ -48,6 +50,7 @@ namespace ScanProMovil.Services.Compras
             var tipo = string.IsNullOrWhiteSpace(order.Tipo_Documento) ? "OC" : order.Tipo_Documento;
             var numeroUsado = int.TryParse(order.Numero, out var value) ? value : 0;
 
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
                 .FirstOrDefaultAsync(c => c.Tipo_Documento == tipo);
 
@@ -70,6 +73,7 @@ namespace ScanProMovil.Services.Compras
 
         public async Task<List<OrdenCompra>> GetOrdersLocalSqliteAsync()
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.PurchaseOrders
                 .AsNoTracking()
                 .Include(o => o.Items)
@@ -81,6 +85,7 @@ namespace ScanProMovil.Services.Compras
         public async Task<string> GetNextOrderNumberAsync()
         {
             const string tipo = "OC";
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Tipo_Documento == tipo);
@@ -92,6 +97,7 @@ namespace ScanProMovil.Services.Compras
 
         public async Task<OrdenCompra> getOrderById(string OrderId)
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.PurchaseOrders.AsNoTracking()
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.Numero == OrderId) ?? new OrdenCompra();
@@ -99,6 +105,7 @@ namespace ScanProMovil.Services.Compras
 
         public async Task<OrdenCompra> UpdateOrder(OrdenCompra order)
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             _context.PurchaseOrders.Update(order);
             await _context.SaveChangesAsync();
             return order;
@@ -108,6 +115,7 @@ namespace ScanProMovil.Services.Compras
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var order = await _context.PurchaseOrders
                     .FirstOrDefaultAsync(o => o.Numero == OrderId);
                 if (order is null) return false;
@@ -127,6 +135,7 @@ namespace ScanProMovil.Services.Compras
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var order = await _context.PurchaseOrders
                     .FirstOrDefaultAsync(o => o.Numero == numero);
                 if (order is null) return false;
@@ -148,6 +157,7 @@ namespace ScanProMovil.Services.Compras
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var order = await _context.PurchaseOrders
                     .FirstOrDefaultAsync(o => o.Numero == Orderid);
                 if (order is null) return false;

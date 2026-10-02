@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ScanProMovil.Data;
+using ScanProMovil.Services.Logging;
 using ScanProMovil.Services.Session;
 using ScanProMovil.Views;
 using ScanProMovil.Views.Compras;
@@ -18,42 +19,45 @@ namespace ScanProMovil
             _session = MauiProgram.Services!.GetRequiredService<AppSession>();
         }
 
-        protected override async void OnAppearing()
+        protected override void OnAppearing()
         {
             base.OnAppearing();
-            LoadSessionHeader();
-            AppDbContext? db = null;
-            try
+            UiGuard.Run(this, async () =>
             {
-                db = MauiProgram.Services!.GetService<AppDbContext>();
-                if (db is not null)
+                LoadSessionHeader();
+                AppDbContext? db = null;
+                try
                 {
-                    // Respaldo previo a la migración: si algo falla, nunca se pierde la base.
-                    await BackupDatabaseAsync(db);
-                    await db.Database.MigrateAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                // NUNCA borrar la base automáticamente (EnsureDeleted) -> pérdida de datos
-                // en campo (conteos StockInit / OCs sin sincronizar). Solo se avisa.
-                System.Diagnostics.Debug.WriteLine($"Error aplicando migraciones EF: {ex.Message}");
-                await MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    var page = Application.Current?.Windows.FirstOrDefault()?.Page;
-                    if (page is not null)
+                    db = MauiProgram.Services!.GetService<AppDbContext>();
+                    if (db is not null)
                     {
-                        await page.DisplayAlertAsync(
-                            "Error de base de datos",
-                            "No se pudieron aplicar las actualizaciones de la base de datos local. " +
-                            "Los datos capturados se conservan; reintenta o contacta soporte.\n\nDetalle: " + ex.Message,
-                            "OK");
+                        // Respaldo previo a la migración: si algo falla, nunca se pierde la base.
+                        await BackupDatabaseAsync(db);
+                        await db.Database.MigrateAsync();
                     }
-                });
-            }
+                }
+                catch (Exception ex)
+                {
+                    // NUNCA borrar la base automáticamente (EnsureDeleted) -> pérdida de datos
+                    // en campo (conteos StockInit / OCs sin sincronizar). Solo se avisa.
+                    AppLog.Error("MainPage.Migrate", ex);
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+                        if (page is not null)
+                        {
+                            await page.DisplayAlertAsync(
+                                "Error de base de datos",
+                                "No se pudieron aplicar las actualizaciones de la base de datos local. " +
+                                "Los datos capturados se conservan; reintenta o contacta soporte.\n\nDetalle: " + ex.Message,
+                                "OK");
+                        }
+                    });
+                }
 
-            if (db is not null)
-                await BackfillTotalesAsync(db);
+                if (db is not null)
+                    await BackfillTotalesAsync(db);
+            });
         }
 
         /// <summary>
@@ -112,7 +116,7 @@ namespace ScanProMovil
             }
         }
 
-        public async void OnTapProducts(object? sender, TappedEventArgs e)
+        public void OnTapProducts(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -120,9 +124,9 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new ProductsPage());
-        }
+        });
 
-        private async void OnTapSetting(object? sender, TappedEventArgs e)
+        private void OnTapSetting(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -130,9 +134,9 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new SettingPage());
-        }
+        });
 
-        private async void OnTapOrdersModule(object? sender, TappedEventArgs? e)
+        private void OnTapOrdersModule(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -140,11 +144,16 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
 
-            var  page = MauiProgram.Services!.GetService<OrdersPage>();
-            await Navigation.PushAsync(page!);
-        }
+            var page = MauiProgram.Services!.GetService<OrdersPage>();
+            if (page is null)
+            {
+                await DisplayAlertAsync("Error", "No se pudo abrir Órdenes.", "OK");
+                return;
+            }
+            await Navigation.PushAsync(page);
+        });
 
-        private async  void OnTapApiModule(object? sender, TappedEventArgs? e)
+        private void OnTapApiModule(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -152,8 +161,9 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new ApiPage());
-        }
-        private async void SqliteModule(object? sender, TappedEventArgs? e)
+        });
+
+        private void SqliteModule(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -162,9 +172,9 @@ namespace ScanProMovil
             }
 
             await Navigation.PushAsync(new SqliteCrudPage());
-        }
+        });
 
-        private async void OnTapScanQrCode(object? sender, TappedEventArgs? e)
+        private void OnTapScanQrCode(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -172,9 +182,9 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new CodeQrScan());
-        }
+        });
 
-        private async void OnTapSincroData(object? sender, TappedEventArgs? e)
+        private void OnTapSincroData(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -182,15 +192,12 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new SincroDocuments());
+        });
 
-        }
+        private void OnLoginUsers(object? sender, EventArgs? e)
+            => UiGuard.Run(this, () => DisplayAlertAsync("mensaje", "modulo de login...", "OK"));
 
-        private async void OnLoginUsers(object? sender, EventArgs? e)
-        {
-            await DisplayAlertAsync("mensaje", "modulo de login...", "OK");
-        }
-
-        private async void OnTapShopping(object? sender, TappedEventArgs? e)
+        private void OnTapShopping(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -199,11 +206,15 @@ namespace ScanProMovil
             }
 
             var page = MauiProgram.Services!.GetService<ShoppingPage>();
-            await Navigation.PushAsync(page!);
-            
-        }
+            if (page is null)
+            {
+                await DisplayAlertAsync("Error", "No se pudo abrir Shopping.", "OK");
+                return;
+            }
+            await Navigation.PushAsync(page);
+        });
 
-        private async void TapGestureRecognizer_Compras(object? sender, TappedEventArgs? e)
+        private void TapGestureRecognizer_Compras(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -212,8 +223,13 @@ namespace ScanProMovil
             }
 
             var page = MauiProgram.Services!.GetService<ComprasIndexPage>();
-            await Navigation.PushAsync(page!);
-        }
+            if (page is null)
+            {
+                await DisplayAlertAsync("Error", "No se pudo abrir Compras.", "OK");
+                return;
+            }
+            await Navigation.PushAsync(page);
+        });
 
         private void LoadSessionHeader()
         {
@@ -238,7 +254,7 @@ namespace ScanProMovil
                 flyoutPage.IsPresented = !flyoutPage.IsPresented;
         }
 
-        private async void OnTapStockInit(object? sender, TappedEventArgs? e)
+        private void OnTapStockInit(object? sender, TappedEventArgs? e) => UiGuard.Run(this, async () =>
         {
             if (sender is Image img)
             {
@@ -247,7 +263,11 @@ namespace ScanProMovil
             }
 
             var page = MauiProgram.Services!.GetService<MainStockInitPage>();
-            if (page is null) return;
+            if (page is null)
+            {
+                await DisplayAlertAsync("Error", "No se pudo abrir Stock Inicial.", "OK");
+                return;
+            }
 
             // El FlyoutPage debe ser raiz de la ventana para que el menú hamburguesa funcione.
             var window = Application.Current?.Windows.FirstOrDefault();
@@ -255,6 +275,6 @@ namespace ScanProMovil
                 window.Page = page;
             else
                 await Navigation.PushAsync(page);
-        }
+        });
     }
 }

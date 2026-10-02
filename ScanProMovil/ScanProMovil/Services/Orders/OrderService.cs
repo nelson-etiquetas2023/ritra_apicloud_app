@@ -8,7 +8,8 @@ namespace ScanProMovil.Services.Orders
 {
     public class OrderService : IOrderServices
     {
-        private readonly AppDbContext _context;
+        // Factory: cada operación crea su propio DbContext (EF Core no es thread-safe).
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
         public IHttpClientFactory httpFactory { get; set; }
         private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
         {
@@ -16,14 +17,15 @@ namespace ScanProMovil.Services.Orders
             WriteIndented = true
         };
 
-        public OrderService(IHttpClientFactory HttpFactory, AppDbContext context)
+        public OrderService(IHttpClientFactory HttpFactory, IDbContextFactory<AppDbContext> contextFactory)
         {
             this.httpFactory = HttpFactory;
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<List<Order>> GetOrdersLocalSqliteAsync()
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Orders
                 .AsNoTracking()
                 .Include(o => o.Items)
@@ -35,6 +37,7 @@ namespace ScanProMovil.Services.Orders
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
                 _context.Entry(order).State = EntityState.Detached;
@@ -52,6 +55,7 @@ namespace ScanProMovil.Services.Orders
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var order = await _context.Orders
                     .FirstOrDefaultAsync(o => o.OrderNumber == idorder);
                 if (order is null) return false;
@@ -69,6 +73,7 @@ namespace ScanProMovil.Services.Orders
 
         public async Task<Order> GetOrderById(string orderid)
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.Orders.AsNoTracking()
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.OrderNumber == orderid) ?? new Order();
@@ -78,6 +83,7 @@ namespace ScanProMovil.Services.Orders
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 _context.Orders.Update(order);
                 await _context.SaveChangesAsync();
                 return true;

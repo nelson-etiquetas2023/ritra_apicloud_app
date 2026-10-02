@@ -8,6 +8,7 @@ using ScanProMovil.Services.Auth;
 using ScanProMovil.Services.Compras;
 using ScanProMovil.Services.Orders;
 using ScanProMovil.Services.Products;
+using ScanProMovil.Services.Logging;
 using ScanProMovil.Services.Session;
 using ScanProMovil.Services.StockInicial;
 using ScanProMovil.ViewModels;
@@ -56,8 +57,16 @@ namespace ScanProMovil
             }).AddHttpMessageHandler<AuthHeaderHandler>();
 
             //Entity Framework Core - SQLite (CodeFirst + Migraciones).
+            // Se registra el factory para que cada operación cree su propio contexto:
+            // EF Core NO es thread-safe y el DbContext singleton compartido entre
+            // servicios/procesos paralelos podía lanzar "A second operation was started
+            // on this context instance...". AddDbContext se mantiene por compatibilidad
+            // con resoluciones puntuales (una sola instancia, no usar en servicios).
             var dbPath = Path.Combine(FileSystem.AppDataDirectory, "scanpro.db");
             builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True"),
+                ServiceLifetime.Singleton);
+            builder.Services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath};Foreign Keys=True"),
                 ServiceLifetime.Singleton);
 
@@ -127,6 +136,21 @@ namespace ScanProMovil
             var app = builder.Build();
             // Guardamos el ServiceProvider
             Services = app.Services;
+
+            // Red global de excepciones (según la wiki oficial de MAUI en Android todo
+            // escapa por AppDomain.UnhandledException). No evita el cierre de la app,
+            // pero deja el detalle en logs/app-YYYYMMDD.log para diagnóstico en campo.
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            {
+                var ex = args.ExceptionObject as Exception ?? new Exception(args.ExceptionObject?.ToString() ?? "Excepción desconocida");
+                AppLog.Error("AppDomain.UnhandledException", ex);
+            };
+            TaskScheduler.UnobservedTaskException += (_, args) =>
+            {
+                AppLog.Error("TaskScheduler.UnobservedTaskException",
+                    args.Exception ?? new Exception("Task faulted sin detalle"));
+                args.SetObserved(); // evita que termine el proceso por un Task olvidado
+            };
 
             return app;
 

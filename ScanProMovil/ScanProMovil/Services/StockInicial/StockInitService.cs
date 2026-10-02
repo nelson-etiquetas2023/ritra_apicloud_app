@@ -10,7 +10,8 @@ namespace ScanProMovil.Services.StockInicial
 {
     public class StockInitService : IStockInitService
     {
-        private readonly AppDbContext _context;
+        // Factory: cada operación crea su propio DbContext (EF Core no es thread-safe).
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
         private readonly IHttpClientFactory _httpFactory;
         private static readonly JsonSerializerOptions jsonOptions = new()
         {
@@ -18,14 +19,15 @@ namespace ScanProMovil.Services.StockInicial
             WriteIndented = true
         };
 
-        public StockInitService(AppDbContext context, IHttpClientFactory httpFactory)
+        public StockInitService(IDbContextFactory<AppDbContext> contextFactory, IHttpClientFactory httpFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             _httpFactory = httpFactory;
         }
 
         public async Task<List<StockInit>> GetAllAsync()
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.StockInits
                 .AsNoTracking()
                 .Include(d => d.Items)
@@ -36,6 +38,7 @@ namespace ScanProMovil.Services.StockInicial
 
         public async Task<StockInit?> GetByIdAsync(string numero)
         {
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.StockInits
                 .AsNoTracking()
                 .Include(d => d.Items)
@@ -48,6 +51,7 @@ namespace ScanProMovil.Services.StockInicial
                 return await GetAllAsync();
 
             var term = searchText.Trim().ToLower();
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             return await _context.StockInits
                 .AsNoTracking()
                 .Include(d => d.Items)
@@ -62,6 +66,7 @@ namespace ScanProMovil.Services.StockInicial
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 using var tx = await _context.Database.BeginTransactionAsync();
                 _context.StockInits.Add(doc);
                 await _context.SaveChangesAsync();
@@ -79,6 +84,7 @@ namespace ScanProMovil.Services.StockInicial
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 using var tx = await _context.Database.BeginTransactionAsync();
 
                 var existente = await _context.StockInits
@@ -118,6 +124,7 @@ namespace ScanProMovil.Services.StockInicial
         {
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var doc = await _context.StockInits
                     .FirstOrDefaultAsync(d => d.Numero == numero);
                 if (doc is null) return false;
@@ -141,6 +148,7 @@ namespace ScanProMovil.Services.StockInicial
             // sin colisionar en el índice único del servidor.
             const string tipo = "TMP";
 
+            await using var _context = await _contextFactory.CreateDbContextAsync();
             using var tx = await _context.Database.BeginTransactionAsync();
 
             var consecutivo = await _context.ConsecutivosStockInit
@@ -179,6 +187,7 @@ namespace ScanProMovil.Services.StockInicial
             var result = new SincroStockInitResult();
             try
             {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
                 var doc = await _context.StockInits
                     .Include(d => d.Items)
                     .FirstOrDefaultAsync(d => d.Numero == numero);
