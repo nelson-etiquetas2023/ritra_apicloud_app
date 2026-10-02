@@ -9,12 +9,14 @@ public partial class ConfigPage : ContentPage
 		InitializeComponent();     
     }
 
-    private async void Btn_SaveConfigOrders_Clicked(object? sender, EventArgs? e)
+    private void Btn_SaveConfigOrders_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         var vm = BindingContext as OrderConfigViewModel;
-        await vm!.SaveConfigCommand.ExecuteAsync(null);    
-
-        
-
-    }
+        if (vm is null)
+        {
+            await DisplayAlertAsync("Error", "No se encontró la configuración de órdenes.", "OK");
+            return;
+        }
+        await vm.SaveConfigCommand.ExecuteAsync(null);
+    });
 }

@@ -15,13 +15,14 @@ public partial class OrderDetailsPage : ContentPage
 		BindingContext = _vm;
 	}
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-
-        _vm.IsLoading = true;   
-        await Task.Delay(2000); // Simulate a delay
-        _vm.IsLoading = false;
-
+        UiGuard.Run(this, async () =>
+        {
+            _vm.IsLoading = true;
+            await Task.Delay(2000); // Simulate a delay
+            _vm.IsLoading = false;
+        });
     }
 }

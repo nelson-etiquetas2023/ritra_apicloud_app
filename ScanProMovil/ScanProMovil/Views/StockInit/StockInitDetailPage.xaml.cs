@@ -31,19 +31,21 @@ public partial class StockInitDetailPage : ContentPage
 
     public void SetNumero(string numero) => _numero = numero;
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
+        UiGuard.Run(this, async () =>
+        {
+            if (_doc is not null) return;
+            if (string.IsNullOrWhiteSpace(_numero)) return;
 
-        if (_doc is not null) return;
-        if (string.IsNullOrWhiteSpace(_numero)) return;
+            var doc = await _service.GetByIdAsync(_numero);
+            if (doc is null) return;
 
-        var doc = await _service.GetByIdAsync(_numero);
-        if (doc is null) return;
-
-        _doc = doc;
-        NumeroLabel.Text = doc.NumeroVisible;
-        RefreshItems();
+            _doc = doc;
+            NumeroLabel.Text = doc.NumeroVisible;
+            RefreshItems();
+        });
     }
 
     private void OnScanEntryLoaded(object? sender, EventArgs e)
@@ -168,7 +170,7 @@ public partial class StockInitDetailPage : ContentPage
             $"{filtered.Count} de {_allItems.Count} ítems · {filteredUnits:N2} de {totalUnits:N2} und";
     }
 
-    private async void OnScanTextChanged(object? sender, TextChangedEventArgs e)
+    private void OnScanTextChanged(object? sender, TextChangedEventArgs e) => UiGuard.Run(this, async () =>
     {
         var text = e.NewTextValue;
         System.Diagnostics.Debug.WriteLine($"[SCAN] OnScanTextChanged: '{text}'");
@@ -200,16 +202,16 @@ public partial class StockInitDetailPage : ContentPage
         catch (OperationCanceledException)
         {
         }
-    }
+    });
 
-    private async void OnScanCompleted(object? sender, EventArgs e)
+    private void OnScanCompleted(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         var code = ScanEntry.Text?.Trim('*', ' ', '\r', '\n') ?? string.Empty;
         if (string.IsNullOrWhiteSpace(code)) return;
 
         _scanDebounceCts?.Cancel();
         await ResolveProductAsync(code);
-    }
+    });
 
     private async Task ResolveProductAsync(string codebar)
     {
@@ -265,7 +267,7 @@ public partial class StockInitDetailPage : ContentPage
         }
     }
 
-    private async void OnAddItemClicked(object? sender, EventArgs e)
+    private void OnAddItemClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (_doc is null) return;
 
@@ -282,7 +284,7 @@ public partial class StockInitDetailPage : ContentPage
         }
 
         await PromptQuantityAsync();
-    }
+    });
 
     private async Task AddScannedItemAsync(double cantidad)
     {
@@ -352,7 +354,7 @@ public partial class StockInitDetailPage : ContentPage
         }
     }
 
-    private async void OnNoteItemClicked(object? sender, EventArgs e)
+    private void OnNoteItemClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (sender is not ImageButton btn || btn.CommandParameter is not StockItemEntity item) return;
         if (_doc is null) return;
@@ -372,9 +374,9 @@ public partial class StockInitDetailPage : ContentPage
         }
         else
             await DisplayAlertAsync("Error", "No se pudo guardar la nota.", "OK");
-    }
+    });
 
-    private async void OnDeleteItemClicked(object? sender, EventArgs e)
+    private void OnDeleteItemClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (sender is not ImageButton btn || btn.CommandParameter is not StockItemEntity item) return;
         if (_doc is null) return;
@@ -392,7 +394,7 @@ public partial class StockInitDetailPage : ContentPage
         }
         else
             await DisplayAlertAsync("Error", "No se pudo eliminar el renglón.", "OK");
-    }
+    });
 
     private void RefreshItems()
     {
@@ -416,7 +418,7 @@ public partial class StockInitDetailPage : ContentPage
         BtnAddLine.IsVisible = false;
     }
 
-    private async void OnSaveClicked(object? sender, EventArgs e)
+    private void OnSaveClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (_doc is null) return;
 
@@ -425,18 +427,24 @@ public partial class StockInitDetailPage : ContentPage
         SavingIndicator.IsVisible = true;
         BtnSave.IsEnabled = false;
 
-        var saveTask = _service.UpdateAsync(_doc);
-        await Task.WhenAll(saveTask, Task.Delay(400));
-        var ok = await saveTask;
+        try
+        {
+            var saveTask = _service.UpdateAsync(_doc);
+            await Task.WhenAll(saveTask, Task.Delay(400));
+            var ok = await saveTask;
 
-        SavingIndicator.IsRunning = false;
-        SavingIndicator.IsVisible = false;
-        SavingOverlay.IsVisible = false;
-        BtnSave.IsEnabled = true;
-
-        if (ok)
-            await Navigation.PopAsync();
-        else
-            await DisplayAlertAsync("Error", "No se pudo guardar el documento.", "OK");
-    }
+            if (ok)
+                await Navigation.PopAsync();
+            else
+                await DisplayAlertAsync("Error", "No se pudo guardar el documento.", "OK");
+        }
+        finally
+        {
+            // El overlay se oculta siempre: si falla, la pantalla no queda congelada.
+            SavingIndicator.IsRunning = false;
+            SavingIndicator.IsVisible = false;
+            SavingOverlay.IsVisible = false;
+            BtnSave.IsEnabled = true;
+        }
+    });
 }

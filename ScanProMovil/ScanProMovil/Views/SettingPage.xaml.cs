@@ -29,35 +29,36 @@ public partial class SettingPage : ContentPage
 		LabelMsg.IsVisible = false;
 	}
 
-	private async void BtnSave_Clicked(object? sender, EventArgs? e)
-	{
-		var deviceName = EntryDeviceName.Text?.Trim() ?? string.Empty;
-		var warehouseName = EntryWarehouseName.Text?.Trim() ?? string.Empty;
-		var apiUrl = EntryApiUrl.Text?.Trim().TrimEnd('/') ?? string.Empty;
-
-		if (string.IsNullOrWhiteSpace(warehouseName))
+	private void BtnSave_Clicked(object? sender, EventArgs? e)
+		=> UiGuard.Run(this, async () =>
 		{
-			LabelMsg.Text = "El nombre del almacén es obligatorio.";
-			LabelMsg.TextColor = Colors.Red;
+			var deviceName = EntryDeviceName.Text?.Trim() ?? string.Empty;
+			var warehouseName = EntryWarehouseName.Text?.Trim() ?? string.Empty;
+			var apiUrl = EntryApiUrl.Text?.Trim().TrimEnd('/') ?? string.Empty;
+
+			if (string.IsNullOrWhiteSpace(warehouseName))
+			{
+				LabelMsg.Text = "El nombre del almacén es obligatorio.";
+				LabelMsg.TextColor = Colors.Red;
+				LabelMsg.IsVisible = true;
+				return;
+			}
+
+			if (!Uri.TryCreate(apiUrl, UriKind.Absolute, out var uri)
+				|| (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+			{
+				LabelMsg.Text = "La URL del servidor API no es válida (debe iniciar con http:// o https://).";
+				LabelMsg.TextColor = Colors.Red;
+				LabelMsg.IsVisible = true;
+				return;
+			}
+
+			_session.DeviceName = deviceName;
+			_session.WarehouseName = warehouseName;
+			Preferences.Set("ApiBaseUrl", apiUrl);
+
+			LabelMsg.Text = "Configuración guardada correctamente. Reinicia la aplicación para usar la nueva URL del API.";
+			LabelMsg.TextColor = Colors.Green;
 			LabelMsg.IsVisible = true;
-			return;
-		}
-
-		if (!Uri.TryCreate(apiUrl, UriKind.Absolute, out var uri)
-			|| (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-		{
-			LabelMsg.Text = "La URL del servidor API no es válida (debe iniciar con http:// o https://).";
-			LabelMsg.TextColor = Colors.Red;
-			LabelMsg.IsVisible = true;
-			return;
-		}
-
-		_session.DeviceName = deviceName;
-		_session.WarehouseName = warehouseName;
-		Preferences.Set("ApiBaseUrl", apiUrl);
-
-		LabelMsg.Text = "Configuración guardada correctamente. Reinicia la aplicación para usar la nueva URL del API.";
-		LabelMsg.TextColor = Colors.Green;
-		LabelMsg.IsVisible = true;
-	}
+		});
 }

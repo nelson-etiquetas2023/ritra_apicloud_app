@@ -37,7 +37,7 @@ public partial class ProductsPage : ContentPage
     {
         EffectClickTap(sender);
     }
-    private async void EffectClickTap(object? sender)
+    private void EffectClickTap(object? sender) => UiGuard.Run(this, async () =>
     {
         if (sender is Layout layout)
         {
@@ -46,7 +46,7 @@ public partial class ProductsPage : ContentPage
             await Task.Delay(50);
             layout.Background = originalColor;
         }
-    }
+    });
 
   
 }

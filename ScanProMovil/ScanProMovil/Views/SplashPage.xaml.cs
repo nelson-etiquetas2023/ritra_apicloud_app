@@ -9,20 +9,22 @@ public partial class SplashPage : ContentPage
         InitializeComponent();
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
+        UiGuard.Run(this, async () =>
+        {
+            _dotsCts = new CancellationTokenSource();
+            _ = AnimateDotsAsync(_dotsCts.Token);
 
-        _dotsCts = new CancellationTokenSource();
-        _ = AnimateDotsAsync(_dotsCts.Token);
+            await Task.Delay(2200);
 
-        await Task.Delay(2200);
+            _dotsCts.Cancel();
 
-        _dotsCts.Cancel();
-
-        var window = Application.Current?.Windows.FirstOrDefault();
-        if (window is not null)
-            window.Page = new NavigationPage(new LoginPage());
+            var window = Application.Current?.Windows.FirstOrDefault();
+            if (window is not null)
+                window.Page = new NavigationPage(new LoginPage());
+        });
     }
 
     private async Task AnimateDotsAsync(CancellationToken ct)

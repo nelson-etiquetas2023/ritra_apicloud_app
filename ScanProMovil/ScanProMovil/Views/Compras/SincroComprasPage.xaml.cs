@@ -11,14 +11,12 @@ public partial class SincroComprasPage : ContentPage
 		InitializeComponent();
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-
+        UiGuard.Run(this, () => Task.CompletedTask);
     }
 
-    private async void btn_click_sincro_orders(object? sender, EventArgs? e)
-    {
-
-    }
+    private void btn_click_sincro_orders(object? sender, EventArgs? e)
+        => UiGuard.Run(this, () => Task.CompletedTask);
 }

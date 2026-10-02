@@ -24,18 +24,26 @@ public partial class OrdersPage : ContentPage
         TotalRowsEntry.Text = Convert.ToString(totalrows);
     }
 
-    public async void btn_AddProducts_Clicked(object? sender, EventArgs e)
+    public void btn_AddProducts_Clicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
-        if (string.IsNullOrWhiteSpace(txtProductIdEntry.Text.Trim())) 
+        if (string.IsNullOrWhiteSpace(txtProductIdEntry.Text?.Trim()))
         {
             await DisplayAlertAsync("validation", "Enter Product id...", "Ok");
+            return;
+        }
+
+        // Validación explícita: Convert.ToDouble lanzaba FormatException con texto vacío/no numérico.
+        if (!double.TryParse(txtQuantityEntry.Text, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var cantidad) || cantidad <= 0)
+        {
+            await DisplayAlertAsync("validation", "Ingrese una cantidad válida...", "Ok");
             return;
         }
 
         var item = new OrderDetails()
         {
             productId = txtProductIdEntry.Text.Trim(),
-            Cantidad = Convert.ToDouble(txtQuantityEntry.Text),
+            Cantidad = cantidad,
             OrderNumber = _vm.NewOrder.OrderNumber
         };
         _vm.NewOrder.ItemsNumber = totalrows + 1;
@@ -44,7 +52,7 @@ public partial class OrdersPage : ContentPage
         txtQuantityEntry.Text = string.Empty;
         txtProductIdEntry.Focus();
         UpdateGrandTotal();
-    }
+    });
 
     private void btn_RemoveProducts_Clicked(object? sender, EventArgs e)
     {
@@ -57,25 +65,30 @@ public partial class OrdersPage : ContentPage
 
     }
 
-    private async void Btn_Save_Order_Clicked(object? sender, EventArgs? e)
+    private void Btn_Save_Order_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         SavingIndicator.IsRunning = true;
         SavingIndicator.IsVisible = true;
         SavingLabel.IsVisible = true;
 
-        await Task.Delay(1000);
-        //guardar la orden de manera local en el dispositvo en sqlite
-        _vm.SaveOrderLocalSqliteAsyncCommand.Execute(null);
+        try
+        {
+            await Task.Delay(1000);
+            //guardar la orden de manera local en el dispositvo en sqlite
+            await _vm.SaveOrderLocalSqliteCommand.ExecuteAsync(null);
 
+            //actualizar la lista de ordebes
+            _vm.Ordenes.Add(_vm.NewOrder);
 
-        SavingIndicator.IsRunning = false;
-        SavingIndicator.IsVisible = false;
-        SavingLabel.IsVisible = false;
-
-        //actualizar la lista de ordebes
-        _vm.Ordenes.Add(_vm.NewOrder);
-
-        //navega de vuelta al index de orders
-        await Navigation.PopAsync();
-    }
+            //navega de vuelta al index de orders
+            await Navigation.PopAsync();
+        }
+        finally
+        {
+            // Si el guardado falla, los indicadores se apagan igual (pantalla no bloqueada).
+            SavingIndicator.IsRunning = false;
+            SavingIndicator.IsVisible = false;
+            SavingLabel.IsVisible = false;
+        }
+    });
 }

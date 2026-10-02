@@ -14,36 +14,41 @@ public partial class ComprasIndexPage : ContentPage
         BindingContext = _vm;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        if (_vm.RefreshListOrders)
+        UiGuard.Run(this, async () =>
         {
-            await Task.Yield();
-            await _vm.GetOrdersLocalSqliteCommand.ExecuteAsync(null);
-        }
+            if (_vm.RefreshListOrders)
+            {
+                await Task.Yield();
+                await _vm.GetOrdersLocalSqliteCommand.ExecuteAsync(null);
+            }
 
+            bool selectMultiple = Preferences.Get("SelectMultipleRows", false);
 
-        bool selectMultiple = Preferences.Get("SelectMultipleRows", false);
-
-        if (selectMultiple)
-        {
-            //habilitar la seleccion multiple en la lista de ordenes.
-            CvOrdenes.SelectionMode = SelectionMode.Multiple;
-        }
+            if (selectMultiple)
+            {
+                //habilitar la seleccion multiple en la lista de ordenes.
+                CvOrdenes.SelectionMode = SelectionMode.Multiple;
+            }
+        });
     }
 
-
-
-    private async void btnAddOrders_Clicked(object? sender, EventArgs? e)
+    private void btnAddOrders_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         //Validar la orden de Compra Seleccionada.
         _vm.RefreshListOrders = true;
         var page = MauiProgram.Services!.GetService<AddComprasPage>();
-        await Navigation.PushAsync(page!);
-    }
+        if (page is null)
+        {
+            await DisplayAlertAsync("Error", "No se pudo abrir el formulario de compra.", "OK");
+            return;
+        }
+        await Navigation.PushAsync(page);
+    });
 
-    private async void btnDetailsOrders_Clicked(object? sender, EventArgs? e)
+    private void btnDetailsOrders_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         // Validar la orden seleccionada.
         if (_vm.SelectedOrder == null)
@@ -61,16 +66,21 @@ public partial class ComprasIndexPage : ContentPage
 
         _vm.RefreshListOrders = false;
         await Navigation.PushAsync(new DetailsComprasPage(_vm.SelectedOrder));
-    }
+    });
 
-    private async void btnConfig_Clicked(object? sender, EventArgs? e)
+    private void btnConfig_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         _vm.RefreshListOrders = true;
         var page = MauiProgram.Services!.GetService<ConfigComprasPage>();
-        await Navigation.PushAsync(page!);
-    }
+        if (page is null)
+        {
+            await DisplayAlertAsync("Error", "No se pudo abrir la configuración de compras.", "OK");
+            return;
+        }
+        await Navigation.PushAsync(page);
+    });
 
-    private async void btn_sincrOrdenes_Clicked(object? sender, EventArgs? e)
+    private void btn_sincrOrdenes_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         // Validar la orden seleccionada.
         if (_vm.SelectedOrder == null)
@@ -99,13 +109,17 @@ public partial class ComprasIndexPage : ContentPage
         //que tiene el servicio + orden seleccionada.
 
         var page = MauiProgram.Services!.GetService<SincroComprasPage>();
-        page!.BindingContext = vmSincro;
+        if (page is null)
+        {
+            await DisplayAlertAsync("Error", "No se pudo abrir la pantalla de sincronización.", "OK");
+            return;
+        }
+        page.BindingContext = vmSincro;
 
+        await Navigation.PushAsync(page);
+    });
 
-        await Navigation.PushAsync(page!);
-    }
-
-    private async void btnDeleteOrder_Clicked(object? sender, EventArgs? e)
+    private void btnDeleteOrder_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         if (_vm.SelectedOrder == null)
         {
@@ -140,9 +154,9 @@ public partial class ComprasIndexPage : ContentPage
         {
             await DisplayAlertAsync("Error", "No se pudo eliminar el documento.", "Ok.");
         }
-    }
+    });
 
-    private async void btnCancelOrder_Clicked(object? sender, EventArgs? e)
+    private void btnCancelOrder_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         if (_vm.SelectedOrder == null)
         {
@@ -177,5 +191,5 @@ public partial class ComprasIndexPage : ContentPage
         {
             await DisplayAlertAsync("Error", "No se pudo cerrar el documento.", "Ok.");
         }
-    }
+    });
 }

@@ -17,10 +17,10 @@ public partial class AddComprasPage : ContentPage
 		BindingContext = _vm;
 	}
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _vm.LoadNextOrderNumberAsync();
+        UiGuard.Run(this, () => _vm.LoadNextOrderNumberAsync());
     }
 
     void UpdateGrandTotal()
@@ -34,7 +34,7 @@ public partial class AddComprasPage : ContentPage
         _vm.CalcularTotales();
     }
 
-    private async void btn_AddProducts_Clicked(object? sender, EventArgs? e)
+    private void btn_AddProducts_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         if (_vm.ProductScan is null)
         {
@@ -77,9 +77,9 @@ public partial class AddComprasPage : ContentPage
 
         txtProductIdEntry.Focus();
         UpdateGrandTotal();
-    }
+    });
 
-    private async void OnEditItem(object? sender, EventArgs e)
+    private void OnEditItem(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (sender is not ImageButton btn || btn.CommandParameter is not DetalleCompra item)
             return;
@@ -100,7 +100,7 @@ public partial class AddComprasPage : ContentPage
         item.Subtotal = nuevaCantidad * item.Costo;
         _vm.NewOrder.ItemsNumber = _vm.NewOrder.Items.Count;
         UpdateGrandTotal();
-    }
+    });
 
     private void OnRemoveItem(object? sender, EventArgs e)
     {
@@ -112,7 +112,7 @@ public partial class AddComprasPage : ContentPage
         UpdateGrandTotal();
     }
 
-    private async void Btn_Save_Order_Clicked(object? sender, EventArgs? e)
+    private void Btn_Save_Order_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         if (_vm.NewOrder.Items.Count == 0)
         {
@@ -125,11 +125,18 @@ public partial class AddComprasPage : ContentPage
         SavingIndicator.IsVisible = true;
         SavingLabel.IsVisible = true;
 
-        var saved = await _vm.SaveOrderLocalSqliteAsync();
-
-        SavingIndicator.IsRunning = false;
-        SavingIndicator.IsVisible = false;
-        SavingLabel.IsVisible = false;
+        bool saved;
+        try
+        {
+            saved = await _vm.SaveOrderLocalSqliteAsync();
+        }
+        finally
+        {
+            // Indicadores se apagan siempre: si falla, la pantalla no queda bloqueada.
+            SavingIndicator.IsRunning = false;
+            SavingIndicator.IsVisible = false;
+            SavingLabel.IsVisible = false;
+        }
 
         if (saved)
         {
@@ -143,14 +150,12 @@ public partial class AddComprasPage : ContentPage
             await DisplayAlertAsync("Error",
                 "No se pudo guardar el documento. Intente nuevamente.", "OK");
         }
-    }
+    });
 
-    private async void Btn_Cancel_Order_Clicked(object? sender, EventArgs? e)
-    {
-        await Navigation.PopAsync();
-    }
+    private void Btn_Cancel_Order_Clicked(object? sender, EventArgs? e)
+        => UiGuard.Run(this, () => Navigation.PopAsync());
 
-    private async void SearchSupplyData(object? sender, EventArgs? e)
+    private void SearchSupplyData(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         string option = await DisplayActionSheetAsync("Seleccion un proveedor:","Cancelar"
             ,null,"Supply Santo Domingo","Todo Express","Supply-Todo");
@@ -167,9 +172,9 @@ public partial class AddComprasPage : ContentPage
                 txt_supplyName.Text = "Supply-Todo";
                 break;
         }
-    }
+    });
 
-    private async void txtProductIdEntry_TextChanged(object? sender, TextChangedEventArgs? e)
+    private void txtProductIdEntry_TextChanged(object? sender, TextChangedEventArgs? e) => UiGuard.Run(this, async () =>
     {
         //busqueda solo codigo de barra
         var text = e!.NewTextValue;
@@ -206,5 +211,5 @@ public partial class AddComprasPage : ContentPage
                 txtProductIdEntry.Focus();
             }
         }
-    }
+    });
 }

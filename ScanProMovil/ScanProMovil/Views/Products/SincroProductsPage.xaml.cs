@@ -11,14 +11,11 @@ public partial class GestionProducts : ContentPage
 		BindingContext = viewModel;
 	}
 
-    private async void OnGoToDetailsProduct(object? sender, TappedEventArgs e)
+    private void OnGoToDetailsProduct(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
     {
-		if (sender is Border border && border.BindingContext is Product product)
-		{
-
+        if (sender is Border border && border.BindingContext is Product product)
+        {
             await Navigation.PushAsync(new ProductDetails(product));
-
-
         }
-    }
+    });
 }

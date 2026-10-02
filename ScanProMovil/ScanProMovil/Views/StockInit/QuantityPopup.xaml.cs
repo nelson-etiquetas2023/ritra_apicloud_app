@@ -14,7 +14,7 @@ public partial class QuantityPopup : Popup
             Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () => QuantityEntry.Focus());
     }
 
-    private async void OnAddClicked(object? sender, EventArgs e)
+    private void OnAddClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (double.TryParse(QuantityEntry.Text, out var cantidad) && cantidad > 0)
         {
@@ -26,12 +26,10 @@ public partial class QuantityPopup : Popup
             ErrorLabel.Text = "Ingrese una cantidad mayor a 0.";
             ErrorLabel.IsVisible = true;
         }
-    }
+    });
 
-    private async void OnCancelClicked(object? sender, EventArgs e)
-    {
-        await CloseAsync();
-    }
+    private void OnCancelClicked(object? sender, EventArgs e)
+        => UiGuard.Run(this, () => CloseAsync());
 
     private void OnMinusClicked(object? sender, EventArgs e)
     {

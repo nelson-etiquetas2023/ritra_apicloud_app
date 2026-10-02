@@ -16,14 +16,17 @@ public partial class LocalDataProductsPage : ContentPage
 		_scanDebounceCts = new CancellationTokenSource();
 	}
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _vm.GetProductLocal();
-        SearchEntry.Focus();
+        UiGuard.Run(this, async () =>
+        {
+            await _vm.GetProductLocal();
+            SearchEntry.Focus();
+        });
     }
 
-    private async void OnProductSelected(object? sender, SelectionChangedEventArgs e)
+    private void OnProductSelected(object? sender, SelectionChangedEventArgs e) => UiGuard.Run(this, async () =>
     {
         if (_vm.SelectedProduct is null) return;
 
@@ -32,9 +35,9 @@ public partial class LocalDataProductsPage : ContentPage
         // Limpia selección visual para permitir re-selección del mismo item
         if (sender is CollectionView cv) cv.SelectedItem = null;
         await Navigation.PushAsync(new ProductDetails(product));
-    }
+    });
 
-    private async void OnProductTapped(object? sender, TappedEventArgs e)
+    private void OnProductTapped(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
     {
         if (e.Parameter is not ScanProMovil.Data.Entities.Product product) return;
         // Evita doble navegación si SelectionChanged ya disparó
@@ -42,15 +45,15 @@ public partial class LocalDataProductsPage : ContentPage
         _vm.SelectedProduct = null;
         if (cv_localProducts is not null) cv_localProducts.SelectedItem = null;
         await Navigation.PushAsync(new ProductDetails(product));
-    }
+    });
 
-    private async void ReloadProducts(object? sender, EventArgs? e)
+    private void ReloadProducts(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         await _vm.GetProductLocal();
         SearchEntry.Text = "";
-    }
+    });
 
-    private async void searchEntry_TextChanged(object? sender, TextChangedEventArgs? e)
+    private void searchEntry_TextChanged(object? sender, TextChangedEventArgs? e) => UiGuard.Run(this, async () =>
     {
         var text = e!.NewTextValue ?? "";
         Debug.WriteLine($"[LocalSearch] TextChanged: '{text}'");
@@ -81,9 +84,9 @@ public partial class LocalDataProductsPage : ContentPage
         }
 
         // Teclado sin * NO auto-busca — espera Completed (Enter) "pasta+Enter"
-    }
+    });
 
-    private async void searchEntry_Completed(object? sender, EventArgs? e)
+    private void searchEntry_Completed(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         var txt = SearchEntry.Text?.Trim() ?? "";
         Debug.WriteLine($"[LocalSearch] Completed: '{txt}' SearchText='{_vm.SearchText}'");
@@ -111,5 +114,5 @@ public partial class LocalDataProductsPage : ContentPage
         SearchEntry.Text = "";
         _vm.SearchText = "";
         SearchEntry.Focus();
-    }
+    });
 }

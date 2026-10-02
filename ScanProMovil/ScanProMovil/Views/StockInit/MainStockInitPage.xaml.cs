@@ -18,10 +18,10 @@ public partial class MainStockInitPage : FlyoutPage
 
         FlyoutMenuHost.Attach(this,
         [
-            new() { Title = "Crear Nuevo", Icon = "add.png", Action = async _ => await CreateNewAsync() },
+            new() { Title = "Crear Nuevo", Icon = "add.png", Action = _ => UiGuard.Run(this, CreateNewAsync) },
             new() { Title = "Inicio", Icon = "warehouse_50px.png", Action = _ => GoToMain() },
             new() { Title = "Parámetros", Icon = "settings_50px.png", Message = "Módulo en construcción" },
-            new() { Title = "Sincronizar", Icon = "database_daily_export_50px.png", Action = async _ => await OnSyncAllClickedAsync() },
+            new() { Title = "Sincronizar", Icon = "database_daily_export_50px.png", Action = _ => UiGuard.Run(this, OnSyncAllClickedAsync) },
         ]);
     }
 
@@ -37,10 +37,10 @@ public partial class MainStockInitPage : FlyoutPage
             window.Page = new FlyoutMainPage();
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await LoadDocsAsync();
+        UiGuard.Run(this, LoadDocsAsync);
     }
 
     private async Task LoadDocsAsync()
@@ -172,14 +172,14 @@ public partial class MainStockInitPage : FlyoutPage
         await nav.PushAsync(page);
     }
 
-    private async void OnCreatePageDisappearing(object? sender, EventArgs e)
+    private void OnCreatePageDisappearing(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (sender is Page page)
             page.Disappearing -= OnCreatePageDisappearing;
         await LoadDocsAsync();
-    }
+    });
 
-    private async void OnSyncItemClicked(object? sender, EventArgs e)
+    private void OnSyncItemClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if ((sender as BindableObject)?.BindingContext is not StockInitEntity doc) return;
 
@@ -189,7 +189,7 @@ public partial class MainStockInitPage : FlyoutPage
 
         await SyncDocAsync(doc);
         await LoadDocsAsync();
-    }
+    });
 
     private async Task SyncDocAsync(StockInitEntity doc)
     {
@@ -197,8 +197,8 @@ public partial class MainStockInitPage : FlyoutPage
         await DisplayAlertAsync(result.Success ? "Sincronizado" : "Error", result.Message, "OK");
     }
 
-    private async void OnSyncAllClicked(object? sender, EventArgs e)
-        => await OnSyncAllClickedAsync();
+    private void OnSyncAllClicked(object? sender, EventArgs e)
+        => UiGuard.Run(this, OnSyncAllClickedAsync);
 
     private async Task OnSyncAllClickedAsync()
     {
@@ -236,7 +236,7 @@ public partial class MainStockInitPage : FlyoutPage
         await LoadDocsAsync();
     }
 
-    private async void OnDocTapped(object? sender, TappedEventArgs e)
+    private void OnDocTapped(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
     {
         if ((sender as BindableObject)?.BindingContext is not StockInitEntity doc) return;
 
@@ -258,9 +258,9 @@ public partial class MainStockInitPage : FlyoutPage
             nav.Popped += handler;
             await nav.PushAsync(detail);
         }
-    }
+    });
 
-    private async void OnCloseDocClicked(object? sender, EventArgs e)
+    private void OnCloseDocClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if ((sender as BindableObject)?.BindingContext is not StockInitEntity doc) return;
 
@@ -282,18 +282,16 @@ public partial class MainStockInitPage : FlyoutPage
         {
             await DisplayAlertAsync("Error", "No se pudo cerrar el documento.", "OK");
         }
-    }
+    });
 
-    private async void OnViewDocClicked(object? sender, EventArgs e)
+    private void OnViewDocClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if ((sender as BindableObject)?.BindingContext is not StockInitEntity doc) return;
         await NavigateToDetailAsync(doc.Numero);
-    }
+    });
 
-    private async void OnCreateNewClicked(object? sender, EventArgs e)
-    {
-        await CreateNewAsync();
-    }
+    private void OnCreateNewClicked(object? sender, EventArgs e)
+        => UiGuard.Run(this, CreateNewAsync);
 
     private async Task NavigateToDetailAsync(string numero)
     {

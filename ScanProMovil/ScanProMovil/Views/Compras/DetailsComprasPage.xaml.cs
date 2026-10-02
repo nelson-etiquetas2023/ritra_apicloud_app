@@ -17,7 +17,7 @@ public partial class DetailsComprasPage : ContentPage
 
     }
 
-    private async void OnSincroTapped(object? sender, TappedEventArgs e)
+    private void OnSincroTapped(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
     {
         if (_vm.Order.Status == 2)
         {
@@ -31,20 +31,21 @@ public partial class DetailsComprasPage : ContentPage
 
         var vmSincro = new SincroComprasViewModels(service, _vm.Order);
         var page = MauiProgram.Services!.GetService<SincroComprasPage>();
-        page!.BindingContext = vmSincro;
+        if (page is null)
+        {
+            await DisplayAlertAsync("Error", "No se pudo abrir la pantalla de sincronización.", "OK");
+            return;
+        }
+        page.BindingContext = vmSincro;
 
-        await Navigation.PushAsync(page!);
-    }
+        await Navigation.PushAsync(page);
+    });
 
-    private async void OnPrintTapped(object? sender, TappedEventArgs e)
-    {
-        await DisplayAlertAsync("Imprimir",
-            "La impresión del documento está en desarrollo.", "Ok.");
-    }
+    private void OnPrintTapped(object? sender, TappedEventArgs e)
+        => UiGuard.Run(this, () => DisplayAlertAsync("Imprimir",
+            "La impresión del documento está en desarrollo.", "Ok."));
 
-    private async void OnDownloadTapped(object? sender, TappedEventArgs e)
-    {
-        await DisplayAlertAsync("Descargar",
-            "La descarga del documento está en desarrollo.", "Ok.");
-    }
+    private void OnDownloadTapped(object? sender, TappedEventArgs e)
+        => UiGuard.Run(this, () => DisplayAlertAsync("Descargar",
+            "La descarga del documento está en desarrollo.", "Ok."));
 }

@@ -14,27 +14,29 @@ public partial class CreateStockInitPage : ContentPage
         _service = service;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-
-        if (_doc is not null) return;
-
-        var numero = await _service.GetNextNumberAsync();
-        _doc = new StockInitEntity
+        UiGuard.Run(this, async () =>
         {
-            Numero = numero,
-            Fecha = DateTime.Today,
-            Description = string.Empty,
-            Status = "Iniciado",
-            Items = new System.Collections.Generic.List<ScanProMovil.Entities.StockItem>()
-        };
+            if (_doc is not null) return;
 
-        NumeroLabel.Text = numero;
-        FechaPicker.Date = DateTime.Today;
+            var numero = await _service.GetNextNumberAsync();
+            _doc = new StockInitEntity
+            {
+                Numero = numero,
+                Fecha = DateTime.Today,
+                Description = string.Empty,
+                Status = "Iniciado",
+                Items = new System.Collections.Generic.List<ScanProMovil.Entities.StockItem>()
+            };
+
+            NumeroLabel.Text = numero;
+            FechaPicker.Date = DateTime.Today;
+        });
     }
 
-    private async void OnSaveClicked(object? sender, EventArgs e)
+    private void OnSaveClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
         if (_doc is null) return;
 
@@ -52,23 +54,27 @@ public partial class CreateStockInitPage : ContentPage
         SavingIndicator.IsVisible = true;
         BtnSave.IsEnabled = false;
 
-        var saveTask = _service.CreateAsync(_doc);
-        await Task.WhenAll(saveTask, Task.Delay(400));
-        var ok = await saveTask;
+        try
+        {
+            var saveTask = _service.CreateAsync(_doc);
+            await Task.WhenAll(saveTask, Task.Delay(400));
+            var ok = await saveTask;
 
-        SavingIndicator.IsRunning = false;
-        SavingIndicator.IsVisible = false;
-        SavingOverlay.IsVisible = false;
-        BtnSave.IsEnabled = true;
+            if (ok)
+                await Navigation.PopAsync();
+            else
+                await DisplayAlertAsync("Error", "No se pudo crear el documento.", "OK");
+        }
+        finally
+        {
+            // Overlay se oculta siempre: si falla, la pantalla no queda congelada.
+            SavingIndicator.IsRunning = false;
+            SavingIndicator.IsVisible = false;
+            SavingOverlay.IsVisible = false;
+            BtnSave.IsEnabled = true;
+        }
+    });
 
-        if (ok)
-            await Navigation.PopAsync();
-        else
-            await DisplayAlertAsync("Error", "No se pudo crear el documento.", "OK");
-    }
-
-    private async void OnCancelClicked(object? sender, EventArgs e)
-    {
-        await Navigation.PopAsync();
-    }
+    private void OnCancelClicked(object? sender, EventArgs e)
+        => UiGuard.Run(this, () => Navigation.PopAsync());
 }

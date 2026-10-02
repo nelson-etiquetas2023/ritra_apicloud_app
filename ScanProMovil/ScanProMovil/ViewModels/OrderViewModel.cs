@@ -88,7 +88,7 @@ namespace ScanProMovil.ViewModels
         }
 
         [RelayCommand]
-        public async void SaveOrderLocalSqliteAsync() 
+        public async Task SaveOrderLocalSqliteAsync() 
         {
             try
             {

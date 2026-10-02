@@ -35,8 +35,6 @@ public partial class SincroOrdersPage : ContentPage
         }
     }
 
-    private async void btnStartSync_Clicked(object? sender, EventArgs? e)
-    {
-		await _vm.ExecuteTestSincroCommand.ExecuteAsync(null);
-    }
+    private void btnStartSync_Clicked(object? sender, EventArgs? e)
+        => UiGuard.Run(this, () => _vm.ExecuteTestSincroCommand.ExecuteAsync(null));
 }

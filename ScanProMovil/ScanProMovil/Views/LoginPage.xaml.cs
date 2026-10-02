@@ -110,78 +110,79 @@ namespace ScanProMovil.Views
             });
         }
 
-        private async void BtnLogin_Clicked(object? sender, EventArgs e)
-        {
-            var identifier = EntryIdentifier.Text?.Trim() ?? string.Empty;
-            var password = EntryPassword.Text ?? string.Empty;
-
-            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(password))
+        private void BtnLogin_Clicked(object? sender, EventArgs e)
+            => UiGuard.Run(this, async () =>
             {
-                await DisplayAlertAsync("Datos incompletos",
-                    "Ingrese correo o nickname y contraseña.", "OK");
-                return;
-            }
+                var identifier = EntryIdentifier.Text?.Trim() ?? string.Empty;
+                var password = EntryPassword.Text ?? string.Empty;
 
-            if (_session.IsBlocked)
-            {
-                await DisplayAlertAsync("Sistema bloqueado",
-                    "El sistema está bloqueado. Intente nuevamente dentro de unos minutos.", "OK");
-                return;
-            }
-
-            BtnLogin.IsEnabled = false;
-            SetLoading(true);
-
-            LoginResult result;
-            try
-            {
-                result = await _authService.LoginAsync(identifier, password);
-            }
-            catch (Exception ex)
-            {
-                result = new LoginResult
+                if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(password))
                 {
-                    Success = false,
-                    Message = "No se pudo conectar con el servidor: " + ex.Message
-                };
-            }
+                    await DisplayAlertAsync("Datos incompletos",
+                        "Ingrese correo o nickname y contraseña.", "OK");
+                    return;
+                }
 
-            SetLoading(false);
+                if (_session.IsBlocked)
+                {
+                    await DisplayAlertAsync("Sistema bloqueado",
+                        "El sistema está bloqueado. Intente nuevamente dentro de unos minutos.", "OK");
+                    return;
+                }
 
-            if (result.Success)
-            {
-                await NavigateToMain();
-                return;
-            }
+                BtnLogin.IsEnabled = false;
+                SetLoading(true);
 
-            BtnLogin.IsEnabled = true;
-            LabelMessage.TextColor = Colors.Red;
+                LoginResult result;
+                try
+                {
+                    result = await _authService.LoginAsync(identifier, password);
+                }
+                catch (Exception ex)
+                {
+                    result = new LoginResult
+                    {
+                        Success = false,
+                        Message = "No se pudo conectar con el servidor: " + ex.Message
+                    };
+                }
 
-            _session.FailedAttempts += 1;
-            var remaining = AuthSession.MaxAttempts - _session.FailedAttempts;
+                SetLoading(false);
 
-            if (remaining <= 0)
-            {
-                _session.FailedAttempts = 0;
-                _session.BlockedUntil = DateTimeOffset.Now.Add(_session.LockDuration);
-                LabelMessage.Text = string.Empty;
-                UpdateScreen();
-                StartBlockCountdown();
+                if (result.Success)
+                {
+                    await NavigateToMain();
+                    return;
+                }
 
-                await DisplayAlertAsync("Sistema bloqueado",
-                    "Demasiados intentos fallidos. El sistema queda bloqueado por " +
-                    $"{(int)_session.LockDuration.TotalMinutes} minutos.", "OK");
-            }
-            else
-            {
-                LabelMessage.Text = string.Empty;
-                var pendingMessage = $"Intentos restantes: {remaining}";
-                LabelAttempts.Text = pendingMessage;
+                BtnLogin.IsEnabled = true;
+                LabelMessage.TextColor = Colors.Red;
 
-                await DisplayAlertAsync("Error de acceso", result.Message, "OK");
-                await DisplayAlertAsync("Intento fallido", pendingMessage, "OK");
-            }
-        }
+                _session.FailedAttempts += 1;
+                var remaining = AuthSession.MaxAttempts - _session.FailedAttempts;
+
+                if (remaining <= 0)
+                {
+                    _session.FailedAttempts = 0;
+                    _session.BlockedUntil = DateTimeOffset.Now.Add(_session.LockDuration);
+                    LabelMessage.Text = string.Empty;
+                    UpdateScreen();
+                    StartBlockCountdown();
+
+                    await DisplayAlertAsync("Sistema bloqueado",
+                        "Demasiados intentos fallidos. El sistema queda bloqueado por " +
+                        $"{(int)_session.LockDuration.TotalMinutes} minutos.", "OK");
+                }
+                else
+                {
+                    LabelMessage.Text = string.Empty;
+                    var pendingMessage = $"Intentos restantes: {remaining}";
+                    LabelAttempts.Text = pendingMessage;
+
+                    await DisplayAlertAsync("Error de acceso", result.Message, "OK");
+                    await DisplayAlertAsync("Intento fallido", pendingMessage, "OK");
+                }
+            });
 
         private void SetLoading(bool isLoading)
         {
