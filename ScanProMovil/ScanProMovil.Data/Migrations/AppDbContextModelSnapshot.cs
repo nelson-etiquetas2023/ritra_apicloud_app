@@ -249,6 +249,72 @@ namespace ScanProMovil.Migrations
                     b.ToTable("OrderItems", (string)null);
                 });
 
+            modelBuilder.Entity("ScanProMovil.Data.Entities.PickingOrder", b =>
+                {
+                    b.Property<int>("PickingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FechaCompletado")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NumeroPedidoVenta")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UsuarioAsignado")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("PickingId");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("NumeroPedidoVenta");
+
+                    b.ToTable("PickingOrders", (string)null);
+                });
+
+            modelBuilder.Entity("ScanProMovil.Data.Entities.PickingOrderDetail", b =>
+                {
+                    b.Property<int>("DetailId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Completado")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PickingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PickingOrderPickingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DetailId");
+
+                    b.HasIndex("PickingId");
+
+                    b.HasIndex("PickingOrderPickingId");
+
+                    b.ToTable("PickingOrderItems", (string)null);
+                });
+
             modelBuilder.Entity("ScanProMovil.Data.Entities.Product", b =>
                 {
                     b.Property<int>("Product_Id")
@@ -430,6 +496,21 @@ namespace ScanProMovil.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ScanProMovil.Data.Entities.PickingOrderDetail", b =>
+                {
+                    b.HasOne("ScanProMovil.Data.Entities.PickingOrder", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PickingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ScanProMovil.Data.Entities.PickingOrder", "PickingOrder")
+                        .WithMany()
+                        .HasForeignKey("PickingOrderPickingId");
+
+                    b.Navigation("PickingOrder");
+                });
+
             modelBuilder.Entity("ScanProMovil.Data.Entities.ProductImagen", b =>
                 {
                     b.HasOne("ScanProMovil.Data.Entities.Product", null)
@@ -454,6 +535,11 @@ namespace ScanProMovil.Migrations
                 });
 
             modelBuilder.Entity("ScanProMovil.Data.Entities.Order", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ScanProMovil.Data.Entities.PickingOrder", b =>
                 {
                     b.Navigation("Items");
                 });

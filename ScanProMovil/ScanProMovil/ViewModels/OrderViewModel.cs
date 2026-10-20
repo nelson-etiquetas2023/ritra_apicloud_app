@@ -111,7 +111,7 @@ namespace ScanProMovil.ViewModels
 
         private void FillSessionTrail(Order order)
         {
-            _session.InitializeDevice();
+            // Device already initialized during login; use cached values
             order.UserName = _session.UserDisplayName;
             order.UserEmail = _session.UserEmail ?? "";
             order.UserRole = _session.UserRole ?? "";

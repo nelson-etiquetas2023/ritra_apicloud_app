@@ -59,30 +59,33 @@ namespace ScanProMovil.Services.Session
 
         private static readonly string defaultDeviceName = GetDeviceFriendlyName();
 
-        public void InitializeDevice()
+        public async Task InitializeDeviceAsync()
         {
             if (_deviceInitialized) return;
             _deviceInitialized = true;
 
-            DeviceCode = ReadDeviceMac();
-
-            if (string.IsNullOrWhiteSpace(DeviceCode))
+            await Task.Run(() =>
             {
-                var fallback = Preferences.Get(DeviceCodeFallbackKey, string.Empty);
-                if (string.IsNullOrWhiteSpace(fallback))
+                DeviceCode = ReadDeviceMac();
+
+                if (string.IsNullOrWhiteSpace(DeviceCode))
                 {
-                    fallback = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-                    Preferences.Set(DeviceCodeFallbackKey, fallback);
+                    var fallback = Preferences.Get(DeviceCodeFallbackKey, string.Empty);
+                    if (string.IsNullOrWhiteSpace(fallback))
+                    {
+                        fallback = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+                        Preferences.Set(DeviceCodeFallbackKey, fallback);
+                    }
+                    DeviceCode = fallback;
                 }
-                DeviceCode = fallback;
-            }
 
-            if (string.IsNullOrWhiteSpace(DeviceName))
-            {
-                var name = GetDeviceFriendlyName();
-                if (!string.IsNullOrWhiteSpace(name))
-                    DeviceName = name;
-            }
+                if (string.IsNullOrWhiteSpace(DeviceName))
+                {
+                    var name = GetDeviceFriendlyName();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        DeviceName = name;
+                }
+            });
         }
 
         public void SetUserFromToken(string jwt)

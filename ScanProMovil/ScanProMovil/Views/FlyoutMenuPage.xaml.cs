@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using ScanProMovil.Services.Session;
 using ScanProMovil.Views.Compras;
+using ScanProMovil.Views.Picking;
 using ScanProMovil.Views.Products;
 using ScanProMovil.Views.StockInit;
 
@@ -19,6 +20,7 @@ public partial class FlyoutMenuPage : ContentPage
     public static List<FlyoutMenuItem> CreateDefaultItems() =>
     [
         new() { Title = "Compras", Icon = "buy_50px.png", TargetType = typeof(ComprasIndexPage) },
+        new() { Title = "Picking", Icon = "pallet_50px.png", TargetType = typeof(PickingPage) },
         new() { Title = "Products", Icon = "package_delivery_logistics_50px.png", TargetType = typeof(ProductsPage) },
         new()
         {

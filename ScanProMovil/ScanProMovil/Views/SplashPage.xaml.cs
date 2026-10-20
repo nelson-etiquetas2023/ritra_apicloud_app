@@ -17,7 +17,7 @@ public partial class SplashPage : ContentPage
             _dotsCts = new CancellationTokenSource();
             _ = AnimateDotsAsync(_dotsCts.Token);
 
-            await Task.Delay(2200);
+            await Task.Delay(300);
 
             _dotsCts.Cancel();
 

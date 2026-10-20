@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ScanProMovil.Views.Picking.PickingPage"
+             x:Name="Root"
+             Title="Picking - Pedidos Pendientes">
+
+    <VerticalStackLayout Spacing="0">
+
+        <!-- Barra superior con acciones -->
+        <HorizontalStackLayout Padding="10" Spacing="5">
+            <Button Text="Sincronizar Picking"
+                    Clicked="Btn_Sincronizar_Clicked"
+                    WidthRequest="170"
+                    HeightRequest="42"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
+            <Label Text="{Binding LoadingMessage}"
+                   FontSize="10"
+                   TextColor="Gray"
+                   VerticalOptions="Center"/>
+        </HorizontalStackLayout>
+
+        <SearchBar Placeholder="Buscar por número de pedido..."
+                   Text="{Binding SearchText}"
+                   FontSize="14"/>
+
+        <!-- Tarjetas de pedidos pendientes -->
+        <CollectionView ItemsSource="{Binding FilteredOrders}"
+                        SelectionMode="None"
+                        EmptyView="No hay pedidos pendientes. Presiona 'Sincronizar Picking' para descargar desde el servidor.">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Stroke="#D1D5DB"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="14"
+                            Margin="0,0,0,14"
+                            BackgroundColor="White">
+
+                        <VerticalStackLayout Spacing="10">
+
+                            <!-- Encabezado: número de pedido + estado -->
+                            <HorizontalStackLayout>
+                                <Image Source="package_delivery_logistics_64px.png"
+                                       WidthRequest="22"
+                                       HeightRequest="22"
+                                       VerticalOptions="Center"/>
+                                <Label Text="{Binding NumeroPedidoVenta}"
+                                       FontSize="17"
+                                       FontAttributes="Bold"
+                                       TextColor="#1F2937"
+                                       VerticalOptions="Center"
+                                       Margin="8,0,0,0"/>
+                                <Label Text="  |  "
+                                       VerticalOptions="Center"
+                                       TextColor="#9CA3AF"/>
+                                <Border BackgroundColor="{Binding Estado, Converter={StaticResource EstadoPickingColorConverter}}"
+                                        Padding="6,2"
+                                        StrokeShape="RoundRectangle 8"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding EstadoTexto}"
+                                           FontSize="9"
+                                           FontAttributes="Bold"
+                                           TextColor="White"/>
+                                </Border>
+                            </HorizontalStackLayout>
+
+                            <HorizontalStackLayout Spacing="12">
+                                <Label Text="{Binding FechaCreacion, StringFormat='{0:dd/MM/yyyy HH:mm}'}"
+                                       FontSize="12"
+                                       TextColor="#6B7280"
+                                       VerticalOptions="Center"/>
+                                <Label Text="{Binding UsuarioAsignado, StringFormat='Usuario: {0}'}"
+                                       FontSize="12"
+                                       TextColor="#6B7280"
+                                       VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+
+                            <BoxView HeightRequest="1"
+                                     BackgroundColor="#E5E7EB"
+                                     Margin="0,2,0,2"/>
+
+                            <!-- Items del pedido -->
+                            <Label Text="Productos a picking"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="#1F2937"/>
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="6">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate>
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Border WidthRequest="32"
+                                                    HeightRequest="32"
+                                                    Stroke="#D1D5DB"
+                                                    StrokeThickness="1"
+                                                    StrokeShape="RoundRectangle 8"
+                                                    BackgroundColor="#F9FAFB"
+                                                    VerticalOptions="Center">
+                                                <Label Text="#"
+                                                       FontSize="11"
+                                                       TextColor="#6B7280"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+                                            <Label Text="{Binding ProductCode}"
+                                                   FontSize="12"
+                                                   TextColor="#374151"
+                                                   VerticalOptions="Center"
+                                                   WidthRequest="90"/>
+                                            <Label Text="{Binding ProductName}"
+                                                   FontSize="12"
+                                                   TextColor="#111827"
+                                                   VerticalOptions="Center"/>
+                                            <Label Text="x"
+                                                   FontSize="12"
+                                                   TextColor="#9CA3AF"
+                                                   VerticalOptions="Center"/>
+                                            <Label Text="{Binding Cantidad}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#1F2937"
+                                                   VerticalOptions="Center"
+                                                   WidthRequest="45"
+                                                   HorizontalTextAlignment="End"/>
+                                            <CheckBox IsChecked="{Binding Completado, Mode=OneWay}"
+                                                      IsEnabled="False"
+                                                      VerticalOptions="Center"
+                                                      Color="#10B981"/>
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <BoxView HeightRequest="1"
+                                     BackgroundColor="#E5E7EB"
+                                     Margin="0,4,0,4"/>
+
+                            <!-- Acción: ir al detalle para completar ítems uno a uno -->
+                            <HorizontalStackLayout>
+                                <Button Text="Detalle"
+                                        Clicked="Btn_Detalle_Clicked"
+                                        CommandParameter="{Binding .}"
+                                        WidthRequest="110"
+                                        HeightRequest="34"
+                                        BackgroundColor="#2563EB"
+                                        TextColor="White"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        HorizontalOptions="End"/>
+                            </HorizontalStackLayout>
+
+                        </VerticalStackLayout>
+
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Indicador de carga -->
+        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                           Color="Blue"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+    </VerticalStackLayout>
+
+</ContentPage>

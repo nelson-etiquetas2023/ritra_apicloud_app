@@ -60,7 +60,7 @@ namespace ScanProMovil.Services.Auth
             {
                 await _session.SetTokenAsync(serviceResponse.Data);
                 _session.Reset();
-                _appSession.InitializeDevice();
+                _ = _appSession.InitializeDeviceAsync(); // fire-and-forget
                 _appSession.SetUserFromToken(serviceResponse.Data);
                 return new LoginResult
                 {

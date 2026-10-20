@@ -69,14 +69,14 @@
 
         <ScrollView Grid.Row="1" BackgroundColor="White">
             <Grid 
-                RowDefinitions="Auto,Auto,Auto,Auto" 
+                RowDefinitions="Auto,Auto,Auto,Auto,Auto" 
                 ColumnDefinitions="*,*" 
                 Padding="12" 
                 RowSpacing="10" 
                 ColumnSpacing="10" 
                 Background="White">
                 
-                <!--Compras-->
+                <!--Picking (primero en el menu)-->
                 <Border Grid.Row="0" Grid.Column="0"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
@@ -84,12 +84,12 @@
                         StrokeThickness="1"
                         BackgroundColor="#CFE3F5">
                     <VerticalStackLayout HorizontalOptions="Center">
-                        <Image Source="buy_50px.png" WidthRequest="100" HeightRequest="100">
+                        <Image Source="pallet_50px.png" WidthRequest="100" HeightRequest="100">
                             <Image.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="TapGestureRecognizer_Compras" />
+                                <TapGestureRecognizer Tapped="OnTapPicking" />
                             </Image.GestureRecognizers>
                         </Image>
-                        <Label Text="Compras" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                        <Label Text="Picking" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
                     </VerticalStackLayout>
                 </Border>
                 <!--Products-->
@@ -108,7 +108,7 @@
                         <Label Text="Products" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
                     </VerticalStackLayout>
                 </Border>
-                <!--Carga de Iniciales-->
+                <!--Compras-->
                 <Border Grid.Row="1" Grid.Column="0"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
@@ -116,12 +116,12 @@
                         StrokeThickness="1"
                         BackgroundColor="#CFE3F5">
                     <VerticalStackLayout HorizontalOptions="Center">
-                        <Image Source="warehouse_50px.png" WidthRequest="100" HeightRequest="100">
+                        <Image Source="buy_50px.png" WidthRequest="100" HeightRequest="100">
                             <Image.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnTapStockInit" />
+                                <TapGestureRecognizer Tapped="TapGestureRecognizer_Compras" />
                             </Image.GestureRecognizers>
                         </Image>
-                        <Label Text="Carga Inicial" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                        <Label Text="Compras" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
                     </VerticalStackLayout>
                 </Border>
                 <!--Orders-->
@@ -140,8 +140,24 @@
                         <Label Text="Orders" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
                     </VerticalStackLayout>
                 </Border>
-                <!--Codigo QR.-->
+                <!--Carga de Iniciales-->
                 <Border Grid.Row="2" Grid.Column="0"
+                        Padding="10"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="#B7D4EE"
+                        StrokeThickness="1"
+                        BackgroundColor="#CFE3F5">
+                    <VerticalStackLayout HorizontalOptions="Center">
+                        <Image Source="warehouse_50px.png" WidthRequest="100" HeightRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTapStockInit" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                        <Label Text="Carga Inicial" FontSize="16" FontAttributes="Bold" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+                <!--Codigo QR.-->
+                <Border Grid.Row="2" Grid.Column="1"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
                         Stroke="#B7D4EE"
@@ -157,7 +173,7 @@
                     </VerticalStackLayout>
                 </Border>
                 <!--Setting-->
-                <Border Grid.Row="2" Grid.Column="1"
+                <Border Grid.Row="3" Grid.Column="0"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
                         Stroke="#B7D4EE"
@@ -173,7 +189,7 @@
                     </VerticalStackLayout>
                 </Border>
                 <!--Sincronizacion data-->
-                <Border Grid.Row="3" Grid.Column="0"
+                <Border Grid.Row="3" Grid.Column="1"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
                         Stroke="#B7D4EE"
@@ -189,7 +205,7 @@
                     </VerticalStackLayout>
                 </Border>
                 <!--Shopping-->
-                <Border Grid.Row="3" Grid.Column="1"
+                <Border Grid.Row="4" Grid.Column="0"
                         Padding="10"
                         StrokeShape="RoundRectangle 16"
                         Stroke="#B7D4EE"

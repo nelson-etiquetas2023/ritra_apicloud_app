@@ -20,7 +20,7 @@ public partial class SettingPage : ContentPage
 
 	private void LoadCurrentValues()
 	{
-		_session.InitializeDevice();
+		// Device already initialized during login; use cached values
 		EntryDeviceName.Text = _session.DeviceName;
 		EntryWarehouseName.Text = _session.WarehouseName;
 		EntryApiUrl.Text = Preferences.Get("ApiBaseUrl", "http://192.168.10.10:8080");

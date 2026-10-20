@@ -3,12 +3,15 @@
             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
             x:Class="ScanProMovil.Views.StockInit.MainStockInitPage"
             xmlns:entities="clr-namespace:ScanProMovil.Entities"
+            xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
             Title="Conteo Físico">
 
     <FlyoutPage.Detail>
         <NavigationPage>
             <x:Arguments>
-                <ContentPage Title="Conteo Físico" BackgroundColor="#F0F4F8">
+                <ContentPage Title="Conteo Físico"
+                             BackgroundColor="#F0F4F8"
+                             x:DataType="vm:StockInitViewModel">
                     <ContentPage.ToolbarItems>
                         <ToolbarItem Text=""
                                      IconImageSource="back_arrow_32px.png"
@@ -16,100 +19,102 @@
                                      Priority="0"
                                      Clicked="OnBackClicked" />
                     </ContentPage.ToolbarItems>
-                    <Grid RowDefinitions="Auto,Auto,Auto,*" Padding="16" RowSpacing="12">
+                    <Grid Padding="1"
+                          RowDefinitions="Auto, Auto, *">
 
-                        <!-- Header con resumen y botón sincronizar todo -->
-                        <Border Grid.Row="0"
-                                BackgroundColor="White"
-                                Padding="16,12"
-                                Stroke="Transparent"
-                                StrokeThickness="0">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="16" />
-                            </Border.StrokeShape>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <VerticalStackLayout Spacing="4">
-                                    <Label Text="Conteo Físico"
-                                           TextColor="#1D3557"
-                                           FontSize="20"
+                        <!--Barra de Acciones (toolbar sobre el documento seleccionado)-->
+                        <ScrollView Grid.Row="0"
+                                    Orientation="Horizontal">
+                            <HorizontalStackLayout Spacing="3">
+                                <Button x:Name="btnAddDoc"
+                                        Text="ADD"
+                                        ImageSource="add.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnAddDoc_Clicked" />
+                                <Button x:Name="btnInfoDoc"
+                                        Text="INFO"
+                                        ImageSource="document_info.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnInfoDoc_Clicked" />
+                                <Button x:Name="btnConfig"
+                                        Text="CONF"
+                                        ImageSource="gear_24px.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnConfig_Clicked" />
+                                <Button x:Name="btnSincDoc"
+                                        Text="SINC"
+                                        ImageSource="uploadcloud.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnSincDoc_Clicked" />
+                                <Button x:Name="btnDeleteDoc"
+                                        Text="DELETE"
+                                        ImageSource="delete.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnDeleteDoc_Clicked" />
+                                <Button x:Name="btnCancelDoc"
+                                        Text="CLOSE"
+                                        ImageSource="cancel.png"
+                                        BackgroundColor="DodgerBlue"
+                                        ContentLayout="Top, 2"
+                                        TextColor="White"
+                                        WidthRequest="80"
+                                        Clicked="btnCancelDoc_Clicked" />
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <!--Barra de Busqueda + contador-->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width=".7*"></ColumnDefinition>
+                                <ColumnDefinition Width=".3*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    Stroke="gray"
+                                    StrokeThickness="1"
+                                    Background="White">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"></RoundRectangle>
+                                </Border.StrokeShape>
+                                <SearchBar Text="{Binding SearchText}"
+                                           Placeholder="Buscar documentos..."
                                            FontAttributes="Bold" />
-                                    <Label x:Name="SummaryLabel"
-                                           TextColor="#6B7280"
-                                           FontSize="13"
-                                           LineBreakMode="TailTruncation" />
-                                </VerticalStackLayout>
-                                <Border Grid.Column="1"
-                                        BackgroundColor="#EEF2FF"
-                                        Padding="10,6"
-                                        Stroke="Transparent"
-                                        StrokeThickness="0">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <ImageButton Source="upload_to_the_cloud_32px.png"
-                                                 WidthRequest="28"
-                                                 HeightRequest="28"
-                                                 BackgroundColor="Transparent"
-                                                 Padding="0"
-                                                 Clicked="OnSyncAllClicked"
-                                                 HorizontalOptions="Center"
-                                                 VerticalOptions="Center"
-                                                 ToolTipProperties.Text="Sincronizar documentos pendientes" />
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <!-- Buscador -->
-                        <Border Grid.Row="1"
-                                BackgroundColor="White"
-                                Padding="12,8"
-                                Stroke="Transparent"
-                                StrokeThickness="0">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="14" />
-                            </Border.StrokeShape>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <Image Source="search_50px.png"
-                                       WidthRequest="20"
-                                       HeightRequest="20"
-                                       VerticalOptions="Center"
-                                       Opacity="0.6" />
-                                <Entry x:Name="SearchEntry"
-                                       Grid.Column="1"
-                                       Placeholder="Buscar por número o descripción..."
-                                       TextChanged="OnSearchChanged"
-                                       FontSize="14"
-                                       TextColor="#1D3557"
-                                       PlaceholderColor="#9CA3AF" />
-                            </Grid>
-                        </Border>
-
-                        <!-- Botones de acción -->
-                        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12">
-                            <Button Grid.Column="0"
-                                    Text="Nuevo Conteo"
-                                    ImageSource="add.png"
-                                    BackgroundColor="#3B82F6"
-                                    TextColor="White"
-                                    FontAttributes="Bold"
-                                    CornerRadius="12"
-                                    HeightRequest="48"
-                                    Clicked="OnCreateNewClicked" />
-                            <Button Grid.Column="1"
-                                    Text="Sincronizar Todo"
-                                    ImageSource="upload_to_the_cloud_32px.png"
-                                    BackgroundColor="#10B981"
-                                    TextColor="White"
-                                    FontAttributes="Bold"
-                                    CornerRadius="12"
-                                    HeightRequest="48"
-                                    Clicked="OnSyncAllClicked" />
+                            </Border>
+                            <!--Total de documentos-->
+                            <Label Grid.Column="1"
+                                   Text="{Binding TotalDocs, StringFormat='{0} Docs'}"
+                                   FontSize="10"
+                                   TextColor="White"
+                                   FontAttributes="Bold"
+                                   VerticalTextAlignment="Center"
+                                   HorizontalOptions="Center"
+                                   Background="Black"
+                                   Margin="0,5,0,5"
+                                   Padding="20,0,20,0" />
                         </Grid>
 
-                        <!-- Lista de documentos -->
-                        <CollectionView x:Name="DocsCollection"
-                                        Grid.Row="3"
-                                        SelectionMode="None">
+                        <!--Lista de documentos-->
+                        <CollectionView Grid.Row="2"
+                                        x:Name="DocsCollection"
+                                        ItemsLayout="VerticalList"
+                                        SelectionMode="Single"
+                                        ItemsSource="{Binding Docs}"
+                                        SelectedItem="{Binding SelectedDoc, Mode=TwoWay}">
                             <CollectionView.EmptyView>
                                 <VerticalStackLayout HorizontalOptions="Center"
                                                      VerticalOptions="Center"
@@ -147,10 +152,7 @@
                                         <Border.StrokeShape>
                                             <RoundRectangle CornerRadius="16" />
                                         </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnDocTapped" />
-                                        </Border.GestureRecognizers>
-                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                        <Grid RowDefinitions="Auto,Auto,Auto"
                                               ColumnDefinitions="*,Auto"
                                               ColumnSpacing="12">
 
@@ -219,51 +221,6 @@
                                                        FontSize="12"
                                                        HorizontalOptions="End"
                                                        VerticalOptions="Center" />
-                                            </Grid>
-
-                                            <!-- Fila 4: Botones de acción -->
-                                            <Grid Grid.Row="3" Grid.ColumnSpan="2"
-                                                  ColumnDefinitions="*,*,*" ColumnSpacing="8"
-                                                  Margin="0,12,0,0">
-                                                <Button Grid.Column="0"
-                                                        Text="Ver"
-                                                        ImageSource="document_info.png"
-                                                        BackgroundColor="#E5E7EB"
-                                                        TextColor="#374151"
-                                                        FontAttributes="Bold"
-                                                        FontSize="13"
-                                                        CornerRadius="10"
-                                                        HeightRequest="40"
-                                                        CommandParameter="{Binding .}"
-                                                        Clicked="OnViewDocClicked" />
-                                                <Button Grid.Column="1"
-                                                        Text="Sincronizar"
-                                                        ImageSource="upload_to_the_cloud_32px.png"
-                                                        BackgroundColor="#3B82F6"
-                                                        TextColor="White"
-                                                        FontAttributes="Bold"
-                                                        FontSize="13"
-                                                        CornerRadius="10"
-                                                        HeightRequest="40"
-                                                        CommandParameter="{Binding .}"
-                                                        Clicked="OnSyncItemClicked" />
-                                                <Button Grid.Column="2"
-                                                        Text="Cerrar"
-                                                        ImageSource="lock.png"
-                                                        BackgroundColor="#EF4444"
-                                                        TextColor="White"
-                                                        FontAttributes="Bold"
-                                                        FontSize="13"
-                                                        CornerRadius="10"
-                                                        HeightRequest="40"
-                                                        CommandParameter="{Binding .}"
-                                                        Clicked="OnCloseDocClicked">
-                                                    <Button.Triggers>
-                                                        <DataTrigger TargetType="Button" Binding="{Binding Status}" Value="Cerrado">
-                                                            <Setter Property="IsVisible" Value="False" />
-                                                        </DataTrigger>
-                                                    </Button.Triggers>
-                                                </Button>
                                             </Grid>
                                         </Grid>
                                     </Border>

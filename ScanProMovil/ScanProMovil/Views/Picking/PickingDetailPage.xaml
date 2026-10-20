@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
+             x:Class="ScanProMovil.Views.Picking.PickingDetailPage"
+             Title="Detalle de Picking"
+             x:Name="Root">
+
+    <VerticalStackLayout Spacing="0">
+
+        <!-- Encabezado de la orden -->
+        <Border Stroke="#D1D5DB"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 14"
+                Padding="16"
+                Margin="12,12,12,0"
+                BackgroundColor="#F9FAFB">
+
+            <VerticalStackLayout Spacing="8">
+
+                <HorizontalStackLayout>
+                    <Image Source="package_delivery_logistics_64px.png"
+                           WidthRequest="28"
+                           HeightRequest="28"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding Orden.NumeroPedidoVenta}"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#1F2937"
+                           VerticalOptions="Center"
+                           Margin="10,0,0,0"/>
+                    <Label Text="  |  "
+                           VerticalOptions="Center"
+                           TextColor="#9CA3AF"/>
+                    <Border BackgroundColor="{Binding Orden.Estado, Converter={StaticResource EstadoPickingColorConverter}}"
+                            Padding="6,2"
+                            StrokeShape="RoundRectangle 8"
+                            VerticalOptions="Center">
+                        <Label Text="{Binding Orden.EstadoTexto}"
+                               FontSize="9"
+                               FontAttributes="Bold"
+                               TextColor="White"/>
+                    </Border>
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="{Binding Orden.FechaCreacion, StringFormat='Fecha: {0:dd/MM/yyyy HH:mm}'}"
+                           FontSize="12"
+                           TextColor="#6B7280"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding Orden.UsuarioAsignado, StringFormat='Usuario: {0}'}"
+                           FontSize="12"
+                           TextColor="#6B7280"
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <!-- Progreso -->
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="Progreso:"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="#374151"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding CompletadosCount, StringFormat='{0} completado(s)'}"
+                           FontSize="12"
+                           TextColor="#10B981"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <Label Text="de"
+                           FontSize="12"
+                           TextColor="#6B7280"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding Items.Count, StringFormat='{0} total'}"
+                           FontSize="12"
+                           TextColor="#6B7280"
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <ProgressBar Progress="{Binding Progreso}"
+                             HeightRequest="8"
+                             ProgressColor="#10B981"/>
+
+            </VerticalStackLayout>
+
+        </Border>
+
+        <!-- Lista de productos a picking -->
+        <Label Text="Productos"
+               FontSize="15"
+               FontAttributes="Bold"
+               TextColor="#1F2937"
+               Margin="16,16,16,8"/>
+
+        <CollectionView ItemsSource="{Binding Items}"
+                        SelectionMode="None"
+                        EmptyView="Sin productos en esta orden.">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Stroke="#E5E7EB"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="12"
+                            Margin="12,0,12,8"
+                            BackgroundColor="White">
+
+                        <HorizontalStackLayout>
+                            <!-- Check / estado del ítem -->
+                            <CheckBox IsChecked="{Binding Completado, Mode=OneWay}"
+                                      IsEnabled="False"
+                                      Color="#10B981"
+                                      VerticalOptions="Center"/>
+
+                            <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding ProductCode}"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       TextColor="#111827"/>
+                                <Label Text="{Binding ProductName}"
+                                       FontSize="12"
+                                       TextColor="#6B7280"
+                                       LineBreakMode="TailTruncation"/>
+                            </VerticalStackLayout>
+
+                            <Label Text="x"
+                                   FontSize="14"
+                                   TextColor="#9CA3AF"
+                                   VerticalOptions="Center"
+                                   Margin="8,0"/>
+
+                            <Label Text="{Binding Cantidad}"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#1F2937"
+                                   VerticalOptions="Center"
+                                   WidthRequest="40"
+                                   HorizontalTextAlignment="End"/>
+
+                            <Button Text="Completar"
+                                    Command="{Binding BindingContext.ToggleItemCommand, Source={x:Reference Root}}"
+                                    CommandParameter="{Binding .}"
+                                    WidthRequest="90"
+                                    HeightRequest="34"
+                                    BackgroundColor="#10B981"
+                                    TextColor="White"
+                                    FontSize="11"
+                                    FontAttributes="Bold"
+                                    VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Botón completar orden completa -->
+        <Button Text="Completar orden completa"
+                Command="{Binding CompletarOrdenCommand}"
+                WidthRequest="220"
+                HeightRequest="46"
+                BackgroundColor="#2563EB"
+                TextColor="White"
+                FontSize="15"
+                FontAttributes="Bold"
+                HorizontalOptions="Center"
+                Margin="0,20,0,24"/>
+
+        <!-- Indicador de carga -->
+        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                           Color="Blue"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+    </VerticalStackLayout>
+
+</ContentPage>

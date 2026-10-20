@@ -17,6 +17,8 @@ namespace ScanProMovil.Data
         public DbSet<ConsecutivoStockInit> ConsecutivosStockInit => Set<ConsecutivoStockInit>();
         public DbSet<StockInit> StockInits => Set<StockInit>();
         public DbSet<StockItem> StockItems => Set<StockItem>();
+        public DbSet<PickingOrder> PickingOrders => Set<PickingOrder>();
+        public DbSet<PickingOrderDetail> PickingOrderItems => Set<PickingOrderDetail>();
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -107,6 +109,24 @@ namespace ScanProMovil.Data
             {
                 e.ToTable("StockItems");
                 e.HasKey(i => i.Id);
+            });
+
+            modelBuilder.Entity<PickingOrder>(e =>
+            {
+                e.ToTable("PickingOrders");
+                e.HasKey(p => p.PickingId);
+                e.HasIndex(p => p.NumeroPedidoVenta);
+                e.HasIndex(p => p.Estado);
+                e.HasMany(p => p.Items)
+                    .WithOne()
+                    .HasForeignKey(i => i.PickingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PickingOrderDetail>(e =>
+            {
+                e.ToTable("PickingOrderItems");
+                e.HasKey(i => i.DetailId);
             });
         }
     }

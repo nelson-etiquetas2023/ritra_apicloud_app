@@ -3,10 +3,12 @@ using CommunityToolkit.Maui;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Handlers;
+using System.Net.Http;
 using ScanProMovil.Data;
 using ScanProMovil.Services.Auth;
 using ScanProMovil.Services.Compras;
 using ScanProMovil.Services.Orders;
+using ScanProMovil.Services.Picking;
 using ScanProMovil.Services.Products;
 using ScanProMovil.Services.Logging;
 using ScanProMovil.Services.Session;
@@ -17,6 +19,7 @@ using ScanProMovil.ViewModels.Products;
 using ScanProMovil.Views;
 using ScanProMovil.Views.Compras;
 using ScanProMovil.Views.Orders;
+using ScanProMovil.Views.Picking;
 using ScanProMovil.Views.Products;
 using ScanProMovil.Views.Sincro;
 using ScanProMovil.Views.StockInit;
@@ -52,8 +55,13 @@ namespace ScanProMovil
 
             builder.Services.AddHttpClient("scanpro", options => {
                 options.BaseAddress = new Uri(deployLocalApi);
-                options.Timeout = TimeSpan.FromSeconds(15);
+                options.Timeout = TimeSpan.FromSeconds(8);
                 options.DefaultRequestHeaders.Add("User-Agent", "MauiApp");
+                options.DefaultRequestHeaders.ConnectionClose = false;
+            }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                EnableMultipleHttp2Connections = true
             }).AddHttpMessageHandler<AuthHeaderHandler>();
 
             //Entity Framework Core - SQLite (CodeFirst + Migraciones).
@@ -63,12 +71,10 @@ namespace ScanProMovil
             // on this context instance...". AddDbContext se mantiene por compatibilidad
             // con resoluciones puntuales (una sola instancia, no usar en servicios).
             var dbPath = Path.Combine(FileSystem.AppDataDirectory, "scanpro.db");
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True"),
-                ServiceLifetime.Singleton);
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True"),
-                ServiceLifetime.Singleton);
+                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True;Cache=Shared")
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking),
+                ServiceLifetime.Scoped);
 
             //Injeccion de los VIEWMODELS.
             builder.Services.AddTransient<ProductsViewModel>();
@@ -77,7 +83,8 @@ namespace ScanProMovil
             builder.Services.AddTransient<SincroOrdersViewModel>();
             builder.Services.AddTransient<ComprasViewModel>();
             builder.Services.AddTransient<SincroComprasViewModels>();
-            builder.Services.AddTransient<ProductsLocalViewModels>();   
+            builder.Services.AddTransient<ProductsLocalViewModels>();
+            builder.Services.AddTransient<StockInitViewModel>();
             builder.Services.AddTransient<AddComprasViewModels>();
             //Injeccion de Pagina XAML.
             builder.Services.AddTransient<GestionProducts>();
@@ -101,6 +108,11 @@ namespace ScanProMovil
             builder.Services.AddSingleton<IOrderServices, OrderService>();
             builder.Services.AddSingleton<IComprasService, ComprasService>();
             builder.Services.AddSingleton<IStockInitService, StockInitService>();
+            builder.Services.AddTransient<IPickingService, PickingService>();
+            builder.Services.AddTransient<PickingViewModel>();
+            builder.Services.AddTransient<PickingPage>();
+            builder.Services.AddTransient<PickingDetailViewModel>();
+            builder.Services.AddTransient<PickingDetailPage>();
 
             builder
                 .UseMauiApp<App>()

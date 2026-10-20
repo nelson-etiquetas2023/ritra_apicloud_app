@@ -16,17 +16,19 @@ namespace ScanProMovil.Migrations
                 table: "StockInits");
 
             // Correlativo local para la identidad TMP-#### del conteo.
-            migrationBuilder.CreateTable(
-                name: "ConsecutivosStockInit",
-                columns: table => new
-                {
-                    Tipo_Documento = table.Column<string>(type: "TEXT", nullable: false),
-                    UltimoNumero = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ConsecutivosStockInit", x => x.Tipo_Documento);
-                });
+            // Usar SQL raw con IF NOT EXISTS para evitar error si la tabla ya existe
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS ""ConsecutivosStockInit"" (
+                    ""Tipo_Documento"" TEXT NOT NULL PRIMARY KEY,
+                    ""UltimoNumero"" INTEGER NOT NULL DEFAULT 0
+                );
+            ");
+
+            // Asegurar registro base 'FIS'
+            migrationBuilder.Sql(@"
+                INSERT OR IGNORE INTO ""ConsecutivosStockInit"" (""Tipo_Documento"", ""UltimoNumero"")
+                VALUES ('FIS', 0);
+            ");
 
             // Correlativo FIS-#### que asigna el servidor al crear el documento.
             migrationBuilder.AddColumn<string>(

@@ -4,6 +4,7 @@ using ScanProMovil.Services.Logging;
 using ScanProMovil.Services.Session;
 using ScanProMovil.Views;
 using ScanProMovil.Views.Compras;
+using ScanProMovil.Views.Picking;
 using ScanProMovil.Views.Products;
 using ScanProMovil.Views.StockInit;
 
@@ -124,6 +125,23 @@ namespace ScanProMovil
                 await img.FadeToAsync(1, 100);   // vuelve a normal
             }
             await Navigation.PushAsync(new ProductsPage());
+        });
+
+        private void OnTapPicking(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
+        {
+            if (sender is Image img)
+            {
+                await img.FadeToAsync(0.5, 100); // baja opacidad
+                await img.FadeToAsync(1, 100);   // vuelve a normal
+            }
+
+            var page = MauiProgram.Services!.GetService<PickingPage>();
+            if (page is null)
+            {
+                await DisplayAlertAsync("Error", "No se pudo abrir Picking.", "OK");
+                return;
+            }
+            await Navigation.PushAsync(page);
         });
 
         private void OnTapSetting(object? sender, TappedEventArgs e) => UiGuard.Run(this, async () =>
