@@ -1,0 +1,4 @@
+product_code,product_name,cantidad,ubicacion,costo,categoria,unidad,nota
+1001,Coca-Cola 500ml,10,Bodega A,12.50,Bebidas,UN,Ejemplo inicial
+1002,Pepsi 500ml,15,Bodega A,11.00,Bebidas,UN,Ejemplo inicial
+2001,Leche Entera 1L,8,Bodega B,15.00,Lacteos,UN,Ejemplo inicial

@@ -1,0 +1,10 @@
+Esta plantilla no se puede crear con texto plano; necesitas abrir el CSV con Excel y guardarlo como .xlsx.
+
+Usa este contenido en una hoja Excel:
+
+product_code,product_name,cantidad,ubicacion,costo,categoria,unidad,nota
+100101,Frijol Negro 500g,10,Bodega A,1250,alimentos,bolsa,Prueba inicial
+100102,Arroz Blanco 1kg,12,Bodega A,1500,alimentos,bolsa,Prueba inicial
+100103,Sazon Maggi,8,Bodega B,1580,alimentos,pote,Prueba inicial
+1001045,Mantequilla Pasteurizada Unta Rica 454g,5,Bodega B,4350,alimentos,pote,Prueba inicial
+100105,Refresco Red Rock Uva 2 Lt,6,Bodega C,10450,bedidas,botella pet,Prueba inicial
