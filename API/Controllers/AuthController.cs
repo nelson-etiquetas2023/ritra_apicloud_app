@@ -9,7 +9,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-   
+    [AllowAnonymous]
     public class AuthController(IAuthService Authservice) : ControllerBase
     {
         public IAuthService Authservice { get; set; } = Authservice;
@@ -19,7 +19,17 @@ namespace API.Controllers
         
         public async Task<ActionResult<ServiceResponse<string>>> Login([FromBody] UserLogin request) 
         {
-            var response = await Authservice.Login(request.Email, request.Password);
+            var identifier = request.ResolveIdentifier();
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                return BadRequest(new ServiceResponse<string>
+                {
+                    Success = false,
+                    Message = "El identificador (correo o nickname) es un campo requerido."
+                });
+            }
+
+            var response = await Authservice.Login(identifier, request.Password);
             
             if (!response.Success) 
             {
@@ -39,6 +49,7 @@ namespace API.Controllers
             var response = await Authservice.Register(new User
             {
                 Email = request.Email,
+                Nickname = request.Nickname,
                 UserName = request.UserName,
                 Role = request.Role,
             },

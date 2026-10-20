@@ -171,6 +171,83 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("plantilla-stock-inicial")]
+        public IActionResult PlantillaStockInicial([FromQuery] bool incluirProductos = true)
+        {
+            var bytes = service.GenerateStockTemplate(incluirProductos);
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "CargaInicialStock.xlsx");
+        }
+
+        [HttpGet]
+        [Route("cargas-iniciales")]
+        public async Task<IActionResult> GetCargasInicialesAsync()
+        {
+            return Ok(await service.GetCargasInicialesAsync());
+        }
+
+        [HttpPost]
+        [Route("aplicar-stock-inicial")]
+        [RequestSizeLimit(30_000_000)]
+        public async Task<IActionResult> AplicarStockInicialAsync(IFormFile file, [FromQuery] string? usuario)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No se recibió ningún archivo.");
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".xlsx" && extension != ".xls")
+                return BadRequest("El archivo debe ser un Excel (.xlsx o .xls).");
+
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                var result = await service.AplicarStockInicialAsync(stream, usuario ?? "");
+                _logger.LogInformation("Carga inicial de stock: aplicados {Aplicados}, errores {Errores}, lote {Lote}",
+                    result.Aplicados, result.Errors.Count, result.Lote);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al aplicar carga inicial de stock");
+                return StatusCode(500, new Shared.Dtos.Inventario.StockInicialResult
+                {
+                    Errors = [new Shared.Dtos.Inventario.StockInicialError { Row = 0, Message = $"Error interno al procesar el archivo: {ex.Message}" }]
+                });
+            }
+        }
+
+        [HttpGet]
+        [Route("carga-inicial/{lote}")]
+        public async Task<IActionResult> GetCargaDetalleAsync(string lote)
+        {
+            return Ok(await service.GetCargaDetalleAsync(lote));
+        }
+
+        [HttpPut]
+        [Route("carga-inicial/{lote}")]
+        public async Task<IActionResult> ActualizarCargaInicialAsync(string lote, [FromBody] Shared.Dtos.Inventario.CargaInicialUpdate req)
+        {
+            if (req == null) return BadRequest("Datos inválidos.");
+            var result = await service.ActualizarCargaInicialAsync(lote, req.Fecha, req.Comentario ?? "");
+            return Ok(result);
+        }
+
+        [HttpDelete]
+        [Route("carga-inicial/{lote}")]
+        public async Task<IActionResult> RevertirCargaInicialAsync(string lote)
+        {
+            var result = await service.RevertirCargaInicialAsync(lote);
+            _logger.LogInformation("Reversión de carga inicial {Lote}: éxito {Success}, revertidos {Aplicados}",
+                lote, result.Success, result.Aplicados);
+            return Ok(result);
+        }
+
         [HttpPut]
         [Route("updateproducts")]
         public async Task<IActionResult> UpdateProductsAsync([FromBody] ParametrosUpdateProducts parametros)
@@ -182,6 +259,29 @@ namespace API.Controllers
             if (!updated.Success) 
                 return Conflict(new { updated.Success, updated.Message, updated.Data });
             return Ok(updated.Data);
+        }
+
+        [HttpPut]
+        [Route("updateproductsfull")]
+        public async Task<IActionResult> UpdateProductsFullAsync([FromBody] ParametrosUpdateProducts parametros)
+        {
+            if (parametros?.producto == null)
+                return BadRequest("Invalid product data");
+
+            var updated = await service.UpdateProductFullAsync(parametros.id, parametros.producto);
+            if (!updated.Success)
+                return Conflict(new { updated.Success, updated.Message, updated.Data });
+            return Ok(updated);
+        }
+
+        [HttpPut]
+        [Route("setactive/{id:int}")]
+        public async Task<IActionResult> SetProductActiveAsync(int id, [FromBody] bool active)
+        {
+            var updated = await service.SetProductActiveAsync(id, active);
+            if (!updated)
+                return NotFound();
+            return Ok(new { success = true });
         }
 
         [HttpDelete]

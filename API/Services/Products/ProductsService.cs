@@ -4,6 +4,7 @@ using API.Storage;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
+using Shared.Dtos.Inventario;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -44,7 +45,16 @@ namespace API.Services.Products
             if (string.IsNullOrWhiteSpace(code)) return null;
             var normalized = code.Trim();
             return await context.Productos.FirstOrDefaultAsync(p =>
-                p.Product_Code.ToLower() == normalized.ToLower() &&
+                p.Product_Code == normalized &&
+                (excludeProductId == null || p.Product_id != excludeProductId.Value));
+        }
+
+        private async Task<Product?> FindProductByCodebarAsync(string? codebar, int? excludeProductId = null)
+        {
+            if (string.IsNullOrWhiteSpace(codebar)) return null;
+            var normalized = codebar.Trim();
+            return await context.Productos.FirstOrDefaultAsync(p =>
+                p.Codebar == normalized &&
                 (excludeProductId == null || p.Product_id != excludeProductId.Value));
         }
 
@@ -53,7 +63,17 @@ namespace API.Services.Products
             return new ServiceResponse<Product>
             {
                 Success = false,
-                Message = $"El código '{code}' ya está asignado al producto '{existing.Product_Name}' (ID {existing.Product_id}). Debe cambiarlo para registrar este producto.",
+                Message = $"El cï¿½digo '{code}' ya estï¿½ asignado al producto '{existing.Product_Name}' (ID {existing.Product_id}). Debe cambiarlo para registrar este producto.",
+                Data = existing
+            };
+        }
+
+        private static ServiceResponse<Product> DuplicateCodebarResponse(Product existing, string codebar)
+        {
+            return new ServiceResponse<Product>
+            {
+                Success = false,
+                Message = $"El cÃ³digo de barra '{codebar}' ya estÃ¡ asignado al producto '{existing.Product_Name}' ({existing.Product_Code}).",
                 Data = existing
             };
         }
@@ -63,7 +83,7 @@ namespace API.Services.Products
             var code = producto.Product_Code?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(code))
             {
-                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+                return new ServiceResponse<Product> { Success = false, Message = "El cï¿½digo de producto es obligatorio." };
             }
 
             var existing = await FindProductByCodeAsync(code);
@@ -72,7 +92,28 @@ namespace API.Services.Products
                 return DuplicateCodeResponse(existing, code);
             }
 
+            var codebar = producto.Codebar?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(codebar))
+            {
+                var dupBar = await FindProductByCodebarAsync(codebar);
+                if (dupBar != null)
+                {
+                    return DuplicateCodebarResponse(dupBar, codebar);
+                }
+                producto.Codebar = codebar;
+            }
+
             producto.Product_Code = code;
+            producto.Product_Name ??= "";
+            producto.Product_Type ??= "";
+            producto.Codebar ??= "";
+            producto.Unidad ??= "";
+            producto.Description ??= "";
+            producto.SkuNumber ??= "";
+            producto.PartNumber ??= "";
+            producto.Model ??= "";
+            producto.Marca ??= "";
+            producto.StatusProducts ??= "";
             context.Productos.Add(producto);
             await context.SaveChangesAsync();
             return new ServiceResponse<Product> { Success = true, Data = producto };
@@ -91,7 +132,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             var code = producto.Product_Code?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(code))
             {
-                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+                return new ServiceResponse<Product> { Success = false, Message = "El cï¿½digo de producto es obligatorio." };
             }
 
             var duplicate = await FindProductByCodeAsync(code, excludeProductId: productId);
@@ -100,26 +141,93 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 return DuplicateCodeResponse(duplicate, code);
             }
 
-            existing.Product_Code = code;
-            existing.Product_Name = producto.Product_Name;
-            existing.Product_Type = producto.Product_Type;
-            existing.Unidad = producto.Unidad;
-            existing.Codebar = producto.Codebar;
-            existing.Price = producto.Price;
-            existing.Costo = producto.Costo;
-            existing.Stock = producto.Stock;
-            existing.Stock_Mix = producto.Stock_Mix;
-            existing.Stock_Max = producto.Stock_Max;
-            existing.StockStatus = producto.StockStatus;
-            existing.Description = producto.Description;
-            existing.Marca = producto.Marca;
-            existing.Model = producto.Model;
-            existing.PartNumber = producto.PartNumber;
-            existing.SkuNumber = producto.SkuNumber;
-            existing.StatusProducts = producto.StatusProducts;
+            // ValidaciÃ³n atÃ³mica Codebar (idempotente: mismo producto con mismo codebar = OK)
+            var codebar = producto.Codebar?.Trim() ?? "";
+            if (!string.IsNullOrWhiteSpace(codebar))
+            {
+                // Idempotencia: si ya tiene ese codebar, no buscar duplicado
+                if (!string.Equals(existing.Codebar?.Trim(), codebar, StringComparison.OrdinalIgnoreCase))
+                {
+                    var dupBar = await FindProductByCodebarAsync(codebar, excludeProductId: productId);
+                    if (dupBar != null)
+                        return DuplicateCodebarResponse(dupBar, codebar);
+                }
+            }
+
+            // Solo se actualiza Codebar - no tocar resto de campos (requisito mÃ³vil)
+            existing.Codebar = codebar;
 
             await context.SaveChangesAsync();
             return new ServiceResponse<Product> { Success = true, Data = existing };
+        }
+
+        public async Task<ServiceResponse<Product>> UpdateProductFullAsync(int productId, Product producto)
+        {
+            var existing = await context.Productos
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Product_id == productId);
+            if (existing == null)
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El producto no existe." };
+            }
+
+            var code = producto.Product_Code?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El cÃ³digo de producto es obligatorio." };
+            }
+
+            var duplicate = await FindProductByCodeAsync(code, excludeProductId: productId);
+            if (duplicate != null)
+            {
+                return DuplicateCodeResponse(duplicate, code);
+            }
+
+            var codebar = producto.Codebar?.Trim() ?? "";
+            if (!string.IsNullOrWhiteSpace(codebar))
+            {
+                if (!string.Equals(existing.Codebar?.Trim(), codebar, StringComparison.OrdinalIgnoreCase))
+                {
+                    var dupBar = await FindProductByCodebarAsync(codebar, excludeProductId: productId);
+                    if (dupBar != null)
+                        return DuplicateCodebarResponse(dupBar, codebar);
+                }
+            }
+
+            // EdiciÃ³n completa WEB. No se toca Stock (lo mueve el ledger de inventario)
+            // ni Images/IsActive (tienen sus endpoints).
+            existing.Product_Code = code;
+            existing.Product_Name = producto.Product_Name?.Trim() ?? existing.Product_Name;
+            existing.Product_Type = producto.Product_Type?.Trim() ?? existing.Product_Type;
+            existing.Price = producto.Price;
+            existing.Codebar = codebar;
+            existing.Unidad = producto.Unidad?.Trim() ?? existing.Unidad;
+            existing.Costo = producto.Costo;
+            existing.Stock_Mix = producto.Stock_Mix;
+            existing.Stock_Max = producto.Stock_Max;
+            existing.ManejaVencimiento = producto.ManejaVencimiento;
+            existing.ManejaSeriales = producto.ManejaSeriales;
+            existing.ManejaLotes = producto.ManejaLotes;
+            existing.FechaVencimiento = producto.ManejaVencimiento ? producto.FechaVencimiento : null;
+            existing.Description = producto.Description?.Trim() ?? "";
+            existing.SkuNumber = producto.SkuNumber?.Trim() ?? "";
+            existing.PartNumber = producto.PartNumber?.Trim() ?? "";
+            existing.Model = producto.Model?.Trim() ?? "";
+            existing.Marca = producto.Marca?.Trim() ?? "";
+            existing.StatusProducts = producto.StatusProducts ?? existing.StatusProducts;
+
+            await context.SaveChangesAsync();
+            return new ServiceResponse<Product> { Success = true, Data = existing };
+        }
+
+        public async Task<bool> SetProductActiveAsync(int productId, bool active)
+        {
+            var existing = await context.Productos.FindAsync(productId);
+            if (existing == null) return false;
+
+            existing.IsActive = active;
+            await context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> DeleteProductAsync(int productId)
@@ -184,7 +292,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    _logger.LogError(ex, "Error de permisos al guardar imagen {FileName}. Verifica los permisos de la carpeta de imágenes.", file.FileName);
+                    _logger.LogError(ex, "Error de permisos al guardar imagen {FileName}. Verifica los permisos de la carpeta de imï¿½genes.", file.FileName);
                     return false;
                 }
                 catch (Exception ex)
@@ -214,7 +322,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             if (worksheet == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo no contiene hojas de cálculo." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo no contiene hojas de cï¿½lculo." });
                 return result;
             }
 
@@ -222,7 +330,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             if (lastRow == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo está vacío." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "El archivo estï¿½ vacï¿½o." });
                 return result;
             }
 
@@ -230,13 +338,13 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             if (columns.Code == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontró la columna obligatoria 'product_code'. Usa la plantilla de producto." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontrï¿½ la columna obligatoria 'product_code'. Usa la plantilla de producto." });
                 return result;
             }
             if (columns.Name == null)
             {
                 result.Success = false;
-                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontró la columna obligatoria 'nombre'. Usa la plantilla de producto." });
+                result.Errors.Add(new ProductImportError { Row = 0, Message = "No se encontrï¿½ la columna obligatoria 'nombre'. Usa la plantilla de producto." });
                 return result;
             }
 
@@ -262,7 +370,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 if (string.IsNullOrWhiteSpace(code))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = "El código de producto es obligatorio." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = "El cï¿½digo de producto es obligatorio." });
                     continue;
                 }
 
@@ -276,14 +384,14 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 if (!string.IsNullOrWhiteSpace(costRaw) && !TryParseCost(costRaw, out _))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El costo '{costRaw}' no es un número válido." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El costo '{costRaw}' no es un nï¿½mero vï¿½lido." });
                     continue;
                 }
 
                 if (!fileCodes.Add(code))
                 {
                     result.Skipped++;
-                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El código '{code}' está duplicado en el archivo." });
+                    result.Errors.Add(new ProductImportError { Row = i, Message = $"El cï¿½digo '{code}' estï¿½ duplicado en el archivo." });
                     continue;
                 }
 
@@ -347,7 +455,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                     }
 
                     await context.SaveChangesAsync();
-                    _logger.LogInformation("Importación: lote {Offset}-{End} procesado (insertados {Inserted}, actualizados {Updated})",
+                    _logger.LogInformation("Importaciï¿½n: lote {Offset}-{End} procesado (insertados {Inserted}, actualizados {Updated})",
                         offset, offset + batch.Count, result.Inserted, result.Updated);
                 }
 
@@ -357,11 +465,335 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error al importar productos: se revirtió toda la operación.");
+                _logger.LogError(ex, "Error al importar productos: se revirtiï¿½ toda la operaciï¿½n.");
                 result.Success = false;
                 result.Errors.Add(new ProductImportError { Row = 0, Message = $"Error interno al procesar el archivo: {ex.Message}" });
             }
 
+            return result;
+        }
+
+        public byte[] GenerateStockTemplate(bool incluirProductos)
+        {
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("CargaInicial");
+
+            string[] headers = ["product_id", "product_code", "product_name", "categoria", "unidad", "stock_actual", "stock_inicial"];
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            ws.Row(1).Style.Font.Bold = true;
+            ws.Row(1).Style.Fill.BackgroundColor = XLColor.FromHtml("#147a3d");
+            ws.Row(1).Style.Font.FontColor = XLColor.White;
+            ws.SheetView.FreezeRows(1);
+
+            if (incluirProductos)
+            {
+                var productos = context.Productos
+                    .AsNoTracking()
+                    .OrderBy(p => p.Product_Code)
+                    .Select(p => new { p.Product_id, p.Product_Code, p.Product_Name, p.Product_Type, p.Unidad, p.Stock })
+                    .ToList();
+
+                int row = 2;
+                foreach (var p in productos)
+                {
+                    ws.Cell(row, 1).Value = p.Product_id;
+                    ws.Cell(row, 2).Value = p.Product_Code;
+                    ws.Cell(row, 3).Value = p.Product_Name;
+                    ws.Cell(row, 4).Value = p.Product_Type;
+                    ws.Cell(row, 5).Value = p.Unidad;
+                    ws.Cell(row, 6).Value = p.Stock;
+                    ws.Cell(row, 7).Value = 0;
+                    row++;
+                }
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
+        public async Task<StockInicialResult> AplicarStockInicialAsync(Stream excelStream, string usuario)
+        {
+            var result = new StockInicialResult();
+            usuario = string.IsNullOrWhiteSpace(usuario) ? "Sistema" : usuario.Trim();
+
+            using var workbook = new XLWorkbook(excelStream);
+            var ws = workbook.Worksheets.FirstOrDefault();
+            if (ws == null)
+            {
+                result.Errors.Add(new StockInicialError { Row = 0, Message = "El archivo no contiene hojas de cÃ¡lculo." });
+                return result;
+            }
+
+            var lastRow = ws.LastRowUsed();
+            if (lastRow == null)
+            {
+                result.Errors.Add(new StockInicialError { Row = 0, Message = "El archivo estÃ¡ vacÃ­o." });
+                return result;
+            }
+
+            int codeCol = 0, stockCol = 0;
+            var header = ws.Row(1);
+            var lastCol = header.LastCellUsed()?.Address.ColumnNumber ?? 0;
+            for (int c = 1; c <= lastCol; c++)
+            {
+                var h = NormalizeHeader(header.Cell(c).GetString());
+                if (h is "productcode" or "codigoproducto" or "codigo" or "code" or "sku")
+                {
+                    if (codeCol == 0) codeCol = c;
+                }
+                else if (h is "stockinicial" or "stock" or "cantidad" or "inicial" or "existencia")
+                {
+                    if (stockCol == 0) stockCol = c;
+                }
+            }
+            if (codeCol == 0)
+            {
+                result.Errors.Add(new StockInicialError { Row = 0, Message = "No se encontrÃ³ la columna 'product_code'. Usa la plantilla." });
+                return result;
+            }
+            if (stockCol == 0)
+            {
+                result.Errors.Add(new StockInicialError { Row = 0, Message = "No se encontrÃ³ la columna 'stock_inicial'. Usa la plantilla." });
+                return result;
+            }
+
+            var (first, last) = GetDataRange(ws, codeCol, lastRow.RowNumber());
+            var vistos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var lineas = new List<StockInicialLinea>();
+            for (int i = first; i <= last; i++)
+            {
+                var code = GetCell(ws, i, codeCol);
+                var stockRaw = GetCell(ws, i, stockCol);
+                if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(stockRaw))
+                    continue;
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    result.Errors.Add(new StockInicialError { Row = i, Message = "El cÃ³digo de producto es obligatorio." });
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(stockRaw))
+                {
+                    // VacÃ­o vale 0: no se aplica ni da error.
+                    result.Omitidos++;
+                    continue;
+                }
+                if (!vistos.Add(code))
+                {
+                    result.Errors.Add(new StockInicialError { Row = i, Message = $"El cÃ³digo '{code}' estÃ¡ duplicado en el archivo." });
+                    continue;
+                }
+                if (!TryParseStock(stockRaw, out var stock) || stock < 0)
+                {
+                    result.Errors.Add(new StockInicialError { Row = i, Message = $"El stock inicial '{stockRaw}' no es un nÃºmero vÃ¡lido mayor o igual a cero." });
+                    continue;
+                }
+                if (stock == 0)
+                {
+                    // Solo se toman los mayores a cero.
+                    result.Omitidos++;
+                    continue;
+                }
+                lineas.Add(new StockInicialLinea { Row = i, Codigo = code, StockInicial = stock });
+            }
+
+            if (result.Errors.Count > 0)
+            {
+                result.Message = "La carga tiene errores y no se aplicÃ³ ningÃºn cambio.";
+                return result;
+            }
+            if (lineas.Count == 0)
+            {
+                result.Errors.Add(new StockInicialError { Row = 0, Message = "El archivo no tiene filas con datos." });
+                return result;
+            }
+
+            var yaExiste = await context.AjustesInventario.AnyAsync(a => a.Motivo == MotivoAjuste.Inicial);
+            if (yaExiste)
+            {
+                result.Message = "Ya existe una carga inicial aplicada. Solo un admin puede reabrirla.";
+                result.Errors.Add(new StockInicialError { Row = 0, Message = result.Message });
+                return result;
+            }
+
+            var codigos = lineas.Select(l => l.Codigo).ToList();
+            var productos = await context.Productos
+                .Where(p => codigos.Contains(p.Product_Code) ||
+                    (p.Codebar != null && codigos.Contains(p.Codebar)))
+                .ToListAsync();
+            var porCodigo = new Dictionary<string, Product>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in productos)
+            {
+                if (!string.IsNullOrWhiteSpace(p.Product_Code)) porCodigo.TryAdd(p.Product_Code.Trim(), p);
+                if (!string.IsNullOrWhiteSpace(p.Codebar)) porCodigo.TryAdd(p.Codebar.Trim(), p);
+            }
+            foreach (var l in lineas)
+            {
+                if (!porCodigo.ContainsKey(l.Codigo))
+                    result.Errors.Add(new StockInicialError { Row = l.Row, Message = $"El cÃ³digo '{l.Codigo}' no existe en el sistema." });
+            }
+            if (result.Errors.Count > 0)
+            {
+                result.Message = "Hay cÃ³digos inexistentes y no se aplicÃ³ ningÃºn cambio.";
+                return result;
+            }
+
+            var lote = $"INICIAL-{DateTime.Now:yyyyMMddHHmmss}";
+            await using var tx = await context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var l in lineas)
+                {
+                    var p = porCodigo[l.Codigo];
+                    var anterior = p.Stock;
+                    var nuevo = l.StockInicial;
+                    await context.Productos
+                        .Where(x => x.Product_id == p.Product_id)
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.Stock, nuevo));
+                    context.AjustesInventario.Add(new AjusteInventario
+                    {
+                        Fecha = DateTime.Now,
+                        Usuario = usuario,
+                        Lote = lote,
+                        ProductoId = p.Product_id,
+                        Codigo = l.Codigo,
+                        StockAnterior = anterior,
+                        StockNuevo = nuevo,
+                        Motivo = MotivoAjuste.Inicial
+                    });
+                }
+                await context.SaveChangesAsync();
+                await tx.CommitAsync();
+                result.Success = true;
+                result.Lote = lote;
+                result.Aplicados = lineas.Count;
+                result.Message = $"Carga inicial {lote} aplicada: {lineas.Count} productos." +
+                    (result.Omitidos > 0 ? $" Se omitieron {result.Omitidos} filas sin stock por llenar." : "");
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                _logger.LogError(ex, "Error al aplicar carga inicial de stock.");
+                result.Message = $"Error interno al aplicar la carga: {ex.Message}";
+                result.Errors.Add(new StockInicialError { Row = 0, Message = result.Message });
+            }
+            return result;
+        }
+
+        private static bool TryParseStock(string raw, out double value)
+        {
+            if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out value))
+                return true;
+            return double.TryParse(raw, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
+        }
+
+        public async Task<List<CargaInicialResumen>> GetCargasInicialesAsync()
+        {
+            return await context.AjustesInventario
+                .Where(a => a.Motivo == MotivoAjuste.Inicial)
+                .GroupBy(a => new { a.Lote, a.Usuario })
+                .Select(g => new CargaInicialResumen
+                {
+                    Lote = g.Key.Lote,
+                    Fecha = g.Max(a => a.Fecha),
+                    Usuario = g.Key.Usuario,
+                    Productos = g.Count(),
+                    Comentario = g.Select(a => a.Comentario).FirstOrDefault() ?? ""
+                })
+                .OrderByDescending(r => r.Fecha)
+                .ToListAsync();
+        }
+
+        public async Task<List<AjusteInventario>> GetCargaDetalleAsync(string lote)
+        {
+            var filas = await context.AjustesInventario
+                .Where(a => a.Lote == lote && a.Motivo == MotivoAjuste.Inicial)
+                .OrderBy(a => a.Codigo)
+                .ToListAsync();
+            if (filas.Count == 0) return filas;
+            var ids = filas.Select(a => a.ProductoId).Distinct().ToList();
+            var nombres = await context.Productos
+                .Where(p => ids.Contains(p.Product_id))
+                .Select(p => new { p.Product_id, p.Product_Name })
+                .ToListAsync();
+            var porId = nombres.ToDictionary(p => p.Product_id, p => p.Product_Name ?? "");
+            foreach (var a in filas)
+            {
+                if (porId.TryGetValue(a.ProductoId, out var n)) a.ProductoNombre = n;
+            }
+            return filas;
+        }
+
+        public async Task<StockInicialResult> ActualizarCargaInicialAsync(string lote, DateTime fecha, string comentario)
+        {
+            var result = new StockInicialResult { Lote = lote ?? "" };
+            if (string.IsNullOrWhiteSpace(lote))
+            {
+                result.Message = "Indica el lote a editar.";
+                return result;
+            }
+            var filas = await context.AjustesInventario
+                .Where(a => a.Lote == lote && a.Motivo == MotivoAjuste.Inicial)
+                .ToListAsync();
+            if (filas.Count == 0)
+            {
+                result.Message = $"No existe carga inicial con lote {lote}.";
+                return result;
+            }
+            foreach (var a in filas)
+            {
+                a.Fecha = fecha;
+                a.Comentario = (comentario ?? "").Trim();
+            }
+            await context.SaveChangesAsync();
+            result.Success = true;
+            result.Aplicados = filas.Count;
+            result.Message = $"Carga {lote} actualizada.";
+            return result;
+        }
+
+        public async Task<StockInicialResult> RevertirCargaInicialAsync(string lote)
+        {
+            var result = new StockInicialResult { Lote = lote ?? "" };
+            if (string.IsNullOrWhiteSpace(lote))
+            {
+                result.Message = "Indica el lote a revertir.";
+                return result;
+            }
+            var filas = await context.AjustesInventario
+                .Where(a => a.Lote == lote && a.Motivo == MotivoAjuste.Inicial)
+                .ToListAsync();
+            if (filas.Count == 0)
+            {
+                result.Message = $"No existe carga inicial con lote {lote}.";
+                return result;
+            }
+            await using var tx = await context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var a in filas)
+                {
+                    var anterior = a.StockAnterior;
+                    await context.Productos
+                        .Where(p => p.Product_id == a.ProductoId)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, anterior));
+                }
+                context.AjustesInventario.RemoveRange(filas);
+                await context.SaveChangesAsync();
+                await tx.CommitAsync();
+                result.Success = true;
+                result.Aplicados = filas.Count;
+                result.Message = $"Carga {lote} revertida: {filas.Count} productos volvieron a su stock anterior.";
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                _logger.LogError(ex, "Error al revertir carga inicial {Lote}.", lote);
+                result.Message = $"Error interno al revertir: {ex.Message}";
+            }
             return result;
         }
 
@@ -490,13 +922,13 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
             {
                 if (request?.Product == null)
                 {
-                    return new ServiceResponse<Product> { Success = false, Message = "Datos del producto inválidos." };
+                    return new ServiceResponse<Product> { Success = false, Message = "Datos del producto invï¿½lidos." };
                 }
 
                 var code = request.Product.Product_Code?.Trim() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(code))
                 {
-                    return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+                    return new ServiceResponse<Product> { Success = false, Message = "El cï¿½digo de producto es obligatorio." };
                 }
 
                 var existing = await FindProductByCodeAsync(code);
@@ -568,7 +1000,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
 
                 await context.SaveChangesAsync();
 
-                // Recargar el producto con sus imágenes
+                // Recargar el producto con sus imï¿½genes
                 var createdProduct = await context.Productos
                     .Include(p => p.Images)
                     .FirstOrDefaultAsync(p => p.Product_id == productId);
@@ -586,10 +1018,15 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
         {
             var savedFiles = new List<string>();
 
-            var code = product?.Product_Code?.Trim() ?? string.Empty;
+            if (product is null)
+            {
+                return new ServiceResponse<Product> { Success = false, Message = "El producto es obligatorio." };
+            }
+
+            var code = product.Product_Code?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(code))
             {
-                return new ServiceResponse<Product> { Success = false, Message = "El código de producto es obligatorio." };
+                return new ServiceResponse<Product> { Success = false, Message = "El cï¿½digo de producto es obligatorio." };
             }
 
             var existing = await FindProductByCodeAsync(code);
@@ -598,7 +1035,28 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 return DuplicateCodeResponse(existing, code);
             }
 
+            var codebarFiles = product.Codebar?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(codebarFiles))
+            {
+                var dupBarFiles = await FindProductByCodebarAsync(codebarFiles);
+                if (dupBarFiles != null)
+                {
+                    return DuplicateCodebarResponse(dupBarFiles, codebarFiles);
+                }
+                product.Codebar = codebarFiles;
+            }
+
             product!.Product_Code = code;
+            product.Product_Name ??= "";
+            product.Product_Type ??= "";
+            product.Codebar ??= "";
+            product.Unidad ??= "";
+            product.Description ??= "";
+            product.SkuNumber ??= "";
+            product.PartNumber ??= "";
+            product.Model ??= "";
+            product.Marca ??= "";
+            product.StatusProducts ??= "";
 
             await using var transaction = await context.Database.BeginTransactionAsync();
 
@@ -660,7 +1118,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                     }
                 }
 
-                _logger.LogError(ex, "No se pudo guardar el producto ni sus imágenes. Ruta configurada: {ImagesPath}", ProductImageStorage.GetPath(_environment, _configuration));
+                _logger.LogError(ex, "No se pudo guardar el producto ni sus imï¿½genes. Ruta configurada: {ImagesPath}", ProductImageStorage.GetPath(_environment, _configuration));
                 return new ServiceResponse<Product> { Success = false, Message = $"Error al guardar el producto: {ex.Message}" };
             }
         }
@@ -688,7 +1146,7 @@ public async Task<ServiceResponse<Product>> UpdateProductAsync(int productId, Pr
                 var fileExtension = Path.GetExtension(imageData.FileName);
                 var storedFileName = $"{Guid.NewGuid()}{fileExtension}";
 
-                // Buscar imagen existente en ese índice
+                // Buscar imagen existente en ese ï¿½ndice
                 var existingImage = producto.Images?.FirstOrDefault(i => i.ImageIndex == imageData.ImageIndex);
 
                 if (existingImage != null)

@@ -14,44 +14,63 @@ namespace API.Services.Auth
         public ApplicationDbContext Context { get; set; } = context;
         public IConfiguration Configuration { get; set; } = configuration;
 
-        public async Task<ServiceResponse<string>> Login(string email, string password)
+        public async Task<ServiceResponse<string>> Login(string identifier, string password)
         {
             var response = new ServiceResponse<string>();
+
             try
             {
-                var user = await Context.Users.FirstOrDefaultAsync(x =>
-                x.Email.ToLower().Equals(email.ToLower()));
+                var normalizedIdentifier = identifier.Trim().ToLowerInvariant();
+                var matches = await Context.Users
+                    .Where(user =>
+                        user.Email.ToLower() == normalizedIdentifier ||
+                        user.Nickname.ToLower() == normalizedIdentifier)
+                    .Take(2)
+                    .ToListAsync();
 
-                if (user == null)
+                if (matches.Count != 1)
                 {
                     response.Success = false;
-                    response.Message = "User not found.";
-                    Console.Write(response.Message);
+                    response.Message = "Credenciales incorrectas.";
+                    return response;
                 }
-                else if (!VerifyPasswordHash(password, user.PasswordHash!, user.PasswordSalt!))
+
+                var user = matches[0];
+                if (user.PasswordHash is null ||
+                    user.PasswordSalt is null ||
+                    !VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
                 {
                     response.Success = false;
-                    response.Message = "Wrong password.";
-                    Console.Write(response.Message);
+                    response.Message = "Credenciales incorrectas.";
+                    return response;
                 }
-                else
-                {
-                    response.Data = CreateToken(user);
-                    Console.Write(response.Message);
-                }
+
+                response.Data = CreateToken(user);
+                response.Message = "Login ok.";
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(ex.Message);
+                response.Success = false;
+                response.Message = "No se pudo validar el inicio de sesión.";
             }
+
             return response;
         }
 
         public async Task<ServiceResponse<int>> Register(User user, string password)
         {
-            if (await UserExists(user.Email)) 
+            user.Email = user.Email.Trim();
+            user.Nickname = user.Nickname.Trim().ToLowerInvariant();
+            user.Role = user.Role.Trim();
+
+            if (await UserExists(user.Email, user.Nickname))
             {
-                return new ServiceResponse<int> { Success = false, Message ="User alredy exists." };
+                return new ServiceResponse<int> { Success = false, Message = "El correo o nickname ya existe." };
+            }
+
+            if (!AppRoles.IsValid(user.Role))
+            {
+                return new ServiceResponse<int> { Success = false, Message = "El rol indicado no es válido." };
             }
 
             CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
@@ -66,21 +85,20 @@ namespace API.Services.Auth
             {
                 Data = user.Id,
                 Success = true,
-                Message = "usuario creado exitosamente...",
+                Message = "Usuario creado exitosamente.",
             };
         }
 
-        public async Task<bool> UserExists(string email)
+        public async Task<bool> UserExists(string email, string nickname)
         {
-            if (await Context.Users.AnyAsync(user =>
-            user.Email.ToLower().Equals(email.ToLower())))
-            {
-                return true;
-            }
-            else 
-            {
-                return false;
-            }
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+            var normalizedNickname = nickname.Trim().ToLowerInvariant();
+
+            return await Context.Users.AnyAsync(user =>
+                user.Email.ToLower() == normalizedEmail ||
+                user.Nickname.ToLower() == normalizedEmail ||
+                user.Email.ToLower() == normalizedNickname ||
+                user.Nickname.ToLower() == normalizedNickname);
         }
 
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt) 
@@ -95,7 +113,7 @@ namespace API.Services.Auth
         {
             using var hmac = new HMACSHA512(passwordSalt);
             var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            return computeHash.SequenceEqual(passwordHash);
+            return CryptographicOperations.FixedTimeEquals(computeHash, passwordHash);
         }
 
         private string CreateToken(User user) 
@@ -105,7 +123,8 @@ namespace API.Services.Auth
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(ClaimTypes.Role, user.Role),
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("nickname", user.Nickname)
             ];
 
             var mysecret = Configuration.GetSection("AppSettings:Token").Value!;
@@ -120,7 +139,7 @@ namespace API.Services.Auth
 
             var token = new JwtSecurityToken(
                     claims: claims,
-                    expires: DateTime.Now.AddDays(1),
+                    expires: DateTime.UtcNow.AddDays(1),
                     signingCredentials: creds);
 
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
