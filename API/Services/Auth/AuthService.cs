@@ -5,7 +5,6 @@ using Shared.Dtos;
 using Shared.Security;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 
 namespace API.Services.Auth
 {
@@ -36,9 +35,7 @@ namespace API.Services.Auth
                 }
 
                 var user = matches[0];
-                if (user.PasswordHash is null ||
-                    user.PasswordSalt is null ||
-                    !VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
+                if (!PasswordHasher.Verify(password, user.PasswordHash, user.PasswordSalt))
                 {
                     response.Success = false;
                     response.Message = "Credenciales incorrectas.";
@@ -73,7 +70,7 @@ namespace API.Services.Auth
                 return new ServiceResponse<int> { Success = false, Message = "El rol indicado no es válido." };
             }
 
-            CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
+            PasswordHasher.Create(password, out byte[] passwordHash, out byte[] passwordSalt);
 
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
@@ -99,21 +96,6 @@ namespace API.Services.Auth
                 user.Nickname.ToLower() == normalizedEmail ||
                 user.Email.ToLower() == normalizedNickname ||
                 user.Nickname.ToLower() == normalizedNickname);
-        }
-
-        private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt) 
-        {
-            using var hmac = new HMACSHA512();
-            passwordSalt = hmac.Key;
-            passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-
-        }
-
-        private static bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt) 
-        {
-            using var hmac = new HMACSHA512(passwordSalt);
-            var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            return CryptographicOperations.FixedTimeEquals(computeHash, passwordHash);
         }
 
         private string CreateToken(User user) 

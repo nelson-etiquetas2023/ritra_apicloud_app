@@ -1,6 +1,6 @@
-﻿using Shared.Dtos;
+﻿using API.Services.Auth;
+using Shared.Dtos;
 using Shared.Security;
-using System.Security.Cryptography;
 
 namespace API.Data
 {
@@ -8,20 +8,29 @@ namespace API.Data
     {
         public static void Seed(ApplicationDbContext context)
         {
-            const string defaultAdminEmail = "nelson.tecno2024@gmail.com";
-            const string defaultAdminPassword = "Jossycar5%";
-            const string defaultAdminNickname = "npino";
+            const string defaultAdminEmail = "admin@scanpro.local";
+            const string defaultAdminNickname = "admin";
+            const string defaultAdminPassword = "admin";
 
-            var defaultAdmin = context.Users.FirstOrDefault(u => u.Email == defaultAdminEmail);
-            if (defaultAdmin is null)
+            // Credenciales anteriores: se buscan primero para renombrar en
+            // caliente la base ya existente en vez de crear un segundo admin.
+            const string legacyAdminEmail = "nelson.tecno2024@gmail.com";
+            const string legacyAdminNickname = "npino";
+
+            var admin = context.Users.FirstOrDefault(u =>
+                            u.Nickname == legacyAdminNickname || u.Email == legacyAdminEmail)
+                        ?? context.Users.FirstOrDefault(u =>
+                            u.Nickname == defaultAdminNickname || u.Email == defaultAdminEmail);
+
+            if (admin is null)
             {
-                CreatePasswordHash(defaultAdminPassword, out var passwordHash, out var passwordSalt);
+                PasswordHasher.Create(defaultAdminPassword, out var passwordHash, out var passwordSalt);
 
                 context.Users.Add(new User
                 {
                     Email = defaultAdminEmail,
                     Nickname = defaultAdminNickname,
-                    UserName = "Nelson",
+                    UserName = "Administrador",
                     Role = AppRoles.Admin,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
@@ -30,10 +39,50 @@ namespace API.Data
 
                 context.SaveChanges();
             }
-            else if (string.IsNullOrWhiteSpace(defaultAdmin.Nickname))
+            else
             {
-                defaultAdmin.Nickname = defaultAdminNickname;
-                context.SaveChanges();
+                var changed = false;
+
+                // El nickname tiene indice unico: no se renombra si otra cuenta
+                // ya lo ocupa, para no abortar el seed completo.
+                var nicknameEnUso = context.Users.Any(u =>
+                    u.Id != admin.Id && u.Nickname == defaultAdminNickname);
+
+                if (!nicknameEnUso &&
+                    !string.Equals(admin.Nickname, defaultAdminNickname, StringComparison.OrdinalIgnoreCase))
+                {
+                    admin.Nickname = defaultAdminNickname;
+                    changed = true;
+                }
+
+                var emailEnUso = context.Users.Any(u =>
+                    u.Id != admin.Id && u.Email == defaultAdminEmail);
+
+                if (!emailEnUso &&
+                    !string.Equals(admin.Email, defaultAdminEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    admin.Email = defaultAdminEmail;
+                    changed = true;
+                }
+
+                if (!string.Equals(admin.Role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+                {
+                    admin.Role = AppRoles.Admin;
+                    changed = true;
+                }
+
+                // Solo se regenera el hash si la contrasena actual no es la
+                // esperada, para no invalidar el salt en cada arranque.
+                if (!PasswordHasher.Verify(defaultAdminPassword, admin.PasswordHash, admin.PasswordSalt))
+                {
+                    PasswordHasher.Create(defaultAdminPassword, out var hash, out var salt);
+                    admin.PasswordHash = hash;
+                    admin.PasswordSalt = salt;
+                    changed = true;
+                }
+
+                if (changed)
+                    context.SaveChanges();
             }
 
             if (!context.Parametros.Any(p => p.Name == "Configuracion del consecutivo de inventario"))
@@ -55,13 +104,6 @@ namespace API.Data
                 });
                 context.SaveChanges();
             }
-        }
-
-        private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using var hmac = new HMACSHA512();
-            passwordSalt = hmac.Key;
-            passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
         }
     }
 }
