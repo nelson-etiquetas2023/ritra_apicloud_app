@@ -7,4 +7,7 @@
     <Deploy Solution="Debug|*" />
   </Project>
   <Project Path="ScanProMovil.Data/ScanProMovil.Data.csproj" />
+  <!-- Shared.csproj debe estar en la solucion: ScanProMovil.Data lo referencia
+       via ProjectReference y VS no resuelve referencias fuera de la solucion. -->
+  <Project Path="../Shared/Shared.csproj" />
 </Solution>
