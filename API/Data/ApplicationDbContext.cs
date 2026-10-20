@@ -1,9 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
 using Shared.Dtos.AppMovil;
-using Shared.Dtos.CargasIniciales;
+using Shared.Dtos.Inventarios;
+using Shared.Dtos.Inventario;
 using Shared.Dtos.Compras;
+using Shared.Dtos.Turnos;
 using Shared.Dtos.Ventas;
+using Shared.Dtos.Picking;
 using Shared.Security;
 
 namespace API.Data
@@ -29,17 +32,38 @@ namespace API.Data
         public DbSet<OrderPurchaseDetails> OrderPurchaseDetails { get; set; }
         public DbSet<OrdenCompra> Compra { get; set; }
         public DbSet<DetalleCompras> DetalleCompra { get; set; }
-        public DbSet<Inicial> CargasIniciales { get; set; }
-        public DbSet<DetalleInicial> CargasInicialesDetalles { get; set; }
+        public DbSet<InventarioTeorico> InventarioTeorico { get; set; }
+        public DbSet<InventarioTeoricoDetalle> InventarioTeoricoDetalles { get; set; }
+        public DbSet<InventarioFisico> InventarioFisico { get; set; }
+        public DbSet<InventarioFisicoDetalle> InventarioFisicoDetalles { get; set; }
         public DbSet<PedidoVenta> PedidoVenta { get; set; }
         public DbSet<DetalleVenta> PedidoVentaDetalles { get; set; }
+        public DbSet<VentaPago> VentaPagos { get; set; }
+        public DbSet<AjusteInventario> AjustesInventario { get; set; }
         public DbSet<Almacen> Almacenes { get; set; }
         public DbSet<Vendedor> Vendedores { get; set; }
+        public DbSet<LabelTemplate> LabelTemplates { get; set; }
+        public DbSet<Printer> Printers { get; set; }
+        public DbSet<PrintJob> PrintJobs { get; set; }
+        public DbSet<TurnoCaja> TurnosCaja { get; set; }
+        public DbSet<TurnoDenominacion> TurnoDenominaciones { get; set; }
+        public DbSet<TurnoMovimiento> TurnoMovimientos { get; set; }
+
+        public DbSet<PickingOrder> PickingOrders { get; set; }
 
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<User>()
+                .Property(user => user.Nickname)
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<User>()
+                .HasIndex(user => user.Nickname)
+                .IsUnique()
+                .HasFilter("[Nickname] <> ''");
+
             //establece la precision de campo total costo.
             modelBuilder.Entity<OrderPurchase>().Property(o => o.TotalCosto)
                 .HasPrecision(18, 2);
@@ -62,6 +86,12 @@ namespace API.Data
                 .HasIndex(p => p.Product_Code)
                 .IsUnique();
 
+            // Índice único filtrado para Codebar (evita duplicados, permite vacíos)
+            modelBuilder.Entity<Product>()
+                .HasIndex(p => p.Codebar)
+                .IsUnique()
+                .HasFilter("[Codebar] IS NOT NULL AND [Codebar] <> ''");
+
             // Índice único para SupplierCode (P######)
             modelBuilder.Entity<Supplier>()
                 .HasIndex(s => s.SupplierCode)
@@ -76,6 +106,18 @@ namespace API.Data
             modelBuilder.Entity<Almacen>()
                 .HasIndex(a => a.almacen_code)
                 .IsUnique();
+
+            // Etiquetas: códigos únicos de plantillas e impresoras
+            modelBuilder.Entity<LabelTemplate>()
+                .HasIndex(t => t.Codigo)
+                .IsUnique();
+
+            modelBuilder.Entity<Printer>()
+                .HasIndex(p => p.Code)
+                .IsUnique();
+
+            modelBuilder.Entity<PrintJob>()
+                .HasIndex(j => j.Status);
 
             // Índice único para vendedor_code (VEN-####)
             modelBuilder.Entity<Vendedor>()
@@ -104,15 +146,36 @@ namespace API.Data
                 .HasPrincipalKey(o => o.Numero)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Inicial>()
+            modelBuilder.Entity<InventarioTeorico>()
                 .HasMany(i => i.Detalles)
-                .WithOne(d => d.Inicial)
-                .HasForeignKey(d => d.InicialId)
+                .WithOne(d => d.InventarioTeorico)
+                .HasForeignKey(d => d.InventarioTeoricoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<DetalleInicial>()
+            modelBuilder.Entity<InventarioTeorico>()
+                .HasIndex(i => i.Numero)
+                .IsUnique();
+
+            modelBuilder.Entity<InventarioTeoricoDetalle>()
                 .Property(d => d.Costo)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<InventarioFisico>()
+                .HasMany(d => d.Detalles)
+                .WithOne(dd => dd.InventarioFisico)
+                .HasForeignKey(dd => dd.InventarioFisicoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<InventarioFisico>()
+                .HasIndex(d => d.Numero)
+                .IsUnique();
+
+            modelBuilder.Entity<InventarioFisicoDetalle>()
+                .Property(d => d.Costo)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<InventarioFisicoDetalle>()
+                .HasIndex(d => d.InventarioFisicoId);
 
             modelBuilder.Entity<Location>()
                 .Property(l => l.Capacity)
@@ -122,14 +185,26 @@ namespace API.Data
                 .Property(l => l.CurrentCapacity)
                 .HasPrecision(18, 2);
 
-            modelBuilder.Entity<DetalleInicial>()
-                .HasIndex(d => d.InicialId);
+            modelBuilder.Entity<InventarioTeoricoDetalle>()
+                .HasIndex(d => d.InventarioTeoricoId);
 
             modelBuilder.Entity<PedidoVenta>()
                 .HasMany(p => p.Items)
                 .WithOne(d => d.PedidoVenta)
                 .HasForeignKey(d => d.PedidoVentaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .HasMany(p => p.Pagos)
+                .WithOne(g => g.PedidoVenta)
+                .HasForeignKey(g => g.PedidoVentaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VentaPago>()
+                .Property(g => g.Monto).HasPrecision(18, 2);
+
+            modelBuilder.Entity<VentaPago>()
+                .HasIndex(g => g.PedidoVentaId);
 
             modelBuilder.Entity<PedidoVenta>()
                 .Property(p => p.Subtotal).HasPrecision(18, 2);
@@ -146,6 +221,12 @@ namespace API.Data
             modelBuilder.Entity<DetalleVenta>()
                 .Property(d => d.Precio).HasPrecision(18, 2);
 
+            modelBuilder.Entity<AjusteInventario>()
+                .HasIndex(a => a.Lote);
+
+            modelBuilder.Entity<AjusteInventario>()
+                .HasIndex(a => a.ProductoId);
+
             modelBuilder.Entity<DetalleVenta>()
                 .Property(d => d.Descuento).HasPrecision(18, 2);
 
@@ -154,6 +235,44 @@ namespace API.Data
 
             modelBuilder.Entity<DetalleVenta>()
                 .HasIndex(d => d.PedidoVentaId);
+
+            modelBuilder.Entity<TurnoCaja>()
+                .Property(t => t.FondoInicial).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoCaja>()
+                .Property(t => t.Esperado).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoCaja>()
+                .Property(t => t.Contado).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoCaja>()
+                .Property(t => t.Diferencia).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoCaja>()
+                .HasIndex(t => new { t.Caja, t.Status });
+
+            modelBuilder.Entity<TurnoDenominacion>()
+                .Property(d => d.Denominacion).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoDenominacion>()
+                .HasIndex(d => d.TurnoId);
+
+            modelBuilder.Entity<TurnoMovimiento>()
+                .Property(m => m.Monto).HasPrecision(18, 2);
+
+            modelBuilder.Entity<TurnoMovimiento>()
+                .HasIndex(m => m.TurnoId);
+
+            modelBuilder.Entity<PedidoVenta>()
+                .HasIndex(p => p.TurnoId);
+
+            modelBuilder.Entity<PickingOrder>(e =>
+            {
+                e.ToTable("PickingOrders");
+                e.HasKey(p => p.Id);
+                e.HasIndex(p => p.NumeroPedidoVenta);
+                e.HasIndex(p => p.Estado);
+            });
 
 
         }
