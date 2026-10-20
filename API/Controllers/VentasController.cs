@@ -8,21 +8,26 @@ namespace API.Controllers
     [Route("api/[controller]")]
     public class VentasController(IVentasService service) : ControllerBase
     {
-        private readonly IVentasService _service = service;
-
         [HttpGet]
         [Route("get")]
         public async Task<IActionResult> GetAllAsync()
         {
-            var pedidos = await _service.GetAllAsync();
+            var pedidos = await service.GetAllAsync();
             return Ok(pedidos);
+        }
+
+        [HttpGet]
+        [Route("turno/{turnoId:int}")]
+        public async Task<IActionResult> GetByTurnoAsync(int turnoId)
+        {
+            return Ok(await service.GetByTurnoAsync(turnoId));
         }
 
         [HttpGet]
         [Route("getbyid/{id}")]
         public async Task<IActionResult> GetByIdAsync(int id)
         {
-            var pedido = await _service.GetByIdAsync(id);
+            var pedido = await service.GetByIdAsync(id);
             if (pedido == null) return NotFound($"Pedido de venta {id} no encontrado");
             return Ok(pedido);
         }
@@ -32,7 +37,7 @@ namespace API.Controllers
         public async Task<IActionResult> CreateAsync([FromBody] PedidoVenta pedido)
         {
             if (pedido == null) return BadRequest("Datos inválidos");
-            var result = await _service.CreateAsync(pedido);
+            var result = await service.CreateAsync(pedido);
             return Ok(result);
         }
 
@@ -41,7 +46,7 @@ namespace API.Controllers
         public async Task<IActionResult> UpdateAsync(int id, [FromBody] PedidoVenta pedido)
         {
             if (pedido == null) return BadRequest("Datos inválidos");
-            var result = await _service.UpdateAsync(id, pedido);
+            var result = await service.UpdateAsync(id, pedido);
             return Ok(result);
         }
 
@@ -49,7 +54,7 @@ namespace API.Controllers
         [Route("delete/{id}")]
         public async Task<IActionResult> DeleteAsync(int id)
         {
-            var deleted = await _service.DeleteAsync(id);
+            var deleted = await service.DeleteAsync(id);
             if (!deleted) return NotFound($"Pedido de venta {id} no encontrado");
             return NoContent();
         }
@@ -58,7 +63,7 @@ namespace API.Controllers
         [Route("getnextnum")]
         public async Task<IActionResult> GetNextNumAsync()
         {
-            var next = await _service.GetNextNumAsync();
+            var next = await service.GetNextNumAsync();
             return Ok(new { numero = next });
         }
 
@@ -66,7 +71,7 @@ namespace API.Controllers
         [Route("process/{numero}")]
         public async Task<IActionResult> ProcesarPedidoAsync(string numero)
         {
-            var result = await _service.ProcesarPedidoAsync(numero);
+            var result = await service.ProcesarPedidoAsync(numero);
             return Ok(result);
         }
 
@@ -74,8 +79,8 @@ namespace API.Controllers
         [Route("anular/{id}")]
         public async Task<IActionResult> Anular(int id)
         {
-            var ok = await _service.AnularAsync(id);
-            if (!ok) return Conflict($"El pedido {id} no existe, ya fue procesado o ya está anulado.");
+            var ok = await service.AnularAsync(id);
+            if (!ok) return Conflict($"El pedido {id} no existe, ya está anulado o su turno está cerrado.");
             return Ok(new { message = "El pedido fue anulado." });
         }
     }

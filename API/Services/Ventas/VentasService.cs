@@ -1,7 +1,7 @@
 using API.Data;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
-using Shared.Dtos.CargasIniciales;
+using Shared.Dtos.Inventarios;
 using Shared.Dtos.Ventas;
 
 namespace API.Services.Ventas
@@ -12,6 +12,17 @@ namespace API.Services.Ventas
         {
             return await context.PedidoVenta
                 .Include(p => p.Items)
+                .Include(p => p.Pagos)
+                .OrderByDescending(p => p.Id)
+                .ToListAsync();
+        }
+
+        public async Task<List<PedidoVenta>> GetByTurnoAsync(int turnoId)
+        {
+            return await context.PedidoVenta
+                .Include(p => p.Items)
+                .Include(p => p.Pagos)
+                .Where(p => p.TurnoId == turnoId)
                 .OrderByDescending(p => p.Id)
                 .ToListAsync();
         }
@@ -20,6 +31,7 @@ namespace API.Services.Ventas
         {
             return await context.PedidoVenta
                 .Include(p => p.Items)
+                .Include(p => p.Pagos)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
@@ -41,7 +53,7 @@ namespace API.Services.Ventas
                 return result;
             }
 
-            if (pedido.Cliente_Id <= 0)
+            if (pedido.Cliente_Id <= 0 && !(pedido.TurnoId.HasValue && !string.IsNullOrWhiteSpace(pedido.Cliente_Nombre)))
             {
                 result.Success = false;
                 result.Message = "Debe seleccionar un cliente.";
@@ -55,12 +67,17 @@ namespace API.Services.Ventas
                 return result;
             }
 
-            var cliente = await context.Customers.FirstOrDefaultAsync(c => c.customer_id == pedido.Cliente_Id);
-            if (cliente == null)
+            // Cliente genérico POS (ocasionales sin registro): solo trae el nombre, sin Cliente_Id.
+            Customer? cliente = null;
+            if (pedido.Cliente_Id > 0)
             {
-                result.Success = false;
-                result.Message = "El cliente seleccionado no existe.";
-                return result;
+                cliente = await context.Customers.FirstOrDefaultAsync(c => c.customer_id == pedido.Cliente_Id);
+                if (cliente == null)
+                {
+                    result.Success = false;
+                    result.Message = "El cliente seleccionado no existe.";
+                    return result;
+                }
             }
 
             var yaExiste = await context.PedidoVenta.AnyAsync(p => p.Numero == pedido.Numero);
@@ -69,6 +86,17 @@ namespace API.Services.Ventas
                 result.Success = false;
                 result.Message = $"El pedido {pedido.Numero} ya existe.";
                 return result;
+            }
+
+            if (pedido.TurnoId.HasValue)
+            {
+                var turno = await context.TurnosCaja.FirstOrDefaultAsync(t => t.Id == pedido.TurnoId.Value);
+                if (turno == null || turno.Status != Shared.Dtos.Turnos.TurnoStatus.Abierto)
+                {
+                    result.Success = false;
+                    result.Message = "El turno de caja no existe o ya está cerrado. Abre un turno para vender.";
+                    return result;
+                }
             }
 
             var errores = ValidarDetalles(pedido);
@@ -80,8 +108,16 @@ namespace API.Services.Ventas
                 return result;
             }
 
-            pedido.Cliente_Nombre = cliente.CustomerName;
-            pedido.Cliente_RNC = cliente.RNC ?? "";
+            if (cliente != null)
+            {
+                pedido.Cliente_Nombre = cliente.CustomerName;
+                pedido.Cliente_RNC = cliente.RNC ?? "";
+            }
+            else
+            {
+                pedido.Cliente_Nombre = pedido.Cliente_Nombre.Trim();
+                pedido.Cliente_RNC = "";
+            }
             pedido.Prioridad = ValidarPrioridad(pedido.Prioridad);
             pedido.Status = 0;
             pedido.Id = 0;
@@ -92,6 +128,28 @@ namespace API.Services.Ventas
             }
 
             RecalcularTotales(pedido);
+
+            // Pagos: si no vienen, todo es efectivo (compatibilidad con Pedidos).
+            // Si vienen, deben sumar el total y lo no-efectivo trae comprobante.
+            pedido.Pagos ??= [];
+            if (pedido.Pagos.Count == 0)
+            {
+                pedido.Pagos.Add(new VentaPago { Metodo = MetodoPago.Efectivo, Monto = pedido.Total });
+            }
+            foreach (var pago in pedido.Pagos)
+            {
+                pago.Id = 0;
+                pago.PedidoVentaId = 0;
+                pago.Metodo = (pago.Metodo ?? "").Trim();
+                pago.Referencia = (pago.Referencia ?? "").Trim();
+            }
+            var errorPago = ValidarPagos(pedido);
+            if (errorPago != null)
+            {
+                result.Success = false;
+                result.Message = errorPago;
+                return result;
+            }
 
             context.PedidoVenta.Add(pedido);
             await context.SaveChangesAsync();
@@ -108,6 +166,7 @@ namespace API.Services.Ventas
 
             var existing = await context.PedidoVenta
                 .Include(p => p.Items)
+                .Include(p => p.Pagos)
                 .FirstOrDefaultAsync(p => p.Id == id);
             if (existing == null)
             {
@@ -161,6 +220,27 @@ namespace API.Services.Ventas
                 return result;
             }
 
+            pedido.Pagos ??= [];
+            RecalcularTotales(pedido);
+            if (pedido.Pagos.Count == 0)
+            {
+                pedido.Pagos.Add(new VentaPago { Metodo = MetodoPago.Efectivo, Monto = pedido.Total });
+            }
+            foreach (var pago in pedido.Pagos)
+            {
+                pago.Id = 0;
+                pago.PedidoVentaId = id;
+                pago.Metodo = (pago.Metodo ?? "").Trim();
+                pago.Referencia = (pago.Referencia ?? "").Trim();
+            }
+            var errorPago = ValidarPagos(pedido);
+            if (errorPago != null)
+            {
+                result.Success = false;
+                result.Message = errorPago;
+                return result;
+            }
+
             existing.Fecha = pedido.Fecha;
             existing.FechaCreacion = pedido.FechaCreacion;
             existing.Cliente_Id = pedido.Cliente_Id;
@@ -189,6 +269,10 @@ namespace API.Services.Ventas
             existing.Descuento = pedido.Descuento;
             existing.Impuesto = pedido.Impuesto;
             existing.Total = pedido.Total;
+
+            context.VentaPagos.RemoveRange(existing.Pagos);
+            foreach (var pago in pedido.Pagos)
+                context.VentaPagos.Add(pago);
 
             await context.SaveChangesAsync();
 
@@ -238,6 +322,30 @@ namespace API.Services.Ventas
             return errores;
         }
 
+        private static string? ValidarPagos(PedidoVenta pedido)
+        {
+            if (pedido.Pagos == null || pedido.Pagos.Count == 0)
+                return "El pedido debe tener al menos una forma de pago.";
+
+            foreach (var pago in pedido.Pagos)
+            {
+                if (pago.Monto <= 0)
+                    return $"El monto del pago '{pago.Metodo}' debe ser mayor a cero.";
+                if (pago.Metodo != MetodoPago.Efectivo &&
+                    pago.Metodo != MetodoPago.Tarjeta &&
+                    pago.Metodo != MetodoPago.Transferencia)
+                    return $"Método de pago '{pago.Metodo}' no válido.";
+                if ((pago.Metodo == MetodoPago.Tarjeta || pago.Metodo == MetodoPago.Transferencia) &&
+                    string.IsNullOrWhiteSpace(pago.Referencia))
+                    return $"El pago con {pago.Metodo} requiere el número de comprobante.";
+            }
+
+            if (Math.Abs(pedido.Pagos.Sum(p => p.Monto) - pedido.Total) > 0.01m)
+                return $"Los pagos ({pedido.Pagos.Sum(p => p.Monto):N2}) deben sumar el total ({pedido.Total:N2}).";
+
+            return null;
+        }
+
         private static string ValidarPrioridad(string? prioridad)
         {
             return prioridad?.Trim() switch
@@ -262,8 +370,34 @@ namespace API.Services.Ventas
 
         public async Task<bool> AnularAsync(int id)
         {
-            var pedido = await context.PedidoVenta.FirstOrDefaultAsync(p => p.Id == id);
-            if (pedido == null || pedido.Status == 4 || pedido.Status == 6) return false;
+            var pedido = await context.PedidoVenta
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pedido == null || pedido.Status == 6) return false;
+
+            // Ventas POS: solo se anulan las del turno abierto y se devuelve el stock descontado.
+            if (pedido.TurnoId.HasValue)
+            {
+                var turno = await context.TurnosCaja.FirstOrDefaultAsync(t => t.Id == pedido.TurnoId.Value);
+                if (turno == null || turno.Status != Shared.Dtos.Turnos.TurnoStatus.Abierto) return false;
+
+                foreach (var item in pedido.Items.Where(i => i.Procesado))
+                {
+                    var producto = await ResolverProductoAsync(item.Product_id);
+                    if (producto != null)
+                    {
+                        await context.Productos
+                            .Where(p => p.Product_id == producto.Product_id)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + (double)item.Cantidad));
+                    }
+                    item.Procesado = false;
+                    item.FechaProcesado = null;
+                }
+            }
+            else if (pedido.Status == 4)
+            {
+                return false;
+            }
 
             pedido.Status = 6;
             await context.SaveChangesAsync();
@@ -312,7 +446,7 @@ namespace API.Services.Ventas
 
             foreach (var item in pedido.Items)
             {
-                var itemResult = await ProcesarItemVentaAsync(item);
+                var itemResult = await ProcesarItemVentaAsync(item, permitirSinStock: pedido.TurnoId is not null);
                 result.Items.Add(itemResult);
                 if (!itemResult.Ok) hayFallo = true;
             }
@@ -330,7 +464,7 @@ namespace API.Services.Ventas
             return result;
         }
 
-        private async Task<ProcesarItemVentaResult> ProcesarItemVentaAsync(DetalleVenta item)
+        private async Task<ProcesarItemVentaResult> ProcesarItemVentaAsync(DetalleVenta item, bool permitirSinStock = false)
         {
             var itemResult = new ProcesarItemVentaResult
             {
@@ -357,9 +491,12 @@ namespace API.Services.Ventas
 
             itemResult.StockAnterior = producto.Stock;
 
-            //Descarga atomica con guarda: si el stock no alcanza, rows == 0 y la linea falla sin tocar inventario.
-            var rows = await context.Productos
-                .Where(p => p.Product_id == producto.Product_id && p.Stock - item.Cantidad >= 0)
+            // Descarga atomica. En POS (pedidos con TurnoId) se permite facturar sin stock:
+            // el inventario puede quedar en negativo hasta que se mejore el control.
+            var query = context.Productos.Where(p => p.Product_id == producto.Product_id);
+            if (!permitirSinStock)
+                query = query.Where(p => p.Stock - item.Cantidad >= 0);
+            var rows = await query
                 .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock - (double)item.Cantidad));
 
             if (rows == 0)
@@ -371,11 +508,8 @@ namespace API.Services.Ventas
 
             itemResult.StockNuevo = producto.Stock - item.Cantidad;
             item.Procesado = true;
-            item.FechaProcesado = DateTime.Now;
+            item.FechaProcesado = DateTime.UtcNow;
             itemResult.Ok = true;
-
-            //Cada linea confirma su propia marca de aplicado (transaccion por producto, idempotencia).
-            await context.SaveChangesAsync();
             return itemResult;
         }
 
@@ -385,8 +519,8 @@ namespace API.Services.Ventas
 
             var normalized = codigo.Trim();
             return await context.Productos.FirstOrDefaultAsync(p =>
-                (p.Codebar != null && p.Codebar.ToLower() == normalized.ToLower()) ||
-                (p.Product_Code != null && p.Product_Code.ToLower() == normalized.ToLower()));
+                (p.Codebar != null && p.Codebar == normalized) ||
+                (p.Product_Code != null && p.Product_Code == normalized));
         }
 
         #endregion

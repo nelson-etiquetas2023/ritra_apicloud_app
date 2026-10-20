@@ -5,6 +5,7 @@ namespace API.Services.Ventas
     public interface IVentasService
     {
         Task<List<PedidoVenta>> GetAllAsync();
+        Task<List<PedidoVenta>> GetByTurnoAsync(int turnoId);
         Task<PedidoVenta?> GetByIdAsync(int id);
         Task<PedidoVentaSaveResult> CreateAsync(PedidoVenta pedido);
         Task<PedidoVentaSaveResult> UpdateAsync(int id, PedidoVenta pedido);
