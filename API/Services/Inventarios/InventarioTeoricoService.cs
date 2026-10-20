@@ -2,33 +2,33 @@ using API.Data;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Shared.Dtos;
-using Shared.Dtos.CargasIniciales;
+using Shared.Dtos.Inventarios;
 using System.Globalization;
 
-namespace API.Services.CargasIniciales
+namespace API.Services.Inventarios
 {
-    public class CargasInicialesService(ApplicationDbContext context) : ICargasInicialesService
+    public class InventarioTeoricoService(ApplicationDbContext context) : IInventarioTeoricoService
     {
         private readonly ApplicationDbContext context = context;
 
-        public async Task<List<Inicial>> GetAllAsync()
+        public async Task<List<InventarioTeorico>> GetAllAsync()
         {
-            return await context.CargasIniciales
+            return await context.InventarioTeorico
                 .Include(i => i.Detalles)
                 .OrderByDescending(i => i.FechaCreacion)
                 .ToListAsync();
         }
 
-        public async Task<Inicial?> GetByIdAsync(int id)
+        public async Task<InventarioTeorico?> GetByIdAsync(int id)
         {
-            return await context.CargasIniciales
+            return await context.InventarioTeorico
                 .Include(i => i.Detalles)
                 .FirstOrDefaultAsync(i => i.Id == id);
         }
 
-        public async Task<CargaInicialSaveResult> CreateAsync(Inicial inicial)
+        public async Task<InventarioTeoricoSaveResult> CreateAsync(InventarioTeorico inicial)
         {
-            var result = new CargaInicialSaveResult();
+            var result = new InventarioTeoricoSaveResult();
 
             if (inicial.Detalles == null || inicial.Detalles.Count == 0)
             {
@@ -69,17 +69,15 @@ namespace API.Services.CargasIniciales
 
             if (string.IsNullOrWhiteSpace(inicial.Numero))
                 inicial.Numero = BuildNextNum();
-            inicial.FechaCreacion = DateTime.Now;
+            inicial.FechaCreacion = DateTime.UtcNow;
             inicial.Status = 0;
 
             foreach (var detalle in inicial.Detalles)
             {
                 detalle.Id = 0;
-                detalle.Procesado = false;
-                detalle.FechaProcesado = null;
             }
 
-            context.CargasIniciales.Add(inicial);
+            context.InventarioTeorico.Add(inicial);
             await context.SaveChangesAsync();
 
             result.Success = true;
@@ -88,24 +86,17 @@ namespace API.Services.CargasIniciales
             return result;
         }
 
-        public async Task<CargaInicialSaveResult> UpdateAsync(int id, Inicial inicial)
+        public async Task<InventarioTeoricoSaveResult> UpdateAsync(int id, InventarioTeorico inicial)
         {
-            var result = new CargaInicialSaveResult();
+            var result = new InventarioTeoricoSaveResult();
 
-            var existing = await context.CargasIniciales
+            var existing = await context.InventarioTeorico
                 .Include(i => i.Detalles)
                 .FirstOrDefaultAsync(i => i.Id == id);
             if (existing == null)
             {
                 result.Success = false;
                 result.Message = $"La carga inicial {id} no fue encontrada.";
-                return result;
-            }
-
-            if (existing.Status == 4)
-            {
-                result.Success = false;
-                result.Message = "El documento ya fue procesado y no puede editarse.";
                 return result;
             }
 
@@ -162,7 +153,6 @@ namespace API.Services.CargasIniciales
                 {
                     match.ProductName = detalle.ProductName;
                     match.Cantidad = detalle.Cantidad;
-                    match.CantidadFisica = detalle.CantidadFisica;
                     match.Ubicacion = detalle.Ubicacion;
                     match.Costo = detalle.Costo;
                     match.Categoria = detalle.Categoria;
@@ -172,10 +162,8 @@ namespace API.Services.CargasIniciales
                 else
                 {
                     detalle.Id = 0;
-                    detalle.InicialId = id;
-                    detalle.Procesado = false;
-                    detalle.FechaProcesado = null;
-                    context.CargasInicialesDetalles.Add(detalle);
+                    detalle.InventarioTeoricoId = id;
+                    context.InventarioTeoricoDetalles.Add(detalle);
                 }
             }
 
@@ -187,73 +175,20 @@ namespace API.Services.CargasIniciales
             return result;
         }
 
-        public async Task<CargaInicialSaveResult> ProcesarInicialAsync(int id)
-        {
-            var result = new CargaInicialSaveResult();
-
-            var inicial = await context.CargasIniciales
-                .Include(i => i.Detalles)
-                .FirstOrDefaultAsync(i => i.Id == id);
-
-            if (inicial == null)
-            {
-                result.Success = false;
-                result.Message = $"La carga inicial {id} no fue encontrada.";
-                return result;
-            }
-
-            if (inicial.Status == 4)
-            {
-                result.Success = false;
-                result.Message = "El documento ya fue procesado y no puede volver a procesarse.";
-                return result;
-            }
-
-            bool hayFallo = false;
-
-            foreach (var detalle in inicial.Detalles)
-            {
-                if (detalle.Procesado) continue;
-
-                var producto = await ResolverProductoAsync(detalle.ProductCode);
-                if (producto == null)
-                {
-                    hayFallo = true;
-                    result.Errors.Add(new RowError { Row = 0, Message = $"Producto '{detalle.ProductCode}' no encontrado en el catálogo." });
-                    continue;
-                }
-
-                producto.Stock += detalle.Cantidad;
-                detalle.Procesado = true;
-                detalle.FechaProcesado = DateTime.Now;
-                await context.SaveChangesAsync();
-            }
-
-            inicial.Status = hayFallo ? 5 : 4;
-            await context.SaveChangesAsync();
-
-            result.Success = !hayFallo;
-            result.Message = hayFallo
-                ? $"El documento quedó en Transacción Fallida. Los productos con error no afectaron el inventario y el documento puede volver a procesarse."
-                : $"El documento {inicial.Numero} fue procesado exitosamente. El stock de los productos se incrementó.";
-            result.Data = await GetByIdAsync(id);
-            return result;
-        }
-
         public async Task<bool> DeleteAsync(int id)
         {
-            var inicial = await context.CargasIniciales.FirstOrDefaultAsync(i => i.Id == id);
+            var inicial = await context.InventarioTeorico.FirstOrDefaultAsync(i => i.Id == id);
             if (inicial == null) return false;
 
-            context.CargasIniciales.Remove(inicial);
+            context.InventarioTeorico.Remove(inicial);
             await context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<CargaInicialImportResult> ImportFromExcelAsync(Stream excelStream)
+        public async Task<InventarioTeoricoImportResult> ImportFromExcelAsync(Stream excelStream)
         {
-            var result = new CargaInicialImportResult();
-            var detalles = new List<DetalleInicial>();
+            var result = new InventarioTeoricoImportResult();
+            var detalles = new List<InventarioTeoricoDetalle>();
 
             using var workbook = new XLWorkbook(excelStream);
             var worksheet = workbook.Worksheets.FirstOrDefault();
@@ -328,12 +263,11 @@ namespace API.Services.CargasIniciales
 
                 TryParseDecimal(costo, out var costoParsed);
 
-                detalles.Add(new DetalleInicial
+                detalles.Add(new InventarioTeoricoDetalle
                 {
                     ProductCode = productCode,
                     ProductName = productName,
                     Cantidad = cantidadParsed,
-                    CantidadFisica = 0,
                     Ubicacion = ubicacion,
                     Costo = costoParsed,
                     Categoria = categoria,
@@ -354,7 +288,7 @@ namespace API.Services.CargasIniciales
             return result;
         }
 
-        public async Task<List<Inicial>> GetDocumentsInitialsInventoryAsync()
+        public async Task<List<InventarioTeorico>> GetDocumentsInitialsInventoryAsync()
         {
             var scanProducts = await context.ScanProducts
                 .OrderBy(p => p.OrdenId)
@@ -362,18 +296,17 @@ namespace API.Services.CargasIniciales
 
             var documentos = scanProducts
                 .GroupBy(p => p.OrdenId)
-                .Select(g => new Inicial
+                .Select(g => new InventarioTeorico
                 {
                     Id = 0,
                     Numero = g.Key ?? "SIN-DOC",
                     FechaCreacion = g.Max(p => p.DateScan),
                     Comentario = $"Documento de inventario escaneado en Zebra ({g.Count()} ítems)",
-                    Detalles = g.Select(p => new DetalleInicial
+                    Detalles = g.Select(p => new InventarioTeoricoDetalle
                     {
                         ProductCode = p.Codebar ?? "",
                         ProductName = p.ProductName ?? "",
-                        Cantidad = 0,
-                        CantidadFisica = p.Quantity,
+                        Cantidad = p.Quantity,
                         Ubicacion = p.Ubicacion ?? "",
                         Categoria = p.Category ?? "",
                         Unidad = p.Unidad ?? "",
@@ -422,13 +355,24 @@ namespace API.Services.CargasIniciales
 
         private string BuildNextNum()
         {
-            var last = context.CargasIniciales
-                .OrderByDescending(i => i.Id)
-                .FirstOrDefault();
-            int next = 1;
-            if (last != null && int.TryParse(last.Numero, out int parsed))
-                next = parsed + 1;
-            return next.ToString("D4");
+            const string prefix = "SIT-";
+
+            var numeros = context.InventarioTeorico
+                .AsNoTracking()
+                .Select(i => i.Numero)
+                .ToList();
+
+            var max = 0;
+            foreach (var numero in numeros)
+            {
+                if (numero.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(numero.AsSpan(prefix.Length), out var value))
+                {
+                    max = Math.Max(max, value);
+                }
+            }
+
+            return $"{prefix}{max + 1:D4}";
         }
 
         private static string GetCell(IXLWorksheet worksheet, int row, int col)
@@ -454,21 +398,12 @@ namespace API.Services.CargasIniciales
             return codigos;
         }
 
-        private async Task<Shared.Dtos.Product?> ResolverProductoAsync(string codigo)
-        {
-            if (string.IsNullOrWhiteSpace(codigo)) return null;
-
-            var normalized = codigo.Trim();
-            return await context.Productos.FirstOrDefaultAsync(p =>
-                (p.Codebar != null && p.Codebar.ToLower() == normalized.ToLower()) ||
-                (p.Product_Code != null && p.Product_Code.ToLower() == normalized.ToLower()));
-        }
-
         private static bool TryParseDecimal(string raw, out decimal value)
         {
             if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out value))
                 return true;
             return decimal.TryParse(raw, NumberStyles.Any, CultureInfo.CurrentCulture, out value);
         }
+
     }
 }

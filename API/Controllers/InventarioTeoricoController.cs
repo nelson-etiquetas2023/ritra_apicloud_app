@@ -1,20 +1,18 @@
-using API.Services.CargasIniciales;
+using API.Services.Inventarios;
 using Microsoft.AspNetCore.Mvc;
-using Shared.Dtos.CargasIniciales;
+using Shared.Dtos.Inventarios;
 
 namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CargasInicialesController(ICargasInicialesService service) : ControllerBase
+    public class InventarioTeoricoController(IInventarioTeoricoService service) : ControllerBase
     {
-        private readonly ICargasInicialesService _service = service;
-
         [HttpGet]
         [Route("get")]
         public async Task<IActionResult> GetAllAsync()
         {
-            var cargas = await _service.GetAllAsync();
+            var cargas = await service.GetAllAsync();
             return Ok(cargas);
         }
 
@@ -22,26 +20,26 @@ namespace API.Controllers
         [Route("getbyid/{id}")]
         public async Task<IActionResult> GetByIdAsync(int id)
         {
-            var carga = await _service.GetByIdAsync(id);
+            var carga = await service.GetByIdAsync(id);
             if (carga == null) return NotFound($"Carga inicial {id} no encontrada");
             return Ok(carga);
         }
 
         [HttpPost]
         [Route("create")]
-        public async Task<IActionResult> CreateAsync([FromBody] Inicial inicial)
+        public async Task<IActionResult> CreateAsync([FromBody] InventarioTeorico inicial)
         {
             if (inicial == null) return BadRequest("Datos inválidos");
-            var result = await _service.CreateAsync(inicial);
+            var result = await service.CreateAsync(inicial);
             return Ok(result);
         }
 
         [HttpPut]
         [Route("update/{id}")]
-        public async Task<IActionResult> UpdateAsync(int id, [FromBody] Inicial inicial)
+        public async Task<IActionResult> UpdateAsync(int id, [FromBody] InventarioTeorico inicial)
         {
             if (inicial == null) return BadRequest("Datos inválidos");
-            var result = await _service.UpdateAsync(id, inicial);
+            var result = await service.UpdateAsync(id, inicial);
             if (!result.Success && result.Data == null)
                 return Ok(result);
             return Ok(result);
@@ -51,7 +49,7 @@ namespace API.Controllers
         [Route("delete/{id}")]
         public async Task<IActionResult> DeleteAsync(int id)
         {
-            var deleted = await _service.DeleteAsync(id);
+            var deleted = await service.DeleteAsync(id);
             if (!deleted) return NotFound($"Carga inicial {id} no encontrada");
             return NoContent();
         }
@@ -73,12 +71,12 @@ namespace API.Controllers
                 await file.CopyToAsync(stream);
                 stream.Position = 0;
 
-                var result = await _service.ImportFromExcelAsync(stream);
+                var result = await service.ImportFromExcelAsync(stream);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new CargaInicialImportResult
+                return StatusCode(500, new InventarioTeoricoImportResult
                 {
                     Success = false,
                     Errors = [new RowError { Row = 0, Message = $"Error interno al procesar el archivo: {ex.Message}" }]
@@ -90,7 +88,7 @@ namespace API.Controllers
         [Route("getDocumentsInitialsInventory")]
         public async Task<IActionResult> GetDocumentsInitialsInventoryAsync()
         {
-            var documentos = await _service.GetDocumentsInitialsInventoryAsync();
+            var documentos = await service.GetDocumentsInitialsInventoryAsync();
             return Ok(documentos);
         }
 
@@ -98,23 +96,15 @@ namespace API.Controllers
         [Route("getnextnum")]
         public async Task<IActionResult> GetNextNumAsync()
         {
-            var next = await _service.GetNextNumAsync();
+            var next = await service.GetNextNumAsync();
             return Ok(new { numero = next });
-        }
-
-        [HttpPost]
-        [Route("procesar/{id}")]
-        public async Task<IActionResult> ProcesarAsync(int id)
-        {
-            var result = await _service.ProcesarInicialAsync(id);
-            return Ok(result);
         }
 
         [HttpGet]
         [Route("template")]
         public IActionResult GetTemplate()
         {
-            var bytes = _service.GenerateTemplate();
+            var bytes = service.GenerateTemplate();
             return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PlantillaCargaInicial.xlsx");
         }
     }

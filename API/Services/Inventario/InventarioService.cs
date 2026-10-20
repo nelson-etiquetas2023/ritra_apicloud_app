@@ -101,12 +101,9 @@ namespace API.Services.Inventario
             itemResult.StockAnterior = producto.Stock;
             producto.Stock += item.Cantidad;
             item.Procesado = true;
-            item.FechaProcesado = DateTime.Now;
+            item.FechaProcesado = DateTime.UtcNow;
             itemResult.StockNuevo = producto.Stock;
             itemResult.Ok = true;
-
-            //Cada linea confirma su propio incremento de inventario (transaccion por producto).
-            await context.SaveChangesAsync();
             return itemResult;
         }
 
@@ -116,8 +113,8 @@ namespace API.Services.Inventario
 
             var normalized = codigo.Trim();
             return await context.Productos.FirstOrDefaultAsync(p =>
-                (p.Codebar != null && p.Codebar.ToLower() == normalized.ToLower()) ||
-                (p.Product_Code != null && p.Product_Code.ToLower() == normalized.ToLower()));
+                (p.Codebar != null && p.Codebar == normalized) ||
+                (p.Product_Code != null && p.Product_Code == normalized));
         }
 
         #endregion
@@ -156,9 +153,9 @@ namespace API.Services.Inventario
 
             var lineas = await context.DetalleCompra
                 .Where(d => d.Procesado &&
-                    (d.Product_id.Trim().ToLower() == normalized.ToLower() ||
-                     (!string.IsNullOrWhiteSpace(codigoA) && d.Product_id.Trim().ToLower() == codigoA.ToLower()) ||
-                     (!string.IsNullOrWhiteSpace(codigoB) && d.Product_id.Trim().ToLower() == codigoB.ToLower())))
+                    (d.Product_id.Trim() == normalized ||
+                     (!string.IsNullOrWhiteSpace(codigoA) && d.Product_id.Trim() == codigoA) ||
+                     (!string.IsNullOrWhiteSpace(codigoB) && d.Product_id.Trim() == codigoB)))
                 .Join(context.Compra,
                       d => d.Numero,
                       o => o.Numero,
@@ -200,6 +197,33 @@ namespace API.Services.Inventario
             result.TotalCantidad = totalCantidad;
             result.TotalSubtotal = totalSubtotal;
             result.StockActual = producto?.Stock ?? stockActual;
+
+            // Ajustes (carga inicial y futuros conteos): quedan en el historial del botón de movimientos.
+            if (producto != null)
+            {
+                var ajustes = await context.AjustesInventario
+                    .Where(a => a.ProductoId == producto.Product_id)
+                    .OrderBy(a => a.Fecha)
+                    .ToListAsync();
+                foreach (var a in ajustes)
+                {
+                    result.Movimientos.Add(new MovimientoInventario
+                    {
+                        Numero = a.Lote,
+                        TipoDocumento = a.Motivo,
+                        Fecha = a.Fecha,
+                        FechaProcesado = a.Fecha,
+                        TipoMovimiento = "Ajuste",
+                        ProductCode = a.Codigo,
+                        ProductName = producto.Product_Name ?? "",
+                        Cantidad = (int)(a.StockNuevo - a.StockAnterior),
+                        StockAnterior = a.StockAnterior,
+                        StockNuevo = a.StockNuevo,
+                        Usuario = a.Usuario
+                    });
+                }
+                result.Movimientos = result.Movimientos.OrderBy(m => m.Fecha).ToList();
+            }
             return result;
         }
 
