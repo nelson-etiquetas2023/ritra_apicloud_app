@@ -1,6 +1,10 @@
 ﻿@page "/users"
+@using Microsoft.AspNetCore.Authorization
+@using Shared.Security
+@attribute [Authorize(Roles = AppRoles.Admin)]
 
 <h3>Modulo de Usuarios</h3>
+
 
 @code {
 

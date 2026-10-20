@@ -81,8 +81,44 @@
 }
 
 .form-group {
-    margin: 26px 0 12px;
+    margin: 16px 0 12px;
     position: relative;
+}
+
+/* Los inputs son renderizados por <InputText> (componente hijo),
+   por eso se necesita ::deep para que el CSS aislado los alcance.
+   Antes solo existía `.input-wrapper ::deep .form-input` pero el
+   markup no tiene ningún `.input-wrapper`, así que nunca aplicaba. */
+::deep .form-input {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #1e293b;
+    font-size: 15px;
+    font-weight: 400;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    width: 100%;
+    outline: none;
+    box-sizing: border-box;
+}
+
+::deep .form-input:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+::deep .form-input::placeholder {
+    color: #94a3b8;
+}
+
+.floating-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .input-wrapper {

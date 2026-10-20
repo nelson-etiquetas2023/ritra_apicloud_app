@@ -11,23 +11,25 @@ namespace WEB
         public ILocalStorage LocalStorage { get; set; } = localStorage;
         public HttpClient Http { get; set; } = http;
 
-        private static readonly Dictionary<string, string> ClaimTypeMap = new()
-        {
-            { "nameid", ClaimTypes.NameIdentifier },
-            { "sub", ClaimTypes.NameIdentifier },
-            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", ClaimTypes.NameIdentifier },
+private static readonly Dictionary<string, string> ClaimTypeMap = new()
+            {
+                { "nameid", ClaimTypes.NameIdentifier },
+                { "sub", ClaimTypes.NameIdentifier },
+                { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", ClaimTypes.NameIdentifier },
 
-            { "unique_name", ClaimTypes.Name },
-            { "name", ClaimTypes.Name },
-            { "preferred_username", ClaimTypes.Name },
-            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name", ClaimTypes.Name },
+                { "unique_name", ClaimTypes.Name },
+                { "name", ClaimTypes.Name },
+                { "preferred_username", ClaimTypes.Name },
+                { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name", ClaimTypes.Name },
 
-            { "email", ClaimTypes.Email },
-            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", ClaimTypes.Email },
+                { "email", ClaimTypes.Email },
+                { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", ClaimTypes.Email },
 
-            { "role", ClaimTypes.Role },
-            { "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", ClaimTypes.Role },
-        };
+                { "role", ClaimTypes.Role },
+                { "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", ClaimTypes.Role },
+
+                { "nickname", ClaimTypes.Name }
+            };
 
         public async override Task<AuthenticationState> GetAuthenticationStateAsync()
         {

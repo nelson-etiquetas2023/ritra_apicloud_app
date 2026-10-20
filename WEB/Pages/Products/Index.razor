@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject IProductsService service
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @using WEB.Pages.Products
 @using ClosedXML.Excel
 @using System.IO
@@ -10,8 +11,38 @@
 <ModalCreateProducts @ref="ModalCreate" OnProductCreated="LoadProducts" />
 <!--Franja de Titulo y menu -->
 <div class="d-flex justify-content-between align-items-center mt-0">
-    <div d-flex align-items-center>
+    <div class="d-flex align-items-center gap-2">
         <h2 class="mb-0"><Icon Name="IconName.Box" Size="IconSize.x2" /> Productos</h2>
+        
+        <!-- Dropdown personalizado: fondo negro, texto blanco (controlado por Blazor, sin depender de Bootstrap JS) -->
+        <div class="dropdown" style="position: relative;">
+            <button class="btn btn-link text-dark p-0"
+                    type="button"
+                    title="Más opciones"
+                    @onclick="ToggleProductMenu"
+                    @onclick:stopPropagation>
+                <Icon Name="IconName.ThreeDotsVertical" Size="IconSize.x5" />
+            </button>
+            @if (showProductMenu)
+            {
+                <!-- Overlay transparente para cerrar al hacer clic fuera -->
+                <div @onclick="CerrarProductMenu"
+                     style="position: fixed; inset: 0; z-index: 1040; background: transparent;"></div>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark show shadow-lg"
+                    style="display: block; position: absolute; top: 100%; right: 0; z-index: 1050; min-width: 220px; background-color: #000; border: none; border-radius: 8px; padding: 0.5rem 0;">
+                    <li>
+                        <button class="dropdown-item d-flex align-items-center gap-2 px-3 py-2"
+                                type="button"
+                                style="color: #fff; background-color: transparent;"
+                                @onclick="IrBusquedaAvanzada"
+                                @onclick:stopPropagation>
+                            <Icon Name="IconName.Funnel" Size="IconSize.x4" />
+                            <span>Búsqueda Avanzada</span>
+                        </button>
+                    </li>
+                </ul>
+            }
+        </div>
     </div>
     <button class="btn btn-primary" type="button" @onclick="CreateProducts">
         <Icon Name="IconName.Archive" Size="IconSize.x4" /> Crear Producto</button>
@@ -139,6 +170,24 @@ else
     private async Task CreateProducts()
     {
         await ModalCreate.ShowAsync();
+    } 
+
+    private bool showProductMenu = false;
+
+    private void ToggleProductMenu()
+    {
+        showProductMenu = !showProductMenu;
+    }
+
+    private void CerrarProductMenu()
+    {
+        showProductMenu = false;
+    }
+
+    private void IrBusquedaAvanzada()
+    {
+        showProductMenu = false;
+        Navigation.NavigateTo("/products/advanced-search-products");
     } 
 
     private async void RefreshListProducts(IQueryable<Product> lista)

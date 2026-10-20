@@ -1,4 +1,5 @@
 ﻿using Shared.Dtos;
+using Shared.Dtos.Inventario;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace WEB.Services.Products
@@ -15,9 +16,16 @@ namespace WEB.Services.Products
         Task<byte[]> GetProductImageAsync(int imageId);
         Task<ServiceResponse<Product>> CreateProductWithImagesAsync(CreateProductWithImagesRequest request);
         Task<ServiceResponse<Product>> CreateProductWithFilesAsync(Product product, List<IBrowserFile> files);
+        Task<bool> SetProductActiveAsync(int productId, bool active);
         Task<bool> UpdateProductImageAsync(int productId, Base64ImageData imageData);
         Task<int> BulkCreateProductsAsync(List<Product> products);
         Task<ProductImportResult> ImportProductsFromExcelAsync(IBrowserFile file);
+        Task<byte[]> DownloadStockTemplateAsync(bool incluirProductos);
+        Task<StockInicialResult> AplicarStockInicialAsync(IBrowserFile file, string usuario);
+        Task<List<CargaInicialResumen>> GetCargasInicialesAsync();
+        Task<StockInicialResult> RevertirCargaInicialAsync(string lote);
+        Task<StockInicialResult> ActualizarCargaInicialAsync(string lote, DateTime fecha, string comentario);
+        Task<List<Shared.Dtos.Inventario.AjusteInventario>> GetCargaDetalleAsync(string lote);
         string GetImageUrl(int imageId, int productId);
     }
 }

@@ -1,5 +1,13 @@
-﻿@using WEB.Services.Versioning
+﻿@using Shared.Security
+@using WEB.Services.Versioning
 @inject AppVersionInfo VersionInfo
+
+@inject AuthenticationStateProvider AuthStateProvider
+
+@code {
+    private bool IsAdmin => AuthStateProvider.GetAuthenticationStateAsync().Result.User.IsInRole(AppRoles.Admin);
+}
+
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -35,7 +43,13 @@
                     <Icon Name="IconName.Boxes" Size="IconSize.x4" Style="margin-right:8px;" /> Almacenes
                 </NavLink>
                 <NavLink class="submenu-link" href="/CargaInicial">
-                    <Icon Name="IconName.BoxArrowInDown" Size="IconSize.x4" Style="margin-right:8px;" /> Iniciales
+                    <Icon Name="IconName.FileExcel" Size="IconSize.x4" Style="margin-right:8px;" /> Inventario Teórico
+                </NavLink>
+                <NavLink class="submenu-link" href="/inventario-inicial">
+                    <Icon Name="IconName.Boxes" Size="IconSize.x4" Style="margin-right:8px;" /> Inventario Inicial
+                </NavLink>
+                <NavLink class="submenu-link" href="/InventarioFisico">
+                    <Icon Name="IconName.BoxArrowInDown" Size="IconSize.x4" Style="margin-right:8px;" /> Inventario Físico
                 </NavLink>
             </div>
         </div>
@@ -67,6 +81,15 @@
                 </span>
             </div>
             <div class="submenu @(_ventasAbierto ? "submenu-open" : null)">
+                <NavLink class="submenu-link" href="/pos">
+                    <Icon Name="IconName.LightningChargeFill" Size="IconSize.x4" Style="margin-right:8px;" /> POS de Venta
+                </NavLink>
+                <NavLink class="submenu-link" href="/pos/ventas">
+                    <Icon Name="IconName.Receipt" Size="IconSize.x4" Style="margin-right:8px;" /> Historial POS
+                </NavLink>
+                <NavLink class="submenu-link" href="/pos/turnos">
+                    <Icon Name="IconName.ClockHistory" Size="IconSize.x4" Style="margin-right:8px;" /> Turnos de caja
+                </NavLink>
                 <NavLink class="submenu-link" href="/pedidoventa">
                     <Icon Name="IconName.Cart" Size="IconSize.x4" Style="margin-right:8px;" /> Pedidos de Venta
                 </NavLink>
@@ -90,16 +113,33 @@
                 <Icon Name="IconName.Building" Size="IconSize.x4" Style="margin-right:10px;" /> Empresa
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/users">
-                <Icon Name="IconName.Person" Size="IconSize.x4" Style="margin-right:10px;" /> Usuarios
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/config">
-                <Icon Name="IconName.Gear" Size="IconSize.x4" Style="margin-right:10px;" /> Configuración
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="@AppRoles.Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/users">
+                        <Icon Name="IconName.Person" Size="IconSize.x4" Style="margin-right:10px;" /> Usuarios
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3 has-submenu">
+                    <div class="nav-link submenu-parent d-flex align-items-center justify-content-between" role="button" tabindex="0" title="Mostrar opciones" @onclick="ToggleConfiguracion" @onclick:stopPropagation="true" @onkeydown="@(e => { if (e.Key == "Enter" || e.Key == " ") ToggleConfiguracion(); })">
+                        <span class="d-flex align-items-center">
+                            <Icon Name="IconName.Gear" Size="IconSize.x4" Style="margin-right:10px;" /> Configuración
+                        </span>
+                        <span class="submenu-caret @(GetConfiguracionCaretClass())">
+                            <Icon Name="IconName.CaretRight" Size="IconSize.x4" />
+                        </span>
+                    </div>
+                    <div class="submenu @(_configuracionAbierto ? "submenu-open" : null)">
+                        <NavLink class="submenu-link" href="/config">
+                            <Icon Name="IconName.Gear" Size="IconSize.x4" Style="margin-right:8px;" /> General
+                        </NavLink>
+                        <NavLink class="submenu-link" href="/etiquetas">
+                            <Icon Name="IconName.UpcScan" Size="IconSize.x4" Style="margin-right:8px;" /> Etiqueta de Codigo de Barra
+                        </NavLink>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/Reports">
                 <Icon Name="IconName.FileEarmarkBarGraph" Size="IconSize.x4" Style="margin-right:10px;" /> Reportes
@@ -125,6 +165,7 @@
     private bool _inventarioAbierto;
     private bool _comprasAbierto;
     private bool _ventasAbierto;
+    private bool _configuracionAbierto;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
@@ -161,5 +202,15 @@
     private string GetVentasCaretClass()
     {
         return _ventasAbierto ? "submenu-caret submenu-caret-open" : "submenu-caret";
+    }
+
+    private string GetConfiguracionCaretClass()
+    {
+        return _configuracionAbierto ? "submenu-caret submenu-caret-open" : "submenu-caret";
+    }
+
+    private void ToggleConfiguracion()
+    {
+        _configuracionAbierto = !_configuracionAbierto;
     }
 }

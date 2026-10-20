@@ -1,5 +1,7 @@
 ﻿@using BlazorBootstrap
 @using System.Security.Claims
+@inject ILocalStorage localStorage
+@inject NavigationManager NavManager
 @inherits LayoutComponentBase
 
 <div class="page">
@@ -39,11 +41,11 @@
     </main>
 </div>
 
-@code
-{
+@code {
     public async Task Logout()
     {
-
+        await localStorage.SetItemAsync("authToken", "");
+        NavManager.NavigateTo("/");
     }
 
     private static string GetDefaultAvatar(string name)

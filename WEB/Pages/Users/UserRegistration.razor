@@ -20,6 +20,11 @@
                 <ValidationMessage For="@(() => user.Email)" />
             </div>
             <div class="mb-3">
+                <label for="nickname" class="label-control"><strong>Nickname:</strong></label>
+                <InputText @bind-Value="user.Nickname" id="nickname" class="form-control" placeholder="introduzca el nickname" />
+                <ValidationMessage For="@(() => user.Nickname)" />
+            </div>
+            <div class="mb-3">
                 <label for="password" class="label-control"><strong>Password:</strong></label>
                 <PasswordInput @bind-Value="user.Password" id="password"  class="form-control" placeholder="introduza su contraseña" />
                 <ValidationMessage For="@(() => user.Password)" />

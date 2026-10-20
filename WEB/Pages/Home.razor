@@ -57,10 +57,11 @@
 @code
 {
     private string searchText = string.Empty;
-    private static List<OrderFisicoHeader>? orders;
+    private List<OrderFisicoHeader>? orders;
     private IEnumerable<OrderFisicoHeader> filteredOrders = new List<OrderFisicoHeader>();
     PaginationState pagination = new PaginationState { ItemsPerPage = 18 };
     private TestComponentModal? createModal;
+    private int pageSize = 18;
    
 
     protected override async Task OnInitializedAsync()
@@ -110,12 +111,12 @@
             o.Description_Document.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             o.Person_Create.Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
-        if (filteredOrders.Count() == 0) return;
+if (filteredOrders.Count() == 0) return;
 
-        //pageSize = filteredOrders.Count();
-        //pagination.ItemsPerPage = pageSize;
+        pageSize = filteredOrders.Count();
+        pagination.ItemsPerPage = pageSize;
 
-        //if (searchText == string.Empty) pagination.ItemsPerPage = 15;
+        if (searchText == string.Empty) pagination.ItemsPerPage = 15;
     }
 
     private async Task  CreateDocument()

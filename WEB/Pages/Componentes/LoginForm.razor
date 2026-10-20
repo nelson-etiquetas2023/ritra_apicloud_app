@@ -1,3 +1,4 @@
+@page "/login"
 @inject IAuthService Authservice
 @inject ILocalStorage localStorage
 @inject AuthenticationStateProvider AuthProvider
@@ -35,22 +36,13 @@
                     }
 
                     <div class="form-group">
-                        <div class="input-wrapper">
-                            <InputText @bind-Value="user.Email" id="email" type="email" class="form-input" autocomplete="email"
-                                       @onfocusin="@(() => _emailFocused = true)" @onfocusout="@(() => _emailFocused = false)" />
-                            <label for="email" class="@((_emailFocused || HasEmail) ? "floated" : "")">Email corporativo</label>
-                        </div>
+                        <label class="floating-label">Correo o nickname</label>
+                        <InputText @bind-Value="user.Identifier" class="form-input" placeholder="npino o nelson.tecno2024@gmail.com" />
                     </div>
 
                     <div class="form-group">
-                        <div class="input-wrapper password-wrapper">
-                            <InputText @bind-Value="user.Password" id="password" type="@PasswordType" class="form-input" autocomplete="current-password"
-                                       @onfocusin="@(() => _passwordFocused = true)" @onfocusout="@(() => _passwordFocused = false)" />
-                            <label for="password" class="@((_passwordFocused || HasPassword) ? "floated" : "")">Contraseña</label>
-                            <button type="button" class="password-toggle" aria-label="Mostrar u ocultar contraseña" @onclick="TogglePassword">
-                                <span class="toggle-icon @(_showPassword ? "show-password" : "")"></span>
-                            </button>
-                        </div>
+                        <label class="floating-label">Contraseña</label>
+                        <InputText @bind-Value="user.Password" class="form-input" type="@PasswordType" placeholder="Ingrese su contraseña" />
                     </div>
 
                     <div class="form-options">
@@ -98,7 +90,7 @@
             else
             {
                 <div class="corp-locked">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <svg xmlns="http://www.2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
@@ -130,19 +122,15 @@
 
     private const int MaxAttempts = 5;
 
-    private UserLogin user = new();
+    private UserLogin user = new UserLogin { Identifier = "", Password = "" };
     private int AttemptsRemaining = MaxAttempts;
     private string errorMessage = string.Empty;
     private string sessionWarning = string.Empty;
     private bool _showPassword = false;
     private bool _isBusy = false;
     private bool _remember = false;
-    private bool _emailFocused = false;
-    private bool _passwordFocused = false;
 
     private string PasswordType => _showPassword ? "text" : "password";
-    private bool HasEmail => !string.IsNullOrWhiteSpace(user.Email);
-    private bool HasPassword => !string.IsNullOrWhiteSpace(user.Password);
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,6 +138,12 @@
         if (failed > MaxAttempts) failed = MaxAttempts;
 
         AttemptsRemaining = MaxAttempts - failed;
+
+        var remembered = await localStorage.GetItemAsync<string>("rememberedIdentifier");
+        if (!string.IsNullOrWhiteSpace(remembered))
+        {
+            user.Identifier = remembered;
+        }
 
         if (AttemptsRemaining <= 0)
         {
@@ -186,6 +180,27 @@
 
         try
         {
+            // Asegurarse de que identifier no sea nulo
+            if (string.IsNullOrWhiteSpace(user.Identifier))
+            {
+                errorMessage = "Ingrese correo o nickname.";
+                AttemptsRemaining--;
+                await localStorage.SetItemAsync("loginAttempts", MaxAttempts - AttemptsRemaining);
+                StateHasChanged();
+                return;
+            }
+
+            // Limpiar password nulo
+            if (string.IsNullOrWhiteSpace(user.Password))
+            {
+                errorMessage = "Ingrese contraseña.";
+                AttemptsRemaining--;
+                await localStorage.SetItemAsync("loginAttempts", MaxAttempts - AttemptsRemaining);
+                StateHasChanged();
+                _isBusy = false;
+                return;
+            }
+
             var result = await Authservice.Login(user);
 
             if (result.Success)
@@ -194,13 +209,13 @@
                 var token = result.Data;
                 if (_remember)
                 {
-                    await localStorage.SetItemAsync("rememberedEmail", user.Email);
+                    await localStorage.SetItemAsync("rememberedIdentifier", user.Identifier);
                 }
                 else
                 {
-                    await localStorage.RemoveItemAsync("rememberedEmail");
+                    await localStorage.RemoveItemAsync("rememberedIdentifier");
                 }
-                user = new();
+                user = new UserLogin { Identifier = "", Password = "" };
                 await localStorage.SetItemAsync("authToken", token);
                 await localStorage.SetItemAsync("loginAttempts", 0);
                 await AuthProvider.GetAuthenticationStateAsync();
@@ -222,7 +237,6 @@
                 {
                     await localStorage.SetItemAsync("systemLocked", true);
                     await OnLocked.InvokeAsync();
-                    return;
                 }
             }
         }

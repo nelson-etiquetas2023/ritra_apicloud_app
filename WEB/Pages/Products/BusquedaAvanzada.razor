@@ -1,0 +1,314 @@
+@page "/products/busqueda-avanzada"
+@inject IProductsService service
+@inject IConfigService configService
+@inject IEtiquetasService etiquetasService
+@inject IEnterprisesService enterprisesService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<ModalEnqueue @ref="modalEnqueue" Templates="plantillas" Printers="impresoras" Enterprises="empresas" DefaultTemplateId="defaultTemplateId" OnEnqueued="EnqueuedToast" />
+
+<PageTitle>Búsqueda Avanzada de Productos</PageTitle>
+
+<!-- Franja de Titulo y menu -->
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <div class="d-flex align-items-center gap-2">
+        <h2 class="mb-0"><Icon Name="IconName.Funnel" Size="IconSize.x2" /> Búsqueda Avanzada</h2>
+    </div>
+    <button class="btn btn-secondary" type="button" @onclick="Volver">
+        <Icon Name="IconName.ArrowLeft" /> Volver
+    </button>
+</div>
+
+<!-- Panel de filtros -->
+<div class="card mt-3 mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><Icon Name="IconName.Sliders" /> Filtros de búsqueda</strong>
+        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="LimpiarFiltros">
+            <Icon Name="IconName.XLg" /> Limpiar
+        </Button>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label" for="fCategoria">Categoría</label>
+                <select class="form-select" id="fCategoria" @bind="filtro.Categoria">
+                    <option value="">Todas</option>
+                    @foreach (var c in categorias.Where(c => c.IsActive))
+                    {
+                        <option value="@c.Name">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fUnidad">Unidad</label>
+                <select class="form-select" id="fUnidad" @bind="filtro.Unidad">
+                    <option value="">Todas</option>
+                    @foreach (var u in unidades.Where(u => u.IsActive))
+                    {
+                        <option value="@u.Name">@u.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fCodigo">Código</label>
+                <input class="form-control" type="text" id="fCodigo" placeholder="Contiene..." @bind="filtro.Codigo" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fNombre">Nombre</label>
+                <input class="form-control" type="text" id="fNombre" placeholder="Contiene..." @bind="filtro.Nombre" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fCodebar">Código de Barras</label>
+                <input class="form-control" type="text" id="fCodebar" placeholder="Contiene..." @bind="filtro.Codebar" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fSku">SKU</label>
+                <input class="form-control" type="text" id="fSku" placeholder="Contiene..." @bind="filtro.Sku" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fPartNumber">Part No.</label>
+                <input class="form-control" type="text" id="fPartNumber" placeholder="Contiene..." @bind="filtro.PartNumber" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fModelo">Modelo</label>
+                <input class="form-control" type="text" id="fModelo" placeholder="Contiene..." @bind="filtro.Modelo" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fMarca">Marca</label>
+                <input class="form-control" type="text" id="fMarca" placeholder="Contiene..." @bind="filtro.Marca" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="fDescripcion">Descripción</label>
+                <input class="form-control" type="text" id="fDescripcion" placeholder="Contiene..." @bind="filtro.Descripcion" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fCostoMin">Costo mín.</label>
+                <input class="form-control" type="number" step="0.01" min="0" id="fCostoMin" @bind="filtro.CostoMin" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fCostoMax">Costo máx.</label>
+                <input class="form-control" type="number" step="0.01" min="0" id="fCostoMax" @bind="filtro.CostoMax" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fPrecioMin">Precio mín.</label>
+                <input class="form-control" type="number" step="0.01" min="0" id="fPrecioMin" @bind="filtro.PrecioMin" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fPrecioMax">Precio máx.</label>
+                <input class="form-control" type="number" step="0.01" min="0" id="fPrecioMax" @bind="filtro.PrecioMax" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fStockMin">Stock mín.</label>
+                <input class="form-control" type="number" step="1" min="0" id="fStockMin" @bind="filtro.StockMin" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="fStockMax">Stock máx.</label>
+                <input class="form-control" type="number" step="1" min="0" id="fStockMax" @bind="filtro.StockMax" />
+            </div>
+        </div>
+        <div class="text-end mt-3">
+            <Button Color="ButtonColor.Primary" @onclick="Buscar">
+                <Icon Name="IconName.Search" /> Buscar
+            </Button>
+            <Button Color="ButtonColor.Secondary" class="ms-2" @onclick="LimpiarFiltros">
+                <Icon Name="IconName.XLg" /> Limpiar
+            </Button>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados -->
+@if (products == null)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100 position-fixed top-0 start-0 w-100">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+        <strong><Icon Name="IconName.Search" /> Resultados: @productsFiltered!.Count() de @products.Count</strong>
+    </div>
+    @if (productsFiltered!.Any())
+    {
+        <QuickGridProducts
+            productsFiltered="productsFiltered!.AsQueryable()"
+            pagination="pagination"
+            OnUpdateListProduct="RefreshListProducts"
+            OnPrintLabel="ImprimirEtiqueta" />
+    }
+    else
+    {
+        <div class="alert alert-warning mt-2">
+            No se encontraron productos con los filtros indicados.
+        </div>
+    }
+}
+
+@code {
+
+    private List<Product>? products;
+    private IEnumerable<Product>? productsFiltered;
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 18 };
+    private List<Category> categorias = [];
+    private List<ProductUnit> unidades = [];
+    private List<LabelTemplate> plantillas = [];
+    private List<Printer> impresoras = [];
+    private List<Enterprise> empresas = [];
+    private int defaultTemplateId;
+    private string errorDefault = "";
+    private ModalEnqueue modalEnqueue = default!;
+
+    private FiltroBusqueda filtro = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+        await CargarConfig();
+        await CargarEtiquetas();
+    }
+
+    private async Task CargarEtiquetas()
+    {
+        try
+        {
+            plantillas = await etiquetasService.GetTemplatesAsync();
+            impresoras = await etiquetasService.GetPrintersAsync();
+            empresas = await enterprisesService.GetAllAsync();
+            var def = await etiquetasService.GetDefaultTemplateAsync();
+            if (def != null) defaultTemplateId = def.Id;
+        }
+        catch
+        {
+            plantillas = [];
+            impresoras = [];
+            empresas = [];
+        }
+    }
+
+    private async Task GuardarDefault()
+    {
+        errorDefault = "";
+        if (defaultTemplateId == 0) { errorDefault = "Elige un formato."; return; }
+        var (tpl, error) = await etiquetasService.SetDefaultTemplateAsync(defaultTemplateId);
+        if (tpl == null) errorDefault = error ?? "No se pudo guardar.";
+        else ToastService.Notify(new(ToastType.Success, $"Formato por defecto: {tpl.Codigo}."));
+    }
+
+    private async Task ImprimirEtiqueta(Product product)
+    {
+        if (!plantillas.Any() || !impresoras.Any(p => p.IsActive))
+        {
+            ToastService.Notify(new(ToastType.Warning, "Registra impresoras y plantillas en Etiquetas primero."));
+            return;
+        }
+        await modalEnqueue.ShowAsync(0, product.Product_id, product);
+    }
+
+    private void EnqueuedToast()
+    {
+        ToastService.Notify(new(ToastType.Success, "Trabajo enviado a la cola de impresión."));
+    }
+
+    private async Task CargarProductos()
+    {
+        products = await service.GetProductAsync();
+        productsFiltered = products.AsEnumerable();
+    }
+
+    private async Task CargarConfig()
+    {
+        try
+        {
+            categorias = await configService.GetCategoriesAsync();
+            unidades = await configService.GetProductUnitsAsync();
+        }
+        catch (Exception)
+        {
+            categorias = [];
+            unidades = [];
+        }
+    }
+
+    private void Buscar()
+    {
+        if (products == null) return;
+
+        var q = products.AsEnumerable();
+
+        q = q.Where(p =>
+            EsContenido(p.Product_Code, filtro.Codigo) &&
+            EsContenido(p.Product_Name, filtro.Nombre) &&
+            EsContenido(p.Product_Type, filtro.Categoria, exacto: true) &&
+            EsContenido(p.Unidad, filtro.Unidad, exacto: true) &&
+            EsContenido(p.Codebar, filtro.Codebar) &&
+            EsContenido(p.SkuNumber, filtro.Sku) &&
+            EsContenido(p.PartNumber, filtro.PartNumber) &&
+            EsContenido(p.Model, filtro.Modelo) &&
+            EsContenido(p.Marca, filtro.Marca) &&
+            EsContenido(p.Description, filtro.Descripcion) &&
+            (filtro.CostoMin == null || p.Costo >= filtro.CostoMin) &&
+            (filtro.CostoMax == null || p.Costo <= filtro.CostoMax) &&
+            (filtro.PrecioMin == null || p.Price >= filtro.PrecioMin) &&
+            (filtro.PrecioMax == null || p.Price <= filtro.PrecioMax) &&
+            (filtro.StockMin == null || p.Stock >= filtro.StockMin) &&
+            (filtro.StockMax == null || p.Stock <= filtro.StockMax));
+
+        productsFiltered = q.ToList();
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtro = new FiltroBusqueda();
+        productsFiltered = products?.AsEnumerable() ?? [];
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/products");
+    }
+
+    private async void RefreshListProducts(IQueryable<Product> lista)
+    {
+        if (lista.Count() == 0)
+        {
+            await CargarProductos();
+            return;
+        }
+
+        productsFiltered = lista.AsEnumerable();
+        StateHasChanged();
+    }
+
+    private static bool EsContenido(string? valor, string? filtro, bool exacto = false)
+    {
+        if (string.IsNullOrWhiteSpace(filtro)) return true;
+        if (valor is null) return false;
+
+        if (exacto)
+            return string.Equals(valor.Trim(), filtro.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        return valor.Contains(filtro.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private class FiltroBusqueda
+    {
+        public string Codigo { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public string Categoria { get; set; } = "";
+        public string Unidad { get; set; } = "";
+        public string Codebar { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public string PartNumber { get; set; } = "";
+        public string Modelo { get; set; } = "";
+        public string Marca { get; set; } = "";
+        public string Descripcion { get; set; } = "";
+        public decimal? CostoMin { get; set; }
+        public decimal? CostoMax { get; set; }
+        public double? PrecioMin { get; set; }
+        public double? PrecioMax { get; set; }
+        public double? StockMin { get; set; }
+        public double? StockMax { get; set; }
+    }
+}

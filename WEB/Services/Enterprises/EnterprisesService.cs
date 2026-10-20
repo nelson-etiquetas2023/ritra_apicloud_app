@@ -28,6 +28,18 @@ namespace WEB.Services.Enterprises
             return enterprise;
         }
 
+        public async Task<List<Enterprise>> GetAllAsync()
+        {
+            var url = "api/enterprises/getall";
+            var clientHttp = HttpFactory.CreateClient("scanpro");
+            var response = await clientHttp.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json)) return [];
+            return await JsonSerializer.DeserializeAsync<List<Enterprise>>(
+                new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+        }
+
         public async Task<bool> CreateEnterpriseAsync(Enterprise enterprise)
         {
             try

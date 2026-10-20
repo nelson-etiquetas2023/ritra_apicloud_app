@@ -82,6 +82,9 @@
     [Parameter]
     public EventCallback<IQueryable<Product>> OnUpdateListProduct { get; set; }
 
+    [Parameter]
+    public EventCallback<Product> OnPrintLabel { get; set; }
+
 
     private ConfirmDialog dialog = default!;
     // Versiones para evitar cache de imágenes por producto
@@ -129,8 +132,9 @@
         }
     }
 
-    private void PrintLabels(Product product)
+    private async Task PrintLabels(Product product)
     {
+        await OnPrintLabel.InvokeAsync(product);
     }
 
     private string GetImageUrl(int imageId, int productId)

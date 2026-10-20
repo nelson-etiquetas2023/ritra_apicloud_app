@@ -1,4 +1,7 @@
 ﻿@page "/config"
+@using Microsoft.AspNetCore.Authorization
+@using Shared.Security
+@attribute [Authorize(Roles = AppRoles.Admin)]
 @inject IConfigService service 
 @inject IJSRuntime JS
 

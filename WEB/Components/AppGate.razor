@@ -40,6 +40,11 @@ else if (_state == GateState.Login)
                         <ValidationMessage For="@(() => registerUser.Email)" />
                     </div>
                     <div class="mb-3">
+                        <label class="form-label"><strong>Nickname:</strong></label>
+                        <InputText @bind-Value="registerUser.Nickname" class="form-control" placeholder="introduzca el nickname" />
+                        <ValidationMessage For="@(() => registerUser.Nickname)" />
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label"><strong>Password:</strong></label>
                         <PasswordInput @bind-Value="registerUser.Password" class="form-control" placeholder="introduza su contraseña" />
                         <ValidationMessage For="@(() => registerUser.Password)" />

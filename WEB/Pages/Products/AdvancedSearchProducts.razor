@@ -1,0 +1,1101 @@
+@page "/products/advanced-search-products"
+@implements IDisposable
+@inject IProductsService productsService
+@inject IEtiquetasService etiquetasService
+@inject IEnterprisesService enterprisesService
+@inject IConfigService configService
+@inject ToastService ToastSvc
+@inject IJSRuntime JS
+
+<PageTitle>Búsqueda Avanzada de Productos</PageTitle>
+
+<ModalCreateProducts @ref="modalCreate" OnProductCreated="RecargarProductos" />
+<ConfirmDialog @ref="confirmDialog" />
+<ModalEnqueue @ref="modalEnqueue" Templates="plantillas" Printers="impresoras" Enterprises="empresas" DefaultTemplateId="defaultTemplateId" OnEnqueued="EnqueuedToast" />
+
+<div class="adv-page">
+<div class="adv-titlebar">
+    <h2><Icon Name="IconName.Funnel" Size="IconSize.x2" /> Búsqueda avanzada de productos</h2>
+    @if (!editando)
+    {
+        <button class="adv-flat" type="button" @onclick="NuevoProducto" title="Crear un producto nuevo">
+            <Icon Name="IconName.PlusLg" Size="IconSize.x2" />
+            <span>Nuevo</span>
+        </button>
+        <button class="adv-flat" type="button" disabled="@(seleccionado == null)" @onclick="EditarProducto" title="Editar el producto seleccionado">
+            <Icon Name="IconName.PencilFill" Size="IconSize.x2" />
+            <span>Editar</span>
+        </button>
+    }
+    else
+    {
+        <button class="adv-flat" type="button" disabled="@guardando" @onclick="GuardarEdicion" title="Guardar cambios">
+            <Icon Name="IconName.Floppy2Fill" Size="IconSize.x2" />
+            <span>@(guardando ? "Guardando..." : "Guardar")</span>
+        </button>
+        <button class="adv-flat" type="button" disabled="@guardando" @onclick="CancelarEdicion" title="Cancelar edición">
+            <Icon Name="IconName.XLg" Size="IconSize.x2" />
+            <span>Cancelar</span>
+        </button>
+    }
+    <div class="adv-title-right">
+        <span class="adv-count">@(products == null ? "Cargando catálogo…" : $"{products.Count} referencias")</span>
+        <button class="adv-volver" type="button" @onclick="Volver">
+            <Icon Name="IconName.ArrowLeft" /> Volver
+        </button>
+    </div>
+</div>
+
+@if (products == null)
+{
+    <div class="adv-loading">
+        <Spinner Size="SpinnerSize.Large" />
+        <strong>Cargando productos…</strong>
+    </div>
+}
+else
+{
+    <div class="adv-layout">
+        <!-- 30%: lista tipo pick-list de almacén -->
+        <section class="adv-list @(gridExpandido ? "" : "collapsed")" aria-label="Listado de productos">
+            <div class="adv-list-toolbar">
+                <button class="adv-burger" type="button" @onclick="AlternarGrid" title="@(gridExpandido ? "Contraer grid (solo fotos)" : "Expandir grid")">
+                    <Icon Name="@(gridExpandido ? IconName.ChevronLeft : IconName.ChevronRight)" />
+                </button>
+                <input type="text"
+                       class="adv-search"
+                       placeholder="Código o nombre…"
+                       @bind-value="searchText"
+                       @bind-value:event="oninput"
+                       @onkeyup="Filtrar" />
+            </div>
+            <div class="adv-grid-scroll">
+                <table class="adv-table">
+                    <thead>
+                        <tr>
+                            <th class="col-foto">Foto</th>
+                            <th class="col-code">Código</th>
+                            <th>Producto</th>
+                            <th class="col-acc">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in productsFiltered)
+                        {
+                            <tr class="@(seleccionado?.Product_id == p.Product_id ? "selected" : "") @(!p.IsActive ? "inactivo" : "")"
+                                @onclick="() => Seleccionar(p)">
+                                <td class="col-foto">
+                                    @{
+                                        var thumb = p.Images?.OrderBy(i => i.ImageIndex).FirstOrDefault();
+                                    }
+                                    @if (thumb != null)
+                                    {
+                                        <img class="adv-thumb"
+                                             src="@productsService.GetImageUrl(thumb.Id, p.Product_id)"
+                                             alt="@p.Product_Name"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'" />
+                                    }
+                                    else
+                                    {
+                                        <span class="adv-thumb-empty">—</span>
+                                    }
+                                </td>
+                                <td class="mono">@p.Product_Code</td>
+                                <td>
+                                    <span class="adv-name">@p.Product_Name</span>
+                                    <span class="adv-sub">@p.Product_Type</span>
+                                    @if (!p.IsActive)
+                                    {
+                                        <span class="adv-badge-off">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="col-acc">
+                                    <button class="adv-act-btn" type="button"
+                                            title="Imprimir etiqueta de código de barras"
+                                            @onclick="() => ImprimirEtiqueta(p)"
+                                            @onclick:stopPropagation>
+                                        <Icon Name="IconName.Printer" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="adv-resumen">
+                <span>Total productos: <strong>@products.Count</strong></span>
+                <span>Filtrados: <strong>@productsFiltered.Count</strong></span>
+            </div>
+        </section>
+
+        <!-- 70%: ficha -->
+        <section class="adv-detail" aria-label="Detalle del producto">
+            <div class="adv-tabs" role="tablist">
+                <button class="adv-tab @(activeTab == "detalle" ? "active" : "")" role="tab" aria-selected="@(activeTab == "detalle")" type="button" @onclick='() => CambiarTab("detalle")'>
+                    Detalle
+                </button>
+                <button class="adv-tab @(activeTab == "inventario" ? "active" : "")" role="tab" aria-selected="@(activeTab == "inventario")" type="button" @onclick='() => CambiarTab("inventario")'>
+                    Inventario
+                </button>
+                <button class="adv-tab @(activeTab == "otros" ? "active" : "")" role="tab" aria-selected="@(activeTab == "otros")" type="button" @onclick='() => CambiarTab("otros")'>
+                    Otros
+                </button>
+            </div>
+            <div class="adv-detail-scroll">
+            @if (activeTab == "detalle")
+            {
+            @if (seleccionado == null)
+            {
+                <div class="adv-empty">
+                    <Icon Name="IconName.ArrowLeft" Size="IconSize.x3" />
+                    <p>Elija una fila del listado para ver su ficha.</p>
+                </div>
+            }
+            else
+            {
+                <div class="adv-ficha">
+                    <div class="adv-ficha-head">
+                        <span class="adv-code mono">@seleccionado.Product_Code</span>
+                        <h3 title="@seleccionado.Product_Name">@seleccionado.Product_Name</h3>
+                        <span class="adv-stock">@seleccionado.Stock.ToString("N2") <small>exist.</small></span>
+                        @if (editando)
+                        {
+                            <Switch Value="edit.Activo"
+                                    ValueExpression="() => edit.Activo"
+                                    ValueChanged="(bool v) => edit.Activo = v"
+                                    Label="Activo" />
+                        }
+                        else
+                        {
+                            <Switch Value="seleccionado.IsActive"
+                                    ValueExpression="() => seleccionado.IsActive"
+                                    ValueChanged="OnActivoChanged"
+                                    Label="Activo"
+                                    Disabled="true" />
+                        }
+                        @if (!editando)
+                        {
+                            <button class="adv-flat" type="button" @onclick="EmpezarEdicion" title="Editar en esta pestaña">
+                                <Icon Name="IconName.PencilFill" /> <span>Editar</span>
+                            </button>
+                        }
+                    </div>
+                    <p class="adv-barcode mono">@seleccionado.Codebar</p>
+                    <div class="adv-fotos">
+                        <div class="adv-fotos-head">
+                            <span class="adv-fotos-title">Fotos (@(seleccionado.Images?.Count ?? 0)/3)</span>
+                            <label class="adv-foto-add" for="advFotoInput" title="Agregar fotos al producto">
+                                + Fotos
+                            </label>
+                            <InputFile id="advFotoInput" OnChange="OnFotosSelected" accept="image/*" multiple hidden disabled="@(subiendoFotos)" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(mensajeFotos))
+                        {
+                            <p class="adv-fotos-msg">@mensajeFotos</p>
+                        }
+                        @if (fotosVisibles.Count == 0)
+                        {
+                            <p class="adv-fotos-empty">Sin fotos registradas.</p>
+                        }
+                        else
+                        {
+                            <div class="adv-fotos-row">
+                                @for (var fi = 0; fi < fotosVisibles.Count; fi++)
+                                {
+                                    var idx = fi;
+                                    <div class="adv-foto-wrap" @onclick="() => AbrirLightbox(idx)" title="Ampliar foto">
+                                        <img class="adv-foto"
+                                             src="@fotosVisibles[idx].Url"
+                                             alt="@fotosVisibles[idx].Alt"
+                                             loading="lazy"
+                                             onerror="this.closest('.adv-foto-wrap').style.display='none'" />
+                                        <span class="adv-foto-zoom"><Icon Name="IconName.ZoomIn" /></span>
+                                        <button class="adv-foto-del" type="button" title="Eliminar imagen"
+                                                @onclick:stopPropagation @onclick="() => EliminarFoto(fotosVisibles[idx])">✕</button>
+                                        @if (fotosVisibles[idx].Pendiente)
+                                        {
+                                            <span class="adv-foto-badge">Subiendo…</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <dl class="adv-specs">
+                        <div><dt>Nombre</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value" @bind="edit.Nombre" /> }
+                            else
+                            { <input class="adv-value" readonly value="@seleccionado.Product_Name" /> }
+                        </dd></div>
+                        <div><dt>Categoría</dt><dd>
+                            @if (editando)
+                            {
+                                <div class="d-flex gap-1">
+                                    <select class="adv-value flex-grow-1" @bind="edit.Categoria">
+                                        <option value="">Seleccione...</option>
+                                        @foreach (var c in categorias.Where(c => c.IsActive))
+                                        {
+                                            <option value="@c.Name">@c.Name</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" title="Agregar categoría"
+                                            @onclick="() => mostrandoAddCat = !mostrandoAddCat">+</button>
+                                </div>
+                                @if (mostrandoAddCat)
+                                {
+                                    <div class="d-flex gap-1 mt-1">
+                                        <input class="adv-value flex-grow-1" placeholder="Nueva categoría..."
+                                               @bind="nuevaCategoria" @onkeyup="TeclaNuevaCategoria" />
+                                        <button class="btn btn-sm btn-success" type="button" @onclick="CrearCategoriaRapida">Crear</button>
+                                    </div>
+                                }
+                            }
+                            else
+                            { <input class="adv-value" readonly value="@seleccionado.Product_Type" /> }
+                        </dd></div>
+                        <div><dt>Unidad</dt><dd>
+                            @if (editando)
+                            {
+                                <div class="d-flex gap-1">
+                                    <select class="adv-value flex-grow-1" @bind="edit.Unidad">
+                                        <option value="">Seleccione...</option>
+                                        @foreach (var u in unidades.Where(u => u.IsActive))
+                                        {
+                                            <option value="@u.Name">@u.Name</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" title="Agregar unidad"
+                                            @onclick="() => mostrandoAddUni = !mostrandoAddUni">+</button>
+                                </div>
+                                @if (mostrandoAddUni)
+                                {
+                                    <div class="d-flex gap-1 mt-1">
+                                        <input class="adv-value flex-grow-1" placeholder="Nueva unidad..."
+                                               @bind="nuevaUnidad" @onkeyup="TeclaNuevaUnidad" />
+                                        <button class="btn btn-sm btn-success" type="button" @onclick="CrearUnidadRapida">Crear</button>
+                                    </div>
+                                }
+                            }
+                            else
+                            { <input class="adv-value" readonly value="@seleccionado.Unidad" /> }
+                        </dd></div>
+                        <div><dt>Costo</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value" type="number" step="0.01" min="0" @bind="edit.Costo" /> }
+                            else
+                            { <input class="adv-value" readonly value='@seleccionado.Costo.ToString("N2")' /> }
+                        </dd></div>
+                        <div><dt>Precio</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value" type="number" step="0.01" min="0" @bind="edit.Precio" /> }
+                            else
+                            { <input class="adv-value" readonly value='@seleccionado.Price.ToString("N2")' /> }
+                        </dd></div>
+                        <div><dt>Código de barras</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value mono" @bind="edit.Codebar" /> }
+                            else
+                            { <input class="adv-value mono" readonly value="@seleccionado.Codebar" /> }
+                        </dd></div>
+                        <div><dt>Marca</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value" @bind="edit.Marca" /> }
+                            else
+                            { <input class="adv-value" readonly value="@seleccionado.Marca" /> }
+                        </dd></div>
+                        <div><dt>Modelo</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value" @bind="edit.Modelo" /> }
+                            else
+                            { <input class="adv-value" readonly value="@seleccionado.Model" /> }
+                        </dd></div>
+                        <div><dt>SKU</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value mono" @bind="edit.Sku" /> }
+                            else
+                            { <input class="adv-value mono" readonly value="@seleccionado.SkuNumber" /> }
+                        </dd></div>
+                        <div><dt>Parte</dt><dd>
+                            @if (editando)
+                            { <input class="adv-value mono" @bind="edit.Parte" /> }
+                            else
+                            { <input class="adv-value mono" readonly value="@seleccionado.PartNumber" /> }
+                        </dd></div>
+                    </dl>
+                    @if (editando && !string.IsNullOrWhiteSpace(errorEdit))
+                    {
+                        <div class="alert alert-danger">@errorEdit</div>
+                    }
+                </div>
+            }
+            }
+            else if (activeTab == "inventario")
+            {
+                @if (seleccionado == null)
+                {
+                    <div class="adv-empty">
+                        <Icon Name="IconName.ArrowLeft" Size="IconSize.x3" />
+                        <p>Elija una fila del listado para ver el inventario.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="adv-ficha mb-3">
+                        <h4 class="mt-1"><Icon Name="IconName.Boxes" /> Niveles de inventario</h4>
+                        <dl class="adv-specs">
+                            <div><dt>Existencia</dt><dd><input class="adv-value" readonly value='@seleccionado.Stock.ToString("N2")' /></dd></div>
+                            <div><dt>Inventario mínimo</dt><dd>
+                                @if (editando)
+                                { <input class="adv-value" type="number" step="1" min="0" @bind="edit.StockMin" /> }
+                                else
+                                { <input class="adv-value" readonly value='@seleccionado.Stock_Mix.ToString("N0")' /> }
+                            </dd></div>
+                            <div><dt>Inventario máximo</dt><dd>
+                                @if (editando)
+                                { <input class="adv-value" type="number" step="1" min="0" @bind="edit.StockMax" /> }
+                                else
+                                { <input class="adv-value" readonly value='@seleccionado.Stock_Max.ToString("N0")' /> }
+                            </dd></div>
+                            <div><dt>Fecha de vencimiento</dt><dd>
+                                @if (editando)
+                                { <input class="adv-value" type="date" @bind="edit.FechaVencimiento" disabled="@(!edit.ManejaVencimiento)" /> }
+                                else
+                                { <input class="adv-value" readonly value='@(seleccionado.ManejaVencimiento ? (seleccionado.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "—") : "No maneja")' /> }
+                            </dd></div>
+                        </dl>
+                        @if (editando && !string.IsNullOrWhiteSpace(errorEdit))
+                        {
+                            <div class="alert alert-danger">@errorEdit</div>
+                        }
+                    </div>
+                    var ubis = GetInventarioFake(seleccionado);
+                    <p class="adv-demo-note">Datos de ejemplo — pendiente integración con inventario real.</p>
+                    <div class="adv-ubis">
+                        @foreach (var u in ubis)
+                        {
+                            <div class="adv-ubi">
+                                <div class="adv-ubi-head mono"><span>@u.Codigo</span><span>@u.Almacen</span></div>
+                                <div class="adv-ubi-body">
+                                    <div class="adv-ubi-cant">@u.Cantidad.ToString("N0") <small>@u.Unidad</small></div>
+                                    <div class="adv-ubi-row"><span>Lote</span><strong class="mono">@u.Lote</strong></div>
+                                    <div class="adv-ubi-row"><span>Último conteo</span><strong>@u.UltimoConteo</strong></div>
+                                    <div class="adv-ubi-row"><span>Estado</span><strong class="adv-estado @("est-" + u.Estado.ToLower())">@u.Estado</strong></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="adv-ubi-total">Total en ubicaciones: <strong>@ubis.Sum(u => u.Cantidad).ToString("N0") @seleccionado.Unidad</strong></div>
+                    <h4 class="mt-3"><Icon Name="IconName.Sliders" /> Manejo del producto</h4>
+                    <div class="adv-flags">
+                        @if (editando)
+                        {
+                            <Switch Value="edit.ManejaVencimiento"
+                                    ValueExpression="() => edit.ManejaVencimiento"
+                                    ValueChanged="OnManejaVencimientoChanged"
+                                    Label="Manejo de vencimiento" />
+                            <Switch Value="edit.ManejaSeriales"
+                                    ValueExpression="() => edit.ManejaSeriales"
+                                    ValueChanged="(bool v) => edit.ManejaSeriales = v"
+                                    Label="Manejo de seriales" />
+                            <Switch Value="edit.ManejaLotes"
+                                    ValueExpression="() => edit.ManejaLotes"
+                                    ValueChanged="(bool v) => edit.ManejaLotes = v"
+                                    Label="Manejo de lotes" />
+                        }
+                        else
+                        {
+                            <Switch Value="seleccionado.ManejaVencimiento"
+                                    ValueExpression="() => seleccionado.ManejaVencimiento"
+                                    ValueChanged="OnSwitchLectura"
+                                    Label="Manejo de vencimiento"
+                                    Disabled="true" />
+                            <Switch Value="seleccionado.ManejaSeriales"
+                                    ValueExpression="() => seleccionado.ManejaSeriales"
+                                    ValueChanged="OnSwitchLectura"
+                                    Label="Manejo de seriales"
+                                    Disabled="true" />
+                            <Switch Value="seleccionado.ManejaLotes"
+                                    ValueExpression="() => seleccionado.ManejaLotes"
+                                    ValueChanged="OnSwitchLectura"
+                                    Label="Manejo de lotes"
+                                    Disabled="true" />
+                        }
+                    </div>
+                }
+            }
+            else if (activeTab == "otros")
+            {
+                @if (seleccionado == null)
+                {
+                    <div class="adv-empty">
+                        <Icon Name="IconName.ArrowLeft" Size="IconSize.x3" />
+                        <p>Elija una fila del listado para ver las opciones.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="adv-ficha">
+                        <div class="adv-ficha-head">
+                            <span class="adv-code mono">@seleccionado.Product_Code</span>
+                            <h3 title="@seleccionado.Product_Name">@seleccionado.Product_Name</h3>
+                        </div>
+                        <p class="adv-barcode mono">@seleccionado.Codebar</p>
+                        <h4 class="mt-3"><Icon Name="IconName.UpcScan" /> Código de barra</h4>
+                        <p class="text-muted small">Formato por defecto para imprimir etiquetas de productos. Solo formatos de categoría <strong>Producto</strong>.</p>
+                        <div class="d-flex gap-2 align-items-end flex-wrap">
+                            <div class="flex-grow-1">
+                                <label class="form-label" for="advFormato">Formato por defecto</label>
+                                <select class="form-select" id="advFormato" @bind="defaultTemplateId">
+                                    <option value="0">-- ninguno --</option>
+                                    @foreach (var t in plantillas.Where(t => t.Categoria == LabelCategories.Producto && t.IsActive))
+                                    {
+                                        <option value="@t.Id">@t.Codigo - @t.Nombre (@t.WidthIn x @t.HeightIn in)</option>
+                                    }
+                                </select>
+                            </div>
+                            <button class="btn btn-success" type="button" @onclick="GuardarDefault">Guardar</button>
+                            <button class="btn btn-primary" type="button" @onclick="() => ImprimirEtiqueta(seleccionado)">
+                                <Icon Name="IconName.Printer" /> Imprimir
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(errorDefault))
+                        {
+                            <div class="alert alert-danger mt-2">@errorDefault</div>
+                        }
+                        @if (editando && !string.IsNullOrWhiteSpace(errorEdit))
+                        {
+                            <div class="alert alert-danger mt-2">@errorEdit</div>
+                        }
+                    </div>
+                }
+            }
+            </div>
+        </section>
+    </div>
+
+    @if (fotoActiva >= 0 && fotoActiva < fotosVisibles.Count)
+    {
+        <div class="adv-lightbox" @onclick="CerrarLightbox" @onkeydown="TeclaLightbox" tabindex="0" autofocus>
+            <button class="adv-lb-close" type="button" @onclick="CerrarLightbox" @onclick:stopPropagation title="Cerrar (Esc)">✕</button>
+            @if (fotosVisibles.Count > 1)
+            {
+                <button class="adv-lb-nav adv-lb-prev" type="button" @onclick="AnteriorFoto" @onclick:stopPropagation title="Foto anterior">‹</button>
+                <button class="adv-lb-nav adv-lb-next" type="button" @onclick="SiguienteFoto" @onclick:stopPropagation title="Foto siguiente">›</button>
+            }
+            <img class="adv-lb-img"
+                 src="@fotosVisibles[fotoActiva].Url"
+                 alt="@fotosVisibles[fotoActiva].Alt"
+                 @onclick="MantenerAbierto"
+                 @onclick:stopPropagation />
+            <span class="adv-lb-count">@(fotoActiva + 1) / @fotosVisibles.Count</span>
+        </div>
+    }
+}
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private List<Product>? products;
+    private List<Product> productsFiltered = new();
+    private Product? seleccionado;
+    private string searchText = "";
+    private string activeTab = "detalle";
+    private bool gridExpandido = true;
+
+    private void CambiarTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private void AlternarGrid() => gridExpandido = !gridExpandido;
+
+    private ModalCreateProducts modalCreate = default!;
+    private ModalEnqueue modalEnqueue = default!;
+    private List<LabelTemplate> plantillas = [];
+    private List<Printer> impresoras = [];
+    private List<Enterprise> empresas = [];
+    private List<Category> categorias = [];
+    private List<ProductUnit> unidades = [];
+    private int defaultTemplateId;
+    private string errorDefault = "";
+
+    private bool editando = false;
+    private bool guardando = false;
+    private bool mostrandoAddCat = false;
+    private bool mostrandoAddUni = false;
+    private string nuevaCategoria = "";
+    private string nuevaUnidad = "";
+    private string errorEdit = "";
+    private EditModel edit = new();
+
+    private sealed class EditModel
+    {
+        public string Nombre { get; set; } = "";
+        public string Categoria { get; set; } = "";
+        public string Unidad { get; set; } = "";
+        public decimal Costo { get; set; }
+        public double Precio { get; set; }
+        public string Codebar { get; set; } = "";
+        public string Marca { get; set; } = "";
+        public string Modelo { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public string Parte { get; set; } = "";
+        public int StockMin { get; set; }
+        public int StockMax { get; set; }
+        public bool ManejaVencimiento { get; set; }
+        public bool ManejaSeriales { get; set; }
+        public bool ManejaLotes { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
+        public bool Activo { get; set; } = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await productsService.GetProductAsync();
+        Filtrar();
+        await CargarEtiquetas();
+    }
+
+    private async Task CargarEtiquetas()
+    {
+        try
+        {
+            plantillas = await etiquetasService.GetTemplatesAsync();
+            impresoras = await etiquetasService.GetPrintersAsync();
+            empresas = await enterprisesService.GetAllAsync();
+            var def = await etiquetasService.GetDefaultTemplateAsync();
+            if (def != null) defaultTemplateId = def.Id;
+        }
+        catch
+        {
+            plantillas = [];
+            impresoras = [];
+            empresas = [];
+        }
+        try
+        {
+            categorias = await configService.GetCategoriesAsync();
+            unidades = await configService.GetProductUnitsAsync();
+        }
+        catch
+        {
+            categorias = [];
+            unidades = [];
+        }
+    }
+
+    private async Task GuardarDefault()
+    {
+        errorDefault = "";
+        if (defaultTemplateId == 0) { errorDefault = "Elige un formato."; return; }
+        var (tpl, error) = await etiquetasService.SetDefaultTemplateAsync(defaultTemplateId);
+        if (tpl == null) errorDefault = error ?? "No se pudo guardar.";
+        else ToastSvc.Notify(new(ToastType.Success, $"Formato por defecto: {tpl.Codigo}."));
+    }
+
+    private void EnqueuedToast()
+    {
+        ToastSvc.Notify(new(ToastType.Success, "Trabajo enviado a la cola de impresión."));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try { await JS.InvokeVoidAsync("scanproPageScroll", true); } catch { }
+        }
+    }
+
+    public void Dispose()
+    {
+        try { ((IJSInProcessRuntime)JS).InvokeVoid("scanproPageScroll", false); } catch { }
+    }
+
+    private void Filtrar()
+    {
+        if (products == null)
+        {
+            productsFiltered = new();
+            return;
+        }
+
+        var q = products.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var s = searchText.Trim();
+            q = q.Where(p =>
+                (p.Product_Code ?? "").Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (p.Product_Name ?? "").Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+        productsFiltered = q.ToList();
+
+        if (seleccionado != null && !productsFiltered.Any(p => p.Product_id == seleccionado.Product_id))
+            seleccionado = null;
+    }
+
+    private void Seleccionar(Product p)
+    {
+        seleccionado = p;
+        editando = false;
+        errorEdit = "";
+        mostrandoAddCat = false;
+        mostrandoAddUni = false;
+    }
+
+    private void OnSwitchLectura(bool v) { }
+
+    private void OnManejaVencimientoChanged(bool v)
+    {
+        edit.ManejaVencimiento = v;
+        if (!v) edit.FechaVencimiento = null;
+    }
+
+    private async Task OnActivoChanged(bool active)
+    {
+        if (seleccionado == null) return;
+
+        var ok = await productsService.SetProductActiveAsync(seleccionado.Product_id, active);
+        if (!ok)
+        {
+            mensajeFotos = "No se pudo cambiar el estado del producto.";
+            StateHasChanged();
+            return;
+        }
+
+        seleccionado.IsActive = active;
+        if (products != null)
+        {
+            var idx = products.FindIndex(x => x.Product_id == seleccionado.Product_id);
+            if (idx >= 0) products[idx].IsActive = active;
+        }
+        var fi = productsFiltered.FindIndex(x => x.Product_id == seleccionado.Product_id);
+        if (fi >= 0) productsFiltered[fi].IsActive = active;
+        StateHasChanged();
+    }
+
+    private async Task ImprimirEtiqueta(Product p)
+    {
+        if (!plantillas.Any() || !impresoras.Any(x => x.IsActive))
+        {
+            ToastSvc.Notify(new(ToastType.Warning, "Registra impresoras y plantillas en Etiquetas primero."));
+            return;
+        }
+        await modalEnqueue.ShowAsync(0, p.Product_id, p);
+    }
+
+    private void EmpezarEdicion()
+    {
+        if (seleccionado == null) return;
+        edit = new EditModel
+        {
+            Nombre = seleccionado.Product_Name ?? "",
+            Categoria = seleccionado.Product_Type ?? "",
+            Unidad = seleccionado.Unidad ?? "",
+            Costo = seleccionado.Costo,
+            Precio = seleccionado.Price,
+            Codebar = seleccionado.Codebar ?? "",
+            Marca = seleccionado.Marca ?? "",
+            Modelo = seleccionado.Model ?? "",
+            Sku = seleccionado.SkuNumber ?? "",
+            Parte = seleccionado.PartNumber ?? "",
+            StockMin = (int)Math.Round(seleccionado.Stock_Mix),
+            StockMax = (int)Math.Round(seleccionado.Stock_Max),
+            ManejaVencimiento = seleccionado.ManejaVencimiento,
+            ManejaSeriales = seleccionado.ManejaSeriales,
+            ManejaLotes = seleccionado.ManejaLotes,
+            FechaVencimiento = seleccionado.FechaVencimiento,
+            Activo = seleccionado.IsActive
+        };
+        errorEdit = "";
+        mostrandoAddCat = false;
+        mostrandoAddUni = false;
+        editando = true;
+    }
+
+    private void CancelarEdicion()
+    {
+        editando = false;
+        errorEdit = "";
+        mostrandoAddCat = false;
+        mostrandoAddUni = false;
+    }
+
+    private async Task TeclaNuevaUnidad(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CrearUnidadRapida();
+    }
+
+    private async Task CrearUnidadRapida()
+    {
+        errorEdit = "";
+        var nombre = (nuevaUnidad ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(nombre)) return;
+        if (unidades.Any(u => string.Equals(u.Name?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)))
+        {
+            edit.Unidad = unidades.First(u => string.Equals(u.Name?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)).Name ?? "";
+            nuevaUnidad = "";
+            mostrandoAddUni = false;
+            return;
+        }
+        var creada = await configService.CreateProductUnitAsync(new ProductUnit { Name = nombre, IsActive = true });
+        if (creada == null)
+        {
+            errorEdit = "No se pudo crear la unidad.";
+            return;
+        }
+        unidades = await configService.GetProductUnitsAsync();
+        edit.Unidad = creada.Name ?? nombre;
+        nuevaUnidad = "";
+        mostrandoAddUni = false;
+        ToastSvc.Notify(new(ToastType.Success, $"Unidad '{edit.Unidad}' creada."));
+    }
+
+    private async Task TeclaNuevaCategoria(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CrearCategoriaRapida();
+    }
+
+    private async Task CrearCategoriaRapida()
+    {
+        errorEdit = "";
+        var nombre = (nuevaCategoria ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(nombre)) return;
+        if (categorias.Any(c => string.Equals(c.Name?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)))
+        {
+            edit.Categoria = categorias.First(c => string.Equals(c.Name?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)).Name ?? "";
+            nuevaCategoria = "";
+            mostrandoAddCat = false;
+            return;
+        }
+        var creada = await configService.CreateCategoryAsync(new Category { Name = nombre, IsActive = true });
+        if (creada == null)
+        {
+            errorEdit = "No se pudo crear la categoría.";
+            return;
+        }
+        categorias = await configService.GetCategoriesAsync();
+        edit.Categoria = creada.Name ?? nombre;
+        nuevaCategoria = "";
+        mostrandoAddCat = false;
+        ToastSvc.Notify(new(ToastType.Success, $"Categoría '{edit.Categoria}' creada."));
+    }
+
+    private async Task GuardarEdicion()
+    {
+        if (seleccionado == null) return;
+        errorEdit = "";
+        if (string.IsNullOrWhiteSpace(edit.Nombre)) { errorEdit = "El nombre es obligatorio."; return; }
+        if (string.IsNullOrWhiteSpace(edit.Categoria)) { errorEdit = "La categoría es obligatoria."; return; }
+        if (string.IsNullOrWhiteSpace(edit.Unidad)) { errorEdit = "La unidad es obligatoria."; return; }
+        if (edit.StockMin < 0 || edit.StockMax < 0) { errorEdit = "Los inventarios mínimo y máximo no pueden ser negativos."; return; }
+        if (edit.StockMax < edit.StockMin) { errorEdit = "El inventario máximo no puede ser menor que el mínimo."; return; }
+
+        guardando = true;
+        try
+        {
+            var copia = new Product
+            {
+                Product_id = seleccionado.Product_id,
+                Product_Code = seleccionado.Product_Code,
+                Product_Name = edit.Nombre.Trim(),
+                Product_Type = edit.Categoria.Trim(),
+                Price = edit.Precio,
+                Codebar = (edit.Codebar ?? "").Trim(),
+                Unidad = edit.Unidad.Trim(),
+                Costo = edit.Costo,
+                Stock = seleccionado.Stock,
+                Stock_Mix = edit.StockMin,
+                Stock_Max = edit.StockMax,
+                ManejaVencimiento = edit.ManejaVencimiento,
+                ManejaSeriales = edit.ManejaSeriales,
+                ManejaLotes = edit.ManejaLotes,
+                FechaVencimiento = edit.ManejaVencimiento ? edit.FechaVencimiento : null,
+                Description = seleccionado.Description ?? "",
+                SkuNumber = edit.Sku.Trim(),
+                PartNumber = edit.Parte.Trim(),
+                Model = edit.Modelo.Trim(),
+                Marca = edit.Marca.Trim(),
+                StatusProducts = seleccionado.StatusProducts ?? "",
+                IsActive = seleccionado.IsActive
+            };
+
+            var result = await productsService.UpdateProductAsync(seleccionado.Product_id, copia);
+            if (!result.Success || result.Data == null)
+            {
+                errorEdit = result.Message ?? "No se pudo guardar.";
+                return;
+            }
+
+            var actualizado = result.Data;
+            actualizado.Images = seleccionado.Images;
+            if (edit.Activo != seleccionado.IsActive)
+            {
+                var okEstado = await productsService.SetProductActiveAsync(seleccionado.Product_id, edit.Activo);
+                if (!okEstado)
+                {
+                    errorEdit = "Producto guardado, pero no se pudo cambiar el estado activo.";
+                    return;
+                }
+                actualizado.IsActive = edit.Activo;
+            }
+            var idx = products?.FindIndex(x => x.Product_id == actualizado.Product_id) ?? -1;
+            if (idx >= 0 && products != null) products[idx] = actualizado;
+            Filtrar();
+            seleccionado = productsFiltered.FirstOrDefault(x => x.Product_id == actualizado.Product_id);
+            editando = false;
+            ToastSvc.Notify(new(ToastType.Success, "Producto actualizado."));
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private List<FotoPendiente> fotosPendientes = new();
+    private string mensajeFotos = "";
+    private bool subiendoFotos = false;
+
+    private async Task OnFotosSelected(InputFileChangeEventArgs e)
+    {
+        mensajeFotos = "";
+        if (seleccionado == null || subiendoFotos) return;
+
+        var existentes = seleccionado.Images?.Select(i => i.ImageIndex).ToHashSet() ?? new();
+        var libres = Enumerable.Range(0, 3).Where(i => !existentes.Contains(i)).ToList();
+        if (libres.Count == 0)
+        {
+            mensajeFotos = "Este producto ya tiene 3 fotos (máximo).";
+            return;
+        }
+
+        fotosPendientes.Clear();
+        var k = 0;
+        foreach (var file in e.GetMultipleFiles(Math.Min(3, libres.Count)))
+        {
+            if (k >= libres.Count) break;
+            try
+            {
+                using var ms = new MemoryStream();
+                await using var stream = file.OpenReadStream(maxAllowedSize: 10_000_000);
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+                fotosPendientes.Add(new FotoPendiente
+                {
+                    Preview = $"data:{contentType};base64,{base64}",
+                    FileName = file.Name,
+                    ContentType = contentType,
+                    Base64 = base64,
+                    ImageIndex = libres[k]
+                });
+                k++;
+            }
+            catch
+            {
+                mensajeFotos = $"No se pudo leer {file.Name}.";
+            }
+        }
+
+        StateHasChanged(); // muestra las fotos al instante, antes de subir
+
+        if (fotosPendientes.Count == 0) return;
+
+        subiendoFotos = true;
+        StateHasChanged();
+        var errores = new List<string>();
+        foreach (var f in fotosPendientes.ToList())
+        {
+            var ok = await productsService.UpdateProductImageAsync(seleccionado.Product_id, new Base64ImageData
+            {
+                Base64Data = f.Base64,
+                FileName = f.FileName,
+                ContentType = f.ContentType,
+                ImageIndex = f.ImageIndex
+            });
+            if (!ok) errores.Add(f.FileName);
+        }
+        subiendoFotos = false;
+        fotosPendientes.Clear();
+
+        if (errores.Count > 0)
+            mensajeFotos = "No se pudieron guardar: " + string.Join(", ", errores);
+
+        try
+        {
+            var fresh = await productsService.GetProductByIdAsync(seleccionado.Product_id);
+            if (products != null)
+            {
+                var idx = products.FindIndex(x => x.Product_id == fresh.Product_id);
+                if (idx >= 0) products[idx] = fresh;
+            }
+            var fi = productsFiltered.FindIndex(x => x.Product_id == fresh.Product_id);
+            if (fi >= 0) productsFiltered[fi] = fresh;
+            seleccionado = fresh;
+        }
+        catch
+        {
+            mensajeFotos = "Fotos subidas, pero no se pudo refrescar la vista.";
+        }
+        StateHasChanged();
+    }
+
+    private async Task NuevoProducto()
+    {
+        await modalCreate.ShowAsync();
+    }
+
+    private async Task EditarProducto()
+    {
+        if (seleccionado == null) return;
+        EmpezarEdicion();
+        await Task.CompletedTask;
+    }
+
+    private async Task RecargarProductos()
+    {
+        products = await productsService.GetProductAsync();
+        Filtrar();
+        StateHasChanged();
+    }
+
+    private void Volver() => Navigation.NavigateTo("/products");
+
+    private List<FotoVisible> fotosVisibles
+    {
+        get
+        {
+            var lista = new List<FotoVisible>();
+            if (seleccionado?.Images != null)
+            {
+                foreach (var img in seleccionado.Images.OrderBy(i => i.ImageIndex))
+                {
+                    lista.Add(new FotoVisible
+                    {
+                        ImageId = img.Id,
+                        Url = productsService.GetImageUrl(img.Id, seleccionado.Product_id),
+                        Alt = img.FileName ?? "",
+                        Pendiente = false
+                    });
+                }
+            }
+            foreach (var f in fotosPendientes)
+            {
+                lista.Add(new FotoVisible { Url = f.Preview, Alt = f.FileName, Pendiente = true });
+            }
+            return lista;
+        }
+    }
+
+    private int fotoActiva = -1;
+
+    private void AbrirLightbox(int idx) => fotoActiva = idx;
+
+    private ConfirmDialog confirmDialog = default!;
+
+    private async Task EliminarFoto(FotoVisible foto)
+    {
+        if (foto.Pendiente)
+        {
+            var pend = fotosPendientes.FirstOrDefault(f => f.FileName == foto.Alt);
+            if (pend != null) fotosPendientes.Remove(pend);
+            StateHasChanged();
+            return;
+        }
+
+        var ok = await confirmDialog.ShowAsync(
+            title: "Eliminar imagen?",
+            message1: $"Se eliminará '{foto.Alt}' del producto.",
+            message2: "Esta acción no se puede deshacer. ¿Proceder?");
+        if (!ok || seleccionado == null) return;
+
+        if (!await productsService.DeleteProductImageAsync(foto.ImageId))
+        {
+            ToastSvc.Notify(new(ToastType.Danger, "No se pudo eliminar la imagen."));
+            return;
+        }
+
+        seleccionado.Images?.RemoveAll(i => i.Id == foto.ImageId);
+        var idx = products?.FindIndex(x => x.Product_id == seleccionado.Product_id) ?? -1;
+        if (idx >= 0 && products != null) products[idx] = seleccionado;
+        fotoActiva = -1;
+        ToastSvc.Notify(new(ToastType.Success, "Imagen eliminada."));
+        StateHasChanged();
+    }
+
+    private void CerrarLightbox() => fotoActiva = -1;
+
+    private void MantenerAbierto() { }
+
+    private void AnteriorFoto()
+    {
+        if (fotosVisibles.Count == 0) return;
+        fotoActiva = (fotoActiva - 1 + fotosVisibles.Count) % fotosVisibles.Count;
+    }
+
+    private void SiguienteFoto()
+    {
+        if (fotosVisibles.Count == 0) return;
+        fotoActiva = (fotoActiva + 1) % fotosVisibles.Count;
+    }
+
+    private void TeclaLightbox(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CerrarLightbox();
+        else if (e.Key == "ArrowRight") SiguienteFoto();
+        else if (e.Key == "ArrowLeft") AnteriorFoto();
+    }
+
+    private sealed class FotoVisible
+    {
+        public int ImageId { get; set; }
+        public string Url { get; set; } = "";
+        public string Alt { get; set; } = "";
+        public bool Pendiente { get; set; }
+    }
+
+    private List<UbicacionFake> GetInventarioFake(Product p)
+    {
+        var seed = Math.Abs(p.Product_id);
+        var codigos = new[] { "PS100-T", "A02-15-B", "B07-03-A", "C11-22-C", "PS104-P", "D05-09-B" };
+        var n = 2 + (seed % 3);
+        var lista = new List<UbicacionFake>();
+        for (var i = 0; i < n; i++)
+        {
+            var cantidad = 5 + ((seed * 13 + i * 29) % 60);
+            lista.Add(new UbicacionFake
+            {
+                Codigo = codigos[(seed + i * 2) % codigos.Length],
+                Almacen = ((seed + i) % 2 == 0) ? "Principal" : "Norte",
+                Cantidad = cantidad,
+                Unidad = p.Unidad,
+                Lote = $"LT-{(seed % 90) + 10}-{i + 1}",
+                UltimoConteo = DateTime.Today.AddDays(-((seed + i * 3) % 12)).ToString("dd/MM/yyyy"),
+                Estado = cantidad > 40 ? "Alto" : cantidad >= 15 ? "Normal" : "Bajo"
+            });
+        }
+        return lista;
+    }
+
+    private sealed class UbicacionFake
+    {
+        public string Codigo { get; set; } = "";
+        public string Almacen { get; set; } = "";
+        public double Cantidad { get; set; }
+        public string Unidad { get; set; } = "";
+        public string Lote { get; set; } = "";
+        public string UltimoConteo { get; set; } = "";
+        public string Estado { get; set; } = "";
+    }
+
+    private sealed class FotoPendiente
+    {
+        public string Preview { get; set; } = "";
+        public string FileName { get; set; } = "";
+        public string ContentType { get; set; } = "image/jpeg";
+        public string Base64 { get; set; } = "";
+        public int ImageIndex { get; set; }
+    }
+}

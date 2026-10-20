@@ -22,7 +22,7 @@
 
             <div class="mb-3">
                 <label for="txt_ProductCode"><strong>Coidgo de Producto:</strong> </label>
-                <InputText class="form-control" id="txt_ProductCode" @bind-Value=product.Product_Code" />
+                <InputText class="form-control" id="txt_ProductCode" @bind-Value="product.Product_Code" />
                 <ValidationMessage For="@(() => product.Product_Code)" />
             </div>
 
@@ -352,8 +352,17 @@
     public async Task ShowAsync()
     {
         errorMessage = string.Empty;
-        categories = await configService.GetCategoriesAsync();
-        units = await configService.GetProductUnitsAsync();
+        try
+        {
+            categories = await configService.GetCategoriesAsync();
+            units = await configService.GetProductUnitsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudieron cargar categorías/unidades: {ex.Message}";
+            categories = [];
+            units = [];
+        }
         product = new Product();
         product.Product_Name = "";
         product.Product_Type = "";

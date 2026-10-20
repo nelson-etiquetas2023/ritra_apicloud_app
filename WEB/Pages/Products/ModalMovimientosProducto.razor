@@ -27,14 +27,41 @@
                 <span class="fw-semibold">Stock Actual: <strong class="text-success">@resultado.StockActual.ToString("N2")</strong></span>
             </div>
 
-            @if (resultado.Movimientos.Count == 0)
+            @if (ajustes.Count > 0)
+            {
+                <table class="table table-bordered table-striped mb-3" Style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th colspan="4" class="text-center bg-success text-white">Carga inicial</th>
+                        </tr>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th class="text-end">Existencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mov in ajustes)
+                        {
+                            <tr>
+                                <td>@mov.Numero</td>
+                                <td>@mov.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@mov.Usuario</td>
+                                <td class="text-end fw-semibold">@mov.StockNuevo.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            @if (compras.Count == 0 && ajustes.Count == 0)
             {
                 <div class="text-center py-4">
                     <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay movimientos registrados</h6>
-                    <p class="text-muted">Este producto aún no tiene compras procesadas.</p>
+                    <p class="text-muted">Este producto aún no tiene movimientos.</p>
                 </div>
             }
-            else
+            @if (compras.Count > 0)
             {
                 <table class="table table-bordered table-striped" Style="font-size:0.9rem;">
                     <thead>
@@ -52,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var mov in resultado.Movimientos)
+                        @foreach (var mov in compras)
                         {
                             <tr>
                                 <td>@mov.Numero</td>
@@ -87,15 +114,24 @@
 
     private Modal modal = default!;
     private MovimientosProductoResult? resultado;
+    private List<MovimientoInventario> ajustes = [];
+    private List<MovimientoInventario> compras = [];
     private bool cargando;
 
     public async Task ShowAsync(string codigo)
     {
         resultado = null;
+        ajustes = [];
+        compras = [];
         cargando = true;
         await modal.ShowAsync();
 
         resultado = await inventarioService.GetMovimientosProductoAsync(codigo);
+        if (resultado != null)
+        {
+            ajustes = resultado.Movimientos.Where(m => m.TipoMovimiento == "Ajuste").ToList();
+            compras = resultado.Movimientos.Where(m => m.TipoMovimiento != "Ajuste").ToList();
+        }
         cargando = false;
         StateHasChanged();
     }

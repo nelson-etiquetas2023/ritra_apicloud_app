@@ -1,5 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using Shared.Dtos;
+using Shared.Dtos.Inventario;
 using System.Text;
 using System.Text.Json;
 using System.Net.Http.Headers;
@@ -154,7 +155,7 @@ namespace WEB.Services.Products
             try
             {
                 var parametros = new ParametrosUpdateProducts(id, product);
-                var url = $"api/products/updateproducts";
+                var url = $"api/products/updateproductsfull";
                 var json = JsonSerializer.Serialize(parametros, jsonOptions);
                 var jsonContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var clientHttp = HttpFactory.CreateClient("scanpro");
@@ -315,6 +316,139 @@ namespace WEB.Services.Products
                 {
                     Errors = [new ProductImportError { Row = 0, Message = ex.Message }]
                 };
+            }
+        }
+
+        public async Task<byte[]> DownloadStockTemplateAsync(bool incluirProductos)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync($"api/products/plantilla-stock-inicial?incluirProductos={incluirProductos}");
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error descargando plantilla de stock: {ex.Message}");
+                return [];
+            }
+        }
+
+        public async Task<StockInicialResult> AplicarStockInicialAsync(IBrowserFile file, string usuario)
+        {
+            try
+            {
+                var url = $"api/products/aplicar-stock-inicial?usuario={Uri.EscapeDataString(usuario ?? "")}";
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+
+                using var content = new MultipartFormDataContent();
+                using var stream = file.OpenReadStream(maxAllowedSize: 30_000_000);
+                var streamContent = new StreamContent(stream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(
+                    file.ContentType ?? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                content.Add(streamContent, "file", file.Name);
+
+                var response = await clientHttp.PostAsync(url, content);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new StockInicialResult { Message = "El servidor no devolvió respuesta." };
+                return await JsonSerializer.DeserializeAsync<StockInicialResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new StockInicialResult();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error aplicando carga inicial: {ex.Message}");
+                return new StockInicialResult
+                {
+                    Errors = [new StockInicialError { Row = 0, Message = ex.Message }]
+                };
+            }
+        }
+
+        public async Task<List<CargaInicialResumen>> GetCargasInicialesAsync()
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync("api/products/cargas-iniciales");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return [];
+                return await JsonSerializer.DeserializeAsync<List<CargaInicialResumen>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+            }
+            catch { return []; }
+        }
+
+        public async Task<StockInicialResult> RevertirCargaInicialAsync(string lote)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.DeleteAsync($"api/products/carga-inicial/{Uri.EscapeDataString(lote)}");
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new StockInicialResult { Message = "El servidor no devolvió respuesta." };
+                return await JsonSerializer.DeserializeAsync<StockInicialResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new StockInicialResult();
+            }
+            catch (Exception ex)
+            {
+                return new StockInicialResult { Message = $"No se pudo conectar: {ex.Message}" };
+            }
+        }
+
+        public async Task<StockInicialResult> ActualizarCargaInicialAsync(string lote, DateTime fecha, string comentario)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var req = new Shared.Dtos.Inventario.CargaInicialUpdate { Fecha = fecha, Comentario = comentario ?? "" };
+                var content = new StringContent(JsonSerializer.Serialize(req, jsonOptions), Encoding.UTF8, "application/json");
+                var response = await clientHttp.PutAsync($"api/products/carga-inicial/{Uri.EscapeDataString(lote)}", content);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new StockInicialResult { Message = "El servidor no devolvió respuesta." };
+                return await JsonSerializer.DeserializeAsync<StockInicialResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions) ?? new StockInicialResult();
+            }
+            catch (Exception ex)
+            {
+                return new StockInicialResult { Message = $"No se pudo conectar: {ex.Message}" };
+            }
+        }
+
+        public async Task<List<Shared.Dtos.Inventario.AjusteInventario>> GetCargaDetalleAsync(string lote)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync($"api/products/carga-inicial/{Uri.EscapeDataString(lote)}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return [];
+                return await JsonSerializer.DeserializeAsync<List<Shared.Dtos.Inventario.AjusteInventario>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+            }
+            catch { return []; }
+        }
+
+        public async Task<bool> SetProductActiveAsync(int productId, bool active)
+        {
+            try
+            {
+                var url = $"api/products/setactive/{productId}";
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(active, jsonOptions), Encoding.UTF8, "application/json");
+                var response = await clientHttp.PutAsync(url, jsonContent);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting product active state: {ex.Message}");
+                return false;
             }
         }
 
