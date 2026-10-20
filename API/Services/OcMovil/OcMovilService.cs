@@ -42,7 +42,7 @@ namespace API.Services.OcMovil
             if (oc is null) return null;
 
             if (oc.FechaCreacion == default)
-                oc.FechaCreacion = DateTime.Now;
+                oc.FechaCreacion = DateTime.UtcNow;
 
             if (string.IsNullOrWhiteSpace(oc.Numero))
             {

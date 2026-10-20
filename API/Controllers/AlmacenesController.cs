@@ -8,8 +8,6 @@ namespace API.Controllers
     [Route("api/[controller]")]
     public class AlmacenesController(IAlmacenesService service) : ControllerBase
     {
-        private readonly IAlmacenesService _service = service;
-
         [HttpGet]
         [Route("get")]
         public async Task<IActionResult> GetAll()

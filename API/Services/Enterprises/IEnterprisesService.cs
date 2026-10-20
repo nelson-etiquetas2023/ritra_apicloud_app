@@ -5,6 +5,7 @@ namespace API.Services.Enterprises
     public interface IEnterprisesService
     {
         Task<Enterprise?> GetEnterpriseAsync();
+        Task<List<Enterprise>> GetAllAsync();
         Task<Enterprise> CreateEnterpriseAsync(Enterprise enterprise);
         Task<Enterprise?> UpdateEnterpriseAsync(int enterpriseId, Enterprise enterprise);
     }

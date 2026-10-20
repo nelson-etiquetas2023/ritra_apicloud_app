@@ -13,6 +13,13 @@ namespace API.Services.Enterprises
             return await context.Enterprises.FirstOrDefaultAsync();
         }
 
+        public async Task<List<Enterprise>> GetAllAsync()
+        {
+            return await context.Enterprises
+                .OrderBy(e => e.enterprise_id)
+                .ToListAsync();
+        }
+
         public async Task<Enterprise> CreateEnterpriseAsync(Enterprise enterprise)
         {
             context.Enterprises.Add(enterprise);

@@ -19,6 +19,13 @@ namespace API.Controllers
             return Ok(enterprise);
         }
 
+        [HttpGet]
+        [Route("getall")]
+        public async Task<IActionResult> GetAll()
+        {
+            return Ok(await service.GetAllAsync());
+        }
+
         [HttpPost]
         [Route("createenterprise")]
         public async Task<IActionResult> CreateEnterpriseAsync(Enterprise enterprise)

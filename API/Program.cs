@@ -1,8 +1,12 @@
-﻿using API.Data;
+using API.Data;
 using API.Services.Almacenes;
+using API.Services.LabelTemplates;
+using API.Services.Printers;
+using API.Services.PrintJobs;
 using API.Services.AppMovil;
+using API.Services.Picking;
 using API.Services.Auth;
-using API.Services.CargasIniciales;
+using API.Services.Inventarios;
 using API.Services.Config;
 using API.Services.Customers;
 using API.Services.Enterprises;
@@ -14,33 +18,43 @@ using API.Services.Reports;
 using API.Services.Suppliers;
 using API.Services.Users;
 using API.Services.Vendedores;
-using API.Services.Ventas;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using API.Services.Turnos;
+using API.Services.Ventas;using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuestPDF.Infrastructure;
+using Shared.Security;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Escucha en todas las interfaces para que la app movil (LAN) pueda sincronizar.
-//builder.WebHost.UseUrls("http://0.0.0.0:5220");
+// Escucha en todas las interfaces para que la app m?vil (LAN) pueda sincronizar.
+// builder.WebHost.UseUrls("http://0.0.0.0:5220");
 
-//Confguraci´┐¢n de CORS.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ??
+    [
+        "http://localhost:9000",
+        "https://localhost:9000",
+        "http://192.168.10.10:9000",
+        "https://192.168.10.10:9000",
+        "http://192.168.10.26:5094",
+        "https://192.168.10.26:5094"
+    ];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://192.168.10.10:9000", 
-            "https://192.168.10.10:9000",
-            "http://192.168.10.26:5094",
-            "https://192.168.10.26:5094",
-            "http://localhost:9000",
-            "https://localhost:9000")
-        .AllowAnyHeader()
-        .AllowAnyMethod();
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
+
+builder.Services.AddHealthChecks();
 
 QuestPDF.Settings.License = LicenseType.Community;
 
@@ -50,7 +64,7 @@ try
     var connectionString = builder.Configuration.GetConnectionString("SERVIDOR-ETIQUETA");
     if (string.IsNullOrEmpty(connectionString))
     {
-        throw new InvalidOperationException("Cadena de conexi´┐¢n 'SERVIDOR-ETIQUETA' no encontrada en appsettings.json");
+        throw new InvalidOperationException("Cadena de conexion SERVIDOR-ETIQUETA no encontrada en appsettings.json");
     }
 
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -75,11 +89,20 @@ builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAppMovilService, AppMovilService>();
 builder.Services.AddScoped<IOcMovilService, OcMovilService>();
-builder.Services.AddScoped<ICargasInicialesService, CargasInicialesService>();
+builder.Services.AddScoped<IInventarioTeoricoService, InventarioTeoricoService>();
+builder.Services.AddScoped<IInventarioFisicoService, InventarioFisicoService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
+builder.Services.AddScoped<ITurnosService, TurnosService>();
 builder.Services.AddScoped<IAlmacenesService, AlmacenesService>();
+builder.Services.AddScoped<ILabelTemplatesService, LabelTemplatesService>();
+builder.Services.AddScoped<IPrintersService, PrintersService>();
+builder.Services.AddScoped<IPrintJobsService, PrintJobsService>();
+builder.Services.AddHostedService<PrintQueueWorker>();
+builder.Services.AddHttpClient();
+//builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
 builder.Services.AddScoped<IVendedoresService, VendedoresService>();
+builder.Services.AddScoped<IPickingService, PickingService>();
 
 builder.Services.AddLogging(config =>
 {
@@ -107,9 +130,30 @@ if (!string.IsNullOrEmpty(secret))
 
 builder.Services.AddControllers();
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AppPolicies.RequireAuthenticatedUser, policy =>
+        policy.RequireAuthenticatedUser());
+
+    options.AddPolicy(AppPolicies.AdminOnly, policy =>
+        policy.RequireRole(AppRoles.Admin));
+
+    options.AddPolicy(AppPolicies.UserOrAdmin, policy =>
+        policy.RequireRole(AppRoles.Admin, AppRoles.User));
+});
+
 var app = builder.Build();
 
-//seeder
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error");
+}
+else
+{
+    app.UseDeveloperExceptionPage();
+}
+
+// seeder
 try
 {
     using var scope = app.Services.CreateScope();
@@ -127,6 +171,8 @@ app.UseRouting();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
+app.MapGet("/error", () => Results.Problem("Ocurri? un error inesperado. Por favor, int?ntelo nuevamente."));
 app.Run();
 
