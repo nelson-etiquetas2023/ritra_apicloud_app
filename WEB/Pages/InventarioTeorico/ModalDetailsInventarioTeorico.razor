@@ -1,5 +1,6 @@
-@page "/CargaInicial/ModalDetailsCargaInicial"
-@using Shared.Dtos.CargasIniciales
+@page "/CargaInicial/ModalDetailsInventarioTeorico"
+@using Shared.Dtos.Inventarios
+@using WEB.Components
 
 <Modal @ref="modal" Size="ModalSize.Large">
     <HeaderTemplate>
@@ -11,15 +12,14 @@
     <BodyTemplate>
         <div class="order-info">
             <div class="info-box proveedor">
-                <h3>Datos de la Carga</h3>
+                <h3>Datos del Inventario Teórico</h3>
                 <p><strong>Comentario: </strong>@carga.Comentario</p>
                 <p><strong>Fecha: </strong>@carga.FechaCreacion</p>
             </div>
             <div class="info-box orden">
-                <h3>Detalle de la Carga</h3>
+                <h3>Detalle del Documento</h3>
                 <p><strong>Numero de Productos: </strong>@carga.Detalles.Count</p>
                 <p><strong>Cantidad Teórica: </strong>@carga.Detalles.Sum(d => d.Cantidad)</p>
-                <p><strong>Cantidad Física: </strong>@carga.Detalles.Sum(d => d.CantidadFisica)</p>
             </div>
         </div>
 
@@ -31,8 +31,6 @@
                         <th>Código</th>
                         <th>Nombre del Producto</th>
                         <th>Cant. Teórica</th>
-                        <th>Cant. Física</th>
-                        <th>Diferencia</th>
                         <th>Ubicación</th>
                         <th>Costo</th>
                         <th>Subtotal</th>
@@ -48,12 +46,6 @@
                             <td>@item.ProductCode</td>
                             <td>@item.ProductName</td>
                             <td>@item.Cantidad</td>
-                            <td>@item.CantidadFisica</td>
-                            <td>
-                                <Badge Color="@(item.Diferencia == 0 ? BadgeColor.Success : BadgeColor.Danger)" VisuallyHiddenText="Diferencia">
-                                    @(item.Diferencia > 0 ? "+" : "")@item.Diferencia
-                                </Badge>
-                            </td>
                             <td>@item.Ubicacion</td>
                             <td>@($"${item.Costo:N2}")</td>
                             <td>@($"${item.Subtotal:N2}")</td>
@@ -67,22 +59,24 @@
         </section>
     </BodyTemplate>
     <FooterTemplate>
-        <table>
-            <tr>
-                <td class="total-label">Total General: </td>
-                <td class="total-value total-final"><strong>@($"${carga.Detalles.Sum(d => d.Subtotal):N2}")</strong></td>
-            </tr>
-        </table>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <table class="mb-0">
+                <tr>
+                    <td class="total-label">Total General: </td>
+                    <td class="total-value total-final"><strong>@($"${carga.Detalles.Sum(d => d.Subtotal):N2}")</strong></td>
+                </tr>
+            </table>
+        </div>
     </FooterTemplate>
 </Modal>
 
 @code {
 
-    public Inicial carga { get; set; } = new();
+    public InventarioTeorico carga { get; set; } = new();
 
     private Modal modal = default!;
 
-    public async Task ShowAsync(Inicial item)
+    public async Task ShowAsync(InventarioTeorico item)
     {
         carga = item;
         await modal.ShowAsync();

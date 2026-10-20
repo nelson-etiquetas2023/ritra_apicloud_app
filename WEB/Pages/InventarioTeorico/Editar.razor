@@ -1,8 +1,8 @@
 @page "/CargaInicial/editar/{id:int}"
-@inject ICargasInicialesService servicio
+@inject IInventarioTeoricoService servicio
 @inject NavigationManager Navigation
-@using WEB.Services.CargasIniciales
-@using Shared.Dtos.CargasIniciales
+@using WEB.Services.Inventarios
+@using Shared.Dtos.Inventarios
 
 @if (loading)
 {
@@ -13,10 +13,10 @@
 else
 {
     <div class="d-flex justify-content-between align-items-center mt-0">
-        <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Editar Carga de Iniciales</h2>
+        <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Editar Inventario Teórico</h2>
     </div>
 
-    <EditorCargaInicial Inicial="carga"
+    <EditorInventarioTeorico InventarioTeorico="carga"
                         OnSaved="IrIndex"
                         OnCancel="IrIndex" />
 }
@@ -25,7 +25,7 @@ else
 
     [Parameter] public int Id { get; set; }
 
-    private Inicial carga = new();
+    private InventarioTeorico carga = new();
     private bool loading = true;
 
     protected override async Task OnInitializedAsync()

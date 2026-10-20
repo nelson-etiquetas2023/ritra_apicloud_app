@@ -1,0 +1,88 @@
+@using Shared.Dtos.Inventarios
+
+<Modal @ref="modal" Size="ModalSize.Large">
+    <HeaderTemplate>
+        <div class="order-header">
+            <h1>Documento físico: @documento.Numero</h1>
+        </div>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        <div class="order-info">
+            <div class="info-box proveedor">
+                <h3>Datos del Documento Físico</h3>
+                <p><strong>Comentario: </strong>@documento.Comentario</p>
+                <p><strong>Fecha: </strong>@documento.FechaCreacion</p>
+                <p><strong>Doc. Teórico: </strong>@documento.DocumentoTeorico</p>
+                @if (documento.FechaAplicacion.HasValue)
+                {
+                    <p><strong>Aplicado al inventario: </strong>@documento.FechaAplicacion.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                }
+            </div>
+            <div class="info-box orden">
+                <h3>Detalle del Documento</h3>
+                <p><strong>Numero de Productos: </strong>@documento.Detalles.Count</p>
+                <p><strong>Cantidad Física: </strong>@documento.Detalles.Sum(d => d.CantidadFisica)</p>
+            </div>
+        </div>
+
+        <section class="order-detalle">
+            <h3>Detalle de productos</h3>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre del Producto</th>
+                        <th>Cant. Física</th>
+                        <th>Ubicación</th>
+                        <th>Costo</th>
+                        <th>Categoría</th>
+                        <th>Unidad</th>
+                        <th>Nota</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in documento.Detalles)
+                    {
+                        <tr>
+                            <td>@item.ProductCode</td>
+                            <td>@item.ProductName</td>
+                            <td>@item.CantidadFisica</td>
+                            <td>@item.Ubicacion</td>
+                            <td>@($"${item.Costo:N2}")</td>
+                            <td>@item.Categoria</td>
+                            <td>@item.Unidad</td>
+                            <td>@item.Nota</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    </BodyTemplate>
+    <FooterTemplate>
+        <table>
+            <tr>
+                <td class="total-label">Total Cías. Físicas: </td>
+                <td class="total-value total-final"><strong>@documento.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</strong></td>
+            </tr>
+        </table>
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    public InventarioFisico documento { get; set; } = new();
+
+    private Modal modal = default!;
+
+    public async Task ShowAsync(InventarioFisico item)
+    {
+        documento = item;
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+}

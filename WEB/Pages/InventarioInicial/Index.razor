@@ -1,0 +1,355 @@
+@page "/inventario-inicial"
+@inject WEB.Services.Products.IProductsService ProductsService
+@inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JS
+@inject ToastService ToastService
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+
+<PageTitle>Inventario Inicial</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"><Icon Name="IconName.Boxes" Size="IconSize.x4" /> Inventario Inicial</h3>
+</div>
+
+<div class="card mt-2">
+    <div class="card-header fw-semibold">Hoja de carga inicial</div>
+    <div class="card-body">
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkCatalogo" @bind="incluirCatalogo" />
+            <label class="form-check-label fw-semibold" for="chkCatalogo">Incluir los productos del catálogo</label>
+        </div>
+        <p class="text-muted small">Marcado: la hoja trae los datos de los productos (código, nombre, categoría, unidad, stock actual) y solo llenas el stock inicial. Sin marcar: hoja vacía con solo los encabezados.</p>
+        <div class="d-flex gap-2">
+            <Button Color="ButtonColor.Secondary" @onclick="DownloadStockTemplate"><Icon Name="IconName.FileEarmarkArrowDown" /> Descargar hoja</Button>
+            <label class="btn btn-warning mb-0" style="cursor:pointer;">
+                <Icon Name="IconName.FileEarmarkArrowUp" /> Subir y aplicar
+                <InputFile OnChange="OnStockFileSelected" accept=".xlsx,.xls" style="display:none;" />
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-2">
+    <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+        <span>Cargas aplicadas (@cargas.Count)</span>
+        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="CargarHistorial"><Icon Name="IconName.ArrowClockwise" /> Recargar</Button>
+    </div>
+    <div class="card-body p-0">
+        @if (cargando)
+        {
+            <div class="text-center py-4 text-muted"><Spinner Size="SpinnerSize.Small" /> Cargando...</div>
+        }
+        else if (cargas.Count == 0)
+        {
+            <div class="text-center py-4 text-muted">No hay cargas iniciales aplicadas.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th class="text-center">Productos</th>
+                            <th>Comentario</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in cargas)
+                        {
+                            <tr>
+                                <td><strong>@c.Lote</strong></td>
+                                <td>@c.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@c.Usuario</td>
+                                <td class="text-center">@c.Productos</td>
+                                <td><small>@c.Comentario</small></td>
+                                <td class="text-nowrap">
+                                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => VerDetalle(c)"><Icon Name="IconName.Eye" /> Ver</Button>
+                                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="() => AbrirEditar(c)"><Icon Name="IconName.Pencil" /> Editar</Button>
+                                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => Revertir(c)"><Icon Name="IconName.XCircle" /> Revertir</Button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<ConfirmDialog @ref="dialogRevertir" />
+
+<Modal @ref="modalDetalle" Title="Productos del documento" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (loteDetalle == null)
+        {
+            <div class="text-center text-muted py-3"><Spinner Size="SpinnerSize.Small" /> Cargando...</div>
+        }
+        else if (detalleLineas.Count == 0)
+        {
+            <div class="text-center text-muted py-3">Sin líneas en este documento.</div>
+        }
+        else
+        {
+            <p class="fw-semibold">Lote @loteDetalle.Lote (@detalleLineas.Count productos)</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-striped mb-0" style="font-size:0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th class="text-end">Anterior</th>
+                            <th class="text-end">Nuevo</th>
+                            <th class="text-end">Diferencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in detalleLineas)
+                        {
+                            <tr>
+                                <td>@l.Codigo</td>
+                                <td>@l.ProductoNombre</td>
+                                <td class="text-end">@l.StockAnterior.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@l.StockNuevo.ToString("N2")</td>
+                                <td class="text-end">+@((l.StockNuevo - l.StockAnterior).ToString("N2"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarDetalle">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
+
+<Modal @ref="modalEditar" Title="Editar carga inicial">
+    <BodyTemplate>
+        @if (loteEditar != null)
+        {
+            <p class="fw-semibold mb-2">Lote @loteEditar.Lote (@loteEditar.Productos productos)</p>
+            <div class="mb-2">
+                <label class="form-label small fw-semibold">Fecha</label>
+                <input type="datetime-local" class="form-control" @bind="fechaEditar" />
+            </div>
+            <div>
+                <label class="form-label small fw-semibold">Comentario</label>
+                <input type="text" class="form-control" placeholder="Ej: inventario inicial enero..." @bind="comentarioEditar" />
+            </div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarEditar">Cancelar</Button>
+        <Button Color="ButtonColor.Success" Disabled="guardandoEditar" @onclick="GuardarEditar">
+            @if (guardandoEditar) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Guardar</span> }
+        </Button>
+    </FooterTemplate>
+</Modal>
+
+<Modal @ref="modalStockResult" Title="Carga inicial de inventario">
+    <BodyTemplate>
+        <pre style="white-space:pre-wrap;font-family:inherit;margin-bottom:0;">@stockResultMessage</pre>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseStockModal">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private bool incluirCatalogo = true;
+    private bool cargando = true;
+    private List<Shared.Dtos.Inventario.CargaInicialResumen> cargas = [];
+    private Modal? modalStockResult;
+    private Modal? modalEditar;
+    private Modal? modalDetalle;
+    private ConfirmDialog dialogRevertir = default!;
+    private string stockResultMessage = "";
+    private Shared.Dtos.Inventario.CargaInicialResumen? loteEditar;
+    private DateTime fechaEditar = DateTime.Now;
+    private string comentarioEditar = "";
+    private bool guardandoEditar;
+
+    private Shared.Dtos.Inventario.CargaInicialResumen? loteDetalle;
+    private List<Shared.Dtos.Inventario.AjusteInventario> detalleLineas = [];
+
+    private async Task VerDetalle(Shared.Dtos.Inventario.CargaInicialResumen c)
+    {
+        loteDetalle = null;
+        detalleLineas = [];
+        try { await modalDetalle!.ShowAsync(); } catch { }
+        loteDetalle = c;
+        detalleLineas = await ProductsService.GetCargaDetalleAsync(c.Lote);
+        StateHasChanged();
+    }
+
+    private async Task CerrarDetalle()
+    {
+        try { await modalDetalle!.HideAsync(); } catch { }
+        loteDetalle = null;
+        detalleLineas = [];
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarHistorial();
+    }
+
+    private async Task CargarHistorial()
+    {
+        cargando = true;
+        try { cargas = await ProductsService.GetCargasInicialesAsync(); }
+        finally { cargando = false; StateHasChanged(); }
+    }
+
+    private async Task DownloadStockTemplate()
+    {
+        try
+        {
+            var content = await ProductsService.DownloadStockTemplateAsync(incluirCatalogo);
+            if (content.Length == 0)
+            {
+                stockResultMessage = "No se pudo descargar la hoja. Revisa la conexión con el servidor.";
+                if (modalStockResult != null) await modalStockResult.ShowAsync();
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFile", "CargaInicialStock.xlsx", Convert.ToBase64String(content));
+        }
+        catch (Exception ex)
+        {
+            stockResultMessage = $"Error descargando la hoja: {ex.Message}";
+            if (modalStockResult != null) await modalStockResult.ShowAsync();
+        }
+    }
+
+    private static bool IsValidExcelFile(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension is ".xlsx" or ".xls";
+    }
+
+    private async Task OnStockFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+        if (!IsValidExcelFile(file.Name))
+        {
+            stockResultMessage = "El archivo debe ser un Excel (.xlsx o .xls).";
+            if (modalStockResult != null) await modalStockResult.ShowAsync();
+            return;
+        }
+
+        PreloadService.Show(SpinnerColor.Dark, "Aplicando carga inicial...");
+        try
+        {
+            string usuario = "Sistema";
+            try
+            {
+                var auth = await AuthProvider.GetAuthenticationStateAsync();
+                usuario = auth.User.Identity?.Name ?? "Sistema";
+            }
+            catch { }
+
+            var result = await ProductsService.AplicarStockInicialAsync(file, usuario);
+            var sb = new System.Text.StringBuilder();
+            if (!result.Success)
+            {
+                sb.AppendLine("⚠️ La carga inicial NO se aplicó (ningún cambio guardado).");
+            }
+            else
+            {
+                sb.AppendLine($"✔️ Carga inicial {result.Lote} aplicada: {result.Aplicados} productos.");
+                sb.AppendLine("El inventario quedó afectado de una vez. Verifícalo en el botón de movimientos (↔) de cada producto.");
+            }
+            if (!string.IsNullOrWhiteSpace(result.Message))
+            {
+                sb.AppendLine();
+                sb.AppendLine(result.Message);
+            }
+            if (result.Errors.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"Errores ({result.Errors.Count}):");
+                foreach (var error in result.Errors.Take(50))
+                {
+                    sb.AppendLine($"  Fila {error.Row}: {error.Message}");
+                }
+                if (result.Errors.Count > 50)
+                {
+                    sb.AppendLine($"  ... y {result.Errors.Count - 50} error(es) más.");
+                }
+            }
+            stockResultMessage = sb.ToString();
+
+            await CargarHistorial();
+            if (modalStockResult != null) await modalStockResult.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            stockResultMessage = $"Error en la carga inicial: {ex.Message}";
+            if (modalStockResult != null) await modalStockResult.ShowAsync();
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task CloseStockModal()
+    {
+        if (modalStockResult != null) await modalStockResult.HideAsync();
+    }
+
+    private async Task Revertir(Shared.Dtos.Inventario.CargaInicialResumen c)
+    {
+        var confirm = await dialogRevertir.ShowAsync(title: $"¿Revertir la carga {c.Lote}?",
+            message1: $"Los {c.Productos} productos volverán a su stock anterior y se borrará el rastro del lote.",
+            message2: "¿Está seguro de proceder?");
+        if (!confirm) return;
+        var r = await ProductsService.RevertirCargaInicialAsync(c.Lote);
+        ToastService.Notify(new(r.Success ? ToastType.Success : ToastType.Danger, r.Message));
+        if (r.Success) await CargarHistorial();
+    }
+
+    private async Task AbrirEditar(Shared.Dtos.Inventario.CargaInicialResumen c)
+    {
+        loteEditar = c;
+        fechaEditar = c.Fecha;
+        comentarioEditar = c.Comentario ?? "";
+        try { await modalEditar!.ShowAsync(); } catch { }
+    }
+
+    private async Task CerrarEditar()
+    {
+        try { await modalEditar!.HideAsync(); } catch { }
+        loteEditar = null;
+    }
+
+    private async Task GuardarEditar()
+    {
+        if (loteEditar == null) return;
+        guardandoEditar = true;
+        try
+        {
+            var r = await ProductsService.ActualizarCargaInicialAsync(loteEditar.Lote, fechaEditar, comentarioEditar);
+            ToastService.Notify(new(r.Success ? ToastType.Success : ToastType.Danger, r.Message));
+            if (r.Success)
+            {
+                try { await modalEditar!.HideAsync(); } catch { }
+                loteEditar = null;
+                await CargarHistorial();
+            }
+        }
+        finally
+        {
+            guardandoEditar = false;
+            StateHasChanged();
+        }
+    }
+}

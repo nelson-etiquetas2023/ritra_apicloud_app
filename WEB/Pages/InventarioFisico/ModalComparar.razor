@@ -1,0 +1,200 @@
+@using Shared.Dtos.Inventarios
+
+<Modal @ref="modal" Size="ModalSize.ExtraLarge" Title="Comparar conteo físico contra inventario teórico">
+    <BodyTemplate>
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-5">
+                <label class="form-label"><strong>Documento físico</strong></label>
+                <input type="text" class="form-control" value="@documento?.Numero" disabled />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label"><strong>Documento teórico</strong></label>
+                <select class="form-select" @bind="teoricoSeleccionado">
+                    <option value="">-- Seleccione un inventario teórico --</option>
+                    @foreach (var teorico in teoricos)
+                    {
+                        <option value="@teorico.Numero">@teorico.Numero — @teorico.Comentario (@teorico.Detalles.Count ítems)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <Button Color="ButtonColor.Primary" class="w-100" Disabled="@cargando" @onclick="Comparar">
+                    @if (cargando)
+                    {
+                        <Spinner Size="SpinnerSize.Small" />
+                        <span>Comparando</span>
+                    }
+                    else
+                    {
+                        <Icon Name="IconName.Search" />
+                        <span>Comparar</span>
+                    }
+                </Button>
+            </div>
+        </div>
+
+        @if (comparacion == null)
+        {
+            <div class="text-center py-4 text-muted">
+                <Icon Name="IconName.InfoCircle" />
+                Seleccione un inventario teórico para ver las diferencias.
+                <div class="mt-1"><small>La comparación es de solo lectura: no guarda cambios.</small></div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center">
+                        <div class="text-muted small">Cantidad teórica</div>
+                        <div class="fs-5 fw-semibold">@comparacion.TotalTeorico.ToString("N2")</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center">
+                        <div class="text-muted small">Cantidad física</div>
+                        <div class="fs-5 fw-semibold">@comparacion.TotalFisico.ToString("N2")</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center">
+                        <div class="text-muted small">Diferencia</div>
+                        <div class="fs-5 fw-semibold text-warning">@comparacion.TotalDiferencia.ToString("N2")</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center">
+                        <div class="text-muted small">Productos comparados</div>
+                        <div class="fs-5 fw-semibold">@comparacion.Detalles.Count</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <Badge Color="BadgeColor.Success">Coinciden: @comparacion.ItemsCoinciden</Badge>
+                <Badge Color="BadgeColor.Warning">Con diferencia: @comparacion.ItemsConDiferencia</Badge>
+                <Badge Color="BadgeColor.Danger">Solo en el teórico: @comparacion.ItemsSoloTeorico</Badge>
+                <Badge Color="BadgeColor.Info">Solo en el físico: @comparacion.ItemsSoloFisico</Badge>
+            </div>
+
+            <div style="max-height:45vh;overflow-y:auto;">
+                <table class="table table-bordered table-striped table-sm">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th class="text-end">Cant. teórica</th>
+                            <th class="text-end">Cant. física</th>
+                            <th class="text-end">Diferencia</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in comparacion.Detalles)
+                        {
+                            <tr class="@FilaClase(item)">
+                                <td>@item.ProductCode</td>
+                                <td>@item.ProductName</td>
+                                <td class="text-end">@item.CantidadTeorica.ToString("N2")</td>
+                                <td class="text-end">@item.CantidadFisica.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@item.Diferencia.ToString("N2")</td>
+                                <td>@item.Ubicacion</td>
+                                <td>@Estado(item)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-warning mb-0 mt-3">
+                <Icon Name="IconName.ExclamationTriangle" />
+                Al aplicar el conteo conciliado, los productos marcados como
+                <strong>solo en el teórico</strong> quedarán con stock en <strong>0</strong>.
+            </div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="Cerrar">Cerrar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public List<InventarioTeorico> Teoricos { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnAplicar { get; set; }
+
+    public InventarioFisico? documento { get; set; }
+    public ComparacionResult? comparacion { get; set; }
+
+    private Modal modal = default!;
+    private string teoricoSeleccionado = "";
+    private bool cargando;
+
+    private List<InventarioTeorico> teoricos => Teoricos;
+
+    public async Task ShowAsync(InventarioFisico item, string? teoricoSugerido = null)
+    {
+        documento = item;
+        teoricoSeleccionado = item.DocumentoTeorico ?? "";
+        if (string.IsNullOrWhiteSpace(teoricoSeleccionado) && !string.IsNullOrWhiteSpace(teoricoSugerido))
+            teoricoSeleccionado = teoricoSugerido;
+
+        comparacion = null;
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+
+    private async Task Comparar()
+    {
+        if (documento == null || string.IsNullOrWhiteSpace(teoricoSeleccionado)) return;
+
+        cargando = true;
+        try
+        {
+            comparacion = await servicio.CompararAsync(teoricoSeleccionado, documento.Numero);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, ex.Message));
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private static string FilaClase(ComparacionDetalle item)
+    {
+        if (item.SoloFisico) return "table-info";
+        if (item.SoloTeorico) return "table-danger";
+        return Math.Abs(item.Diferencia) < 0.0001 ? "table-success" : "table-warning";
+    }
+
+    private static RenderFragment Estado(ComparacionDetalle item)
+    {
+        if (item.SoloFisico) return @<Badge Color="BadgeColor.Info">Solo físico</Badge>;
+        if (item.SoloTeorico) return @<Badge Color="BadgeColor.Danger">Falta</Badge>;
+        return Math.Abs(item.Diferencia) < 0.0001
+            ? @<Badge Color="BadgeColor.Success">Coincide</Badge>
+            : @<Badge Color="BadgeColor.Warning">Diferencia</Badge>;
+    }
+
+    private async Task Cerrar()
+    {
+        await modal.HideAsync();
+    }
+
+    [Inject]
+    private IInventarioTeoricoService servicio { get; set; } = default!;
+
+    [Inject]
+    private ToastService ToastService { get; set; } = default!;
+}

@@ -1,39 +1,31 @@
 @page "/CargaInicial"
-@inject ICargasInicialesService servicio
+@inject IInventarioTeoricoService servicio
 @inject ToastService ToastService
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
-@using WEB.Services.CargasIniciales
-@using Shared.Dtos.CargasIniciales
+@using WEB.Services.Inventarios
+@using Shared.Dtos.Inventarios
+@using WEB.Components
 @using Microsoft.AspNetCore.Components.QuickGrid
 
-<ModalDetailsCargaInicial @ref="modalDetails" />
-
-<Modal @ref="modalProcesarResult" Title="Resultado del procesamiento" Size="ModalSize.Large">
-    <BodyTemplate>
-        @if (procesarResult != null)
-        {
-            <div class="alert @(procesarResult.Success ? "alert-success" : "alert-danger")">
-                <Icon Name="@(procesarResult.Success ? IconName.CheckCircle : IconName.XCircle)" /> @procesarResult.Message
-            </div>
-            @if (procesarResult.Errors.Count > 0)
-            {
-                <h6>Errores:</h6>
-                <pre style="white-space:pre-wrap;font-family:inherit;max-height:200px;overflow-y:auto;">@(string.Join(Environment.NewLine, procesarResult.Errors.Select(e => e.Message)))</pre>
-            }
-        }
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="CloseProcesarModal">Cerrar</Button>
-    </FooterTemplate>
-</Modal>
+<ModalDetailsInventarioTeorico @ref="modalDetails" />
 
 <div class="d-flex justify-content-between align-items-center mt-0">
-    <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Carga de Iniciales</h2>
-    <button class="btn btn-primary" type="button" @onclick="NuevaCarga">
-        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Carga
-    </button>
+    <h2 class="mb-0"><Icon Name="IconName.FileExcel" Size="IconSize.x2" /> Inventario Teórico</h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" type="button" @onclick="DescargarPlantilla">
+            <Icon Name="IconName.FileEarmarkArrowDown" Size="IconSize.x4" /> Plantilla
+        </button>
+        <button class="btn btn-primary" type="button" @onclick="NuevaCarga">
+            <Icon Name="IconName.Plus" Size="IconSize.x4" /> Importar Excel
+        </button>
+    </div>
 </div>
+
+<p class="text-muted mt-1 mb-2">
+    Inventario teórico cargado desde Excel. No modifica el stock: sirve como referencia para
+    conciliar los conteos del <a href="/InventarioFisico">Inventario Físico</a>.
+</p>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
     <div class="container-fluid d-flex justify-content-between align-items-center p-0">
@@ -62,7 +54,7 @@ else if (!cargasFiltered!.Any())
 {
     <div class="text-center py-5">
         <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
-        <p class="text-muted">Presiona "Nueva Carga" para crear la primera carga inicial.</p>
+        <p class="text-muted">Presiona "Importar Excel" para cargar el primer inventario teórico.</p>
     </div>
 }
 else
@@ -84,19 +76,8 @@ else
         <TemplateColumn Title="Cant. Teórica">
             <span class="fw-semibold">@context.Detalles.Sum(d => d.Cantidad).ToString("N0")</span>
         </TemplateColumn>
-        <TemplateColumn Title="Cant. Física">
-            <span class="fw-semibold">@context.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</span>
-        </TemplateColumn>
-        <TemplateColumn Title="Diferencia">
-            @{
-                var dif = context.Detalles.Sum(d => d.Diferencia);
-            }
-            <Badge Color="@(dif == 0 ? BadgeColor.Success : BadgeColor.Danger)" VisuallyHiddenText="Diferencia">
-                @(dif > 0 ? "+" : "")@dif.ToString("N0")
-            </Badge>
-        </TemplateColumn>
         <TemplateColumn Title="Total">
-            <span class="fw-semibold">@($"${context.Detalles.Sum(d => d.Cantidad * d.Costo):N2}")</span>
+            <span class="fw-semibold">@($"${context.Detalles.Sum(d => d.Subtotal):N2}")</span>
         </TemplateColumn>
         <TemplateColumn Title="Status">
             @if (context.Status == 0)
@@ -107,53 +88,32 @@ else
             {
                 <Badge Color="BadgeColor.Warning">Actualizado</Badge>
             }
-            else if (context.Status == 2)
-            {
-                <Badge Color="BadgeColor.Success">Sincronizado</Badge>
-            }
-            else if (context.Status == 4)
-            {
-                <Badge Color="BadgeColor.Success">Procesado</Badge>
-            }
-            else if (context.Status == 5)
-            {
-                <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
-            }
             else
             {
                 <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
             }
         </TemplateColumn>
         <TemplateColumn Title="Acciones">
-            @if (context.Status != 4 && context.Status != 5)
-            {
-                <Tooltip Title="Editar" Placement="TooltipPlacement.Top">
-                    <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer">
-                        <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
-                    </a>
-                </Tooltip>
-            }
+            <Tooltip Title="Comparar con conteo físico" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Comparar(context)" style="cursor: pointer">
+                    <Icon Name="IconName.ColumnsGap" Size="IconSize.x5" Color="IconColor.Primary" />
+                </a>
+            </Tooltip>
+            <Tooltip Title="Editar" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer; margin-left:10px;">
+                    <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
             <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
                 <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer; margin-left:10px;">
                     <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
                 </a>
             </Tooltip>
-            @if (context.Status != 4 && context.Status != 5)
-            {
-                <Tooltip Title="Procesar" Placement="TooltipPlacement.Top">
-                    <a href="javascript:void(0)" @onclick="() => Procesar(context)" style="cursor: pointer; margin-left:10px;">
-                        <Icon Name="IconName.PlayCircleFill" Size="IconSize.x5" Color="IconColor.Success" />
-                    </a>
-                </Tooltip>
-            }
-            @if (context.Status != 4 && context.Status != 5)
-            {
-                <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
-                    <a href="javascript:void(0)" @onclick="() => Eliminar(context)" style="cursor: pointer; margin-left:10px;">
-                        <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Danger" />
-                    </a>
-                </Tooltip>
-            }
+            <Tooltip Title="Eliminar" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Eliminar(context)" style="cursor: pointer; margin-left:10px;">
+                    <Icon Name="IconName.TrashFill" Size="IconSize.x5" Color="IconColor.Danger" />
+                </a>
+            </Tooltip>
         </TemplateColumn>
     </QuickGrid>
     <div class="mt-2">
@@ -163,14 +123,12 @@ else
 
 @code {
 
-    private List<Inicial>? Cargas;
-    private IEnumerable<Inicial>? cargasFiltered;
+    private List<InventarioTeorico>? Cargas;
+    private IEnumerable<InventarioTeorico>? cargasFiltered;
     private string searchText = "";
     private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
     private int pageSize = 15;
-    private ModalDetailsCargaInicial modalDetails = default!;
-    private Modal? modalProcesarResult;
-    private CargaInicialSaveResult? procesarResult;
+    private ModalDetailsInventarioTeorico modalDetails = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,17 +171,37 @@ else
         Navigation.NavigateTo("/CargaInicial/nueva");
     }
 
-    private void Editar(Inicial carga)
+    private void Comparar(InventarioTeorico carga)
+    {
+        Navigation.NavigateTo($"/InventarioFisico?teorico={Uri.EscapeDataString(carga.Numero)}");
+    }
+
+    private async Task DescargarPlantilla()
+    {
+        try
+        {
+            var bytes = await servicio.DownloadTemplateAsync();
+            await JS.InvokeVoidAsync("downloadFile", "plantilla-inventario-teorico.xlsx",
+                Convert.ToBase64String(bytes));
+            ToastService.Notify(new(ToastType.Success, "Plantilla descargada."));
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo descargar la plantilla: {ex.Message}"));
+        }
+    }
+
+    private void Editar(InventarioTeorico carga)
     {
         Navigation.NavigateTo($"/CargaInicial/editar/{carga.Id}");
     }
 
-    private async Task ShowDetails(Inicial carga)
+    private async Task ShowDetails(InventarioTeorico carga)
     {
         await modalDetails.ShowAsync(carga);
     }
 
-    private async Task Eliminar(Inicial carga)
+    private async Task Eliminar(InventarioTeorico carga)
     {
         var confirm = await JS.InvokeAsync<bool>("confirm",
             $"¿Estás seguro de que deseas eliminar la carga inicial {carga.Numero}? Esta acción no se puede deshacer.");
@@ -239,26 +217,5 @@ else
         {
             ToastService.Notify(new(ToastType.Danger, "No se pudo eliminar la carga inicial."));
         }
-    }
-
-    private async Task Procesar(Inicial carga)
-    {
-        var confirm = await JS.InvokeAsync<bool>("confirm",
-            $"¿Estás seguro de que deseas procesar la carga inicial {carga.Numero}? El stock de los productos se incrementará.");
-        if (!confirm) return;
-
-        procesarResult = null;
-        if (modalProcesarResult != null)
-            await modalProcesarResult.ShowAsync();
-
-        procesarResult = await servicio.ProcesarAsync(carga.Id);
-        await LoadCargas();
-        StateHasChanged();
-    }
-
-    private async Task CloseProcesarModal()
-    {
-        if (modalProcesarResult != null)
-            await modalProcesarResult.HideAsync();
     }
 }

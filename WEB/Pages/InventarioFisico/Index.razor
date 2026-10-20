@@ -1,0 +1,233 @@
+@page "/InventarioFisico"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Shared.Dtos.Inventarios
+@using WEB.Pages.InventarioTeorico
+@using WEB.Services.Inventarios
+
+<PageTitle>Inventario Físico</PageTitle>
+
+<ModalDetailsInventarioFisico @ref="modalDetails" />
+<ModalComparar @ref="modalComparar" Teoricos="teoricos" />
+<ModalAplicar @ref="modalAplicar" Teoricos="teoricos" OnAplicado="Recargar" />
+
+<div class="d-flex justify-content-between align-items-center mt-0">
+    <h2 class="mb-0"><Icon Name="IconName.BoxArrowInDown" Size="IconSize.x2" /> Inventario Físico</h2>
+    <button class="btn btn-outline-secondary" type="button" @onclick="Recargar" disabled="@cargando">
+        <Icon Name="IconName.ArrowClockwise" Size="IconSize.x4" /> Actualizar
+    </button>
+</div>
+
+<p class="text-muted mt-1 mb-2">
+    Conteos enviados por la aplicación móvil. Compare contra un inventario teórico y aplique el
+    resultado al stock de los productos.
+</p>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+        <form id="formbusquedaFisico" class="d-flex align-items-center gap-2 w-100" @onsubmit="buscar" @onsubmit:preventDefault>
+            <strong class="text-nowrap">buscar por filtro:</strong>
+            <div class="d-flex flex-grow-1">
+                <input id="txt_busqueda_fisico" type="text" class="form-control me-2"
+                       placeholder="Buscar por numero, comentario, teórico o producto..."
+                       @bind-value="searchText" @bind-value:event="oninput" />
+                <Button Type="ButtonType.Submit" class="btn btn-primary">
+                    <Icon Name="IconName.Search" />
+                </Button>
+            </div>
+            <strong class="text-nowrap" style="width: 100px;">@fisicosFiltered?.Count().ToString() Items.</strong>
+        </form>
+    </div>
+</nav>
+
+@if (fisicos == null)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
+    </div>
+}
+else if (!fisicosFiltered!.Any())
+{
+    <div class="text-center py-5">
+        <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay conteos físicos</h6>
+        <p class="text-muted">Los conteos aparecen aquí cuando la aplicación móvil los sincroniza.</p>
+    </div>
+}
+else
+{
+    <QuickGrid Items="fisicosFiltered!.AsQueryable()" ItemsPerPage="@pageSize"
+              class="table table-hover table-bordered table-striped" Pagination="@paginationIndex"
+              Style="font-size:0.9rem;">
+        <TemplateColumn Title="Numero" Sortable="true">
+            <strong>@context.Numero</strong>
+        </TemplateColumn>
+        <TemplateColumn Title="Fecha Doc." Sortable="true">
+            <Icon Name="IconName.CalendarDate" />
+            @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm")
+        </TemplateColumn>
+        <TemplateColumn Title="Doc. Teórico" Sortable="true">
+            @if (string.IsNullOrWhiteSpace(context.DocumentoTeorico))
+            {
+                <span class="text-muted">&mdash;</span>
+            }
+            else
+            {
+                @context.DocumentoTeorico
+            }
+        </TemplateColumn>
+        <PropertyColumn Property="@(c => c.Comentario)" Title="Comentario" Sortable="true" />
+        <TemplateColumn Title="Items" Sortable="true">
+            <Badge Color="BadgeColor.Info" VisuallyHiddenText="Cantidad de líneas">
+                @context.Detalles.Count
+            </Badge>
+        </TemplateColumn>
+        <TemplateColumn Title="Cant. Física">
+            <span class="fw-semibold">@context.Detalles.Sum(d => d.CantidadFisica).ToString("N2")</span>
+        </TemplateColumn>
+        <TemplateColumn Title="Status">
+            @EstadoBadge(context)
+        </TemplateColumn>
+        <TemplateColumn Title="Acciones">
+            <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer">
+                    <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                </a>
+            </Tooltip>
+            <Tooltip Title="Comparar con teórico" Placement="TooltipPlacement.Top">
+                <a href="javascript:void(0)" @onclick="() => Comparar(context)" style="cursor: pointer; margin-left:10px;">
+                    <Icon Name="IconName.ColumnsGap" Size="IconSize.x5" Color="IconColor.Primary" />
+                </a>
+            </Tooltip>
+            @if (context.Status == 4)
+            {
+                <Tooltip Title="Ver aplicación" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => VerAplicacion(context)" style="cursor: pointer; margin-left:10px;">
+                        <Icon Name="IconName.CheckCircleFill" Size="IconSize.x5" Color="IconColor.Success" />
+                    </a>
+                </Tooltip>
+            }
+            else
+            {
+                <Tooltip Title="Aplicar al inventario" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => Aplicar(context)" style="cursor: pointer; margin-left:10px;">
+                        <Icon Name="IconName.Check2Square" Size="IconSize.x5" Color="IconColor.Success" />
+                    </a>
+                </Tooltip>
+            }
+        </TemplateColumn>
+    </QuickGrid>
+    <div class="mt-2">
+        <GridPaginator State="@paginationIndex" />
+    </div>
+}
+
+@code {
+
+    private List<InventarioFisico>? fisicos;
+    private IEnumerable<InventarioFisico>? fisicosFiltered;
+    private List<InventarioTeorico> teoricos = [];
+    private string searchText = "";
+    private bool cargando;
+    private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
+    private int pageSize = 15;
+
+    private ModalDetailsInventarioFisico modalDetails = default!;
+    private ModalComparar modalComparar = default!;
+    private ModalAplicar modalAplicar = default!;
+
+    [SupplyParameterFromQuery]
+    private string? teorico { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Recargar();
+    }
+
+    private async Task Recargar()
+    {
+        cargando = true;
+        try
+        {
+            fisicos = await servicio.GetInventarioFisicoAsync();
+            teoricos = await servicio.GetAllAsync();
+            buscar();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, ex.Message));
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void buscar()
+    {
+        if (fisicos == null) return;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            fisicosFiltered = fisicos
+                .OrderByDescending(d => d.FechaCreacion)
+                .ThenByDescending(d => d.Numero);
+        }
+        else
+        {
+            fisicosFiltered = fisicos.Where(d =>
+                (d.Numero != null && d.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (d.Comentario != null && d.Comentario.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                (d.DocumentoTeorico != null && d.DocumentoTeorico.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                d.Detalles.Any(x =>
+                    (x.ProductCode != null && x.ProductCode.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.ProductName != null && x.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.Ubicacion != null && x.Ubicacion.Contains(searchText, StringComparison.OrdinalIgnoreCase))))
+                .OrderByDescending(d => d.FechaCreacion)
+                .ThenByDescending(d => d.Numero);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ShowDetails(InventarioFisico documento)
+    {
+        await modalDetails.ShowAsync(documento);
+    }
+
+    private async Task Comparar(InventarioFisico documento)
+    {
+        await modalComparar.ShowAsync(documento, teorico);
+    }
+
+    private async Task Aplicar(InventarioFisico documento)
+    {
+        await modalAplicar.ShowAsync(documento);
+    }
+
+    private async Task VerAplicacion(InventarioFisico documento)
+    {
+        ToastService.Notify(new(ToastType.Info,
+            $"El conteo {documento.Numero} se aplicó al inventario el {documento.FechaAplicacion:dd/MM/yyyy HH:mm}" +
+            (string.IsNullOrWhiteSpace(documento.DocumentoTeorico) ? "." : $" conciliado con {documento.DocumentoTeorico}.")));
+        await Task.CompletedTask;
+    }
+
+    private static RenderFragment EstadoBadge(InventarioFisico documento)
+    {
+        if (documento.Status == 4)
+        {
+            return @<Badge Color="BadgeColor.Success">Aplicado</Badge>;
+        }
+
+        if (documento.Status == 1)
+        {
+            return @<Badge Color="BadgeColor.Warning">Pendiente</Badge>;
+        }
+
+        return @<Badge Color="BadgeColor.Info">Sincronizado</Badge>;
+    }
+
+    [Inject]
+    private IInventarioTeoricoService servicio { get; set; } = default!;
+
+    [Inject]
+    private ToastService ToastService { get; set; } = default!;
+}

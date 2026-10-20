@@ -1,0 +1,245 @@
+@using Shared.Dtos.Inventarios
+
+<Modal @ref="modal" Size="ModalSize.ExtraLarge" Title="Aplicar conteo físico al inventario">
+    <BodyTemplate>
+        @if (documento == null)
+        {
+            <p class="text-muted">Seleccione un conteo físico.</p>
+        }
+        else if (aplicado)
+        {
+            <div class="alert @(resultado?.Success == true ? "alert-success" : "alert-danger")">
+                <Icon Name="@(resultado?.Success == true ? IconName.CheckCircle : IconName.XCircle)" />
+                @resultado?.Message
+            </div>
+
+            @if (resultado is { Errors.Count: > 0 })
+            {
+                <h6>Errores que impidieron la aplicación:</h6>
+                <ul class="mb-3">
+                    @foreach (var error in resultado.Errors)
+                    {
+                        <li>@error.Message</li>
+                    }
+                </ul>
+            }
+
+            @if (resultado is { Success: true })
+            {
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 text-center">
+                            <div class="text-muted small">Productos actualizados</div>
+                            <div class="fs-5 fw-semibold">@resultado.ProductosActualizados</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 text-center">
+                            <div class="text-muted small">Puestos en cero</div>
+                            <div class="fs-5 fw-semibold text-danger">@resultado.ProductosPuestosEnCero</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 text-center">
+                            <div class="text-muted small">Fecha de aplicación</div>
+                            <div class="fs-6 fw-semibold">@resultado.FechaAplicacion?.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="max-height:45vh;overflow-y:auto;">
+                    <table class="table table-bordered table-striped table-sm">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th class="text-end">Stock anterior</th>
+                                <th class="text-end">Stock nuevo</th>
+                                <th class="text-end">Cant. física</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var linea in resultado.Lineas)
+                            {
+                                <tr class="@(linea.PuestoEnCero ? "table-danger" : "")">
+                                    <td>@linea.ProductCode</td>
+                                    <td>@linea.ProductName</td>
+                                    <td class="text-end">@linea.StockAnterior.ToString("N2")</td>
+                                    <td class="text-end fw-semibold">@linea.StockNuevo.ToString("N2")</td>
+                                    <td class="text-end">@linea.CantidadFisica.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="border rounded p-3 mb-3">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Conteo físico</div>
+                        <div class="fw-semibold">@documento.Numero — @documento.Detalles.Count ítems, @documento.Detalles.Sum(d => d.CantidadFisica).ToString("N2") unidades</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Fecha del conteo</div>
+                        <div class="fw-semibold">@documento.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <Icon Name="IconName.ExclamationTriangle" />
+                Esta acción <strong>sobrescribe el stock</strong> de los productos con la cantidad contada
+                y no se puede deshacer.
+            </div>
+
+            <fieldset class="mb-3">
+                <legend class="fs-6 fw-semibold">Modo de aplicación</legend>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="modoSolo" name="modo"
+                           checked="@(modo == ModoAplicacion.SoloFisico)" @onchange="() => modo = ModoAplicacion.SoloFisico" />
+                    <label class="form-check-label" for="modoSolo">
+                        <strong>Solo físico</strong>
+                        <div class="small text-muted">
+                            Solo se actualizan los @documento.Detalles.Count producto(s) escaneado(s).
+                            Los demás productos del catálogo conservan su stock.
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="modoConciliado" name="modo"
+                           checked="@(modo == ModoAplicacion.Conciliado)" @onchange="() => modo = ModoAplicacion.Conciliado" />
+                    <label class="form-check-label" for="modoConciliado">
+                        <strong>Conciliado con un inventario teórico</strong>
+                        <div class="small text-muted">
+                            Además de los escaneados, los productos del teórico que no se escanearon quedan con stock en 0.
+                        </div>
+                    </label>
+                </div>
+            </fieldset>
+
+            @if (modo == ModoAplicacion.Conciliado)
+            {
+                <div class="mb-3">
+                    <label class="form-label"><strong>Inventario teórico a conciliar</strong></label>
+                    <select class="form-select" @bind="teoricoSeleccionado">
+                        <option value="">-- Seleccione un inventario teórico --</option>
+                        @foreach (var teorico in teoricos)
+                        {
+                            <option value="@teorico.Numero">@teorico.Numero — @teorico.Comentario (@teorico.Detalles.Count ítems)</option>
+                        }
+                    </select>
+                </div>
+            }
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        @if (!aplicado)
+        {
+            <Button Color="ButtonColor.Secondary" @onclick="Cerrar">Cancelar</Button>
+            <Button Color="ButtonColor.Success" Disabled="@puedeAplicar" @onclick="Aplicar">
+                @if (cargando)
+                {
+                    <Spinner Size="SpinnerSize.Small" />
+                    <span>Aplicando</span>
+                }
+                else
+                {
+                    <Icon Name="IconName.Check2Circle" />
+                    <span>Aplicar al inventario</span>
+                }
+            </Button>
+        }
+        else
+        {
+            <Button Color="ButtonColor.Primary" @onclick="Cerrar">Cerrar</Button>
+        }
+    </FooterTemplate>
+</Modal>
+
+@code {
+
+    public enum ModoAplicacion
+    {
+        SoloFisico,
+        Conciliado
+    }
+
+    [Parameter]
+    public List<InventarioTeorico> Teoricos { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnAplicado { get; set; }
+
+    public InventarioFisico? documento { get; set; }
+    public AplicarFisicoResult? resultado { get; set; }
+
+    private Modal modal = default!;
+    private ModoAplicacion modo = ModoAplicacion.SoloFisico;
+    private string teoricoSeleccionado = "";
+    private bool cargando;
+    private bool aplicado;
+
+    private List<InventarioTeorico> teoricos => Teoricos;
+
+    private bool puedeAplicar =>
+        documento != null && !cargando &&
+        (modo == ModoAplicacion.SoloFisico || !string.IsNullOrWhiteSpace(teoricoSeleccionado));
+
+    public async Task ShowAsync(InventarioFisico item)
+    {
+        documento = item;
+        teoricoSeleccionado = item.DocumentoTeorico ?? "";
+        modo = string.IsNullOrWhiteSpace(teoricoSeleccionado)
+            ? ModoAplicacion.SoloFisico
+            : ModoAplicacion.Conciliado;
+        resultado = null;
+        aplicado = false;
+        cargando = false;
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await modal.HideAsync();
+    }
+
+    private async Task Aplicar()
+    {
+        if (documento == null || !puedeAplicar) return;
+
+        cargando = true;
+        try
+        {
+            var teorico = modo == ModoAplicacion.Conciliado ? teoricoSeleccionado : null;
+            resultado = await servicio.AplicarFisicoAsync(documento.Id, teorico);
+            aplicado = true;
+
+            if (resultado.Success)
+                await OnAplicado.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, ex.Message));
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        await modal.HideAsync();
+    }
+
+    [Inject]
+    private IInventarioTeoricoService servicio { get; set; } = default!;
+
+    [Inject]
+    private ToastService ToastService { get; set; } = default!;
+}

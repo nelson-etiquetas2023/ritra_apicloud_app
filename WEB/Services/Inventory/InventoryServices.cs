@@ -63,13 +63,6 @@ namespace WEB.Services.Inventory
         {
             try
             {
-                string carpetaDestino = Path.Combine(Environment.CurrentDirectory, "datos");
-                if (!Directory.Exists(carpetaDestino)) 
-                {
-                    Directory.CreateDirectory(carpetaDestino);   
-                }
-                string filePath = Path.Combine(carpetaDestino, "datos.txt");
-
                 using var stream = new MemoryStream(); 
                 using (StreamWriter sr = new(stream, Encoding.UTF8, leaveOpen:true)) 
                 {
@@ -93,7 +86,6 @@ namespace WEB.Services.Inventory
         {
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Inventario");
-            string filepath = Path.Combine(Environment.CurrentDirectory, "ExportData");
             //encabezado de la hoja de excel.
             worksheet.Cell(1, 1).Value = "It.";
             worksheet.Cell(1, 1).Style.Font.Bold = true;
