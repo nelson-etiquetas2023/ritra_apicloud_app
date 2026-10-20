@@ -41,6 +41,8 @@
     <!-- Add sortable.js reference if SortableList component is used in your application. -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+    <script src="js/BrowserPrint-3.1.250.min.js"></script>
+    <script src="js/browserPrintLabels.js"></script>
 
     <script>
         function setItem(key, value) 
@@ -213,6 +215,14 @@
             });
         };
 
+        // Activa/desactiva el scroll de la página (la búsqueda avanzada lo bloquea:
+        // solo el grid y la ficha tienen scroll propio).
+        window.scanproPageScroll = (lock) => {
+            const value = lock ? 'hidden' : '';
+            document.documentElement.style.overflow = value;
+            document.body.style.overflow = value;
+        };
+
         window.triggerFileInput = () => {
             const fileInput = document.querySelector('input[type=file][accept*="image"]');
             if (fileInput) {
@@ -284,6 +294,10 @@
             });
         };
 
+        // Ticket POS 80mm: imprime solo #pos-ticket (ver TicketVenta.razor.css)
+        window.printPosTicket = () => {
+            window.print();
+        };
         // Obtener la ubicación actual del usuario (GPS del navegador)
         window.getCurrentLocation = (dotNetRef) => {
             if (!navigator.geolocation) {

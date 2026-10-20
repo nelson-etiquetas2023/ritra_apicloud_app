@@ -26,19 +26,11 @@ namespace WEB.Services.LocalStorage
             _mode = mode;
         }
 
-        private string GetStorageFunctionPrefix()
-        {
-            // Siempre usamos setItem/getItem/deleteItem (definidos en index.html apuntando a sessionStorage)
-            return "Item";
-        }
-
         private async Task<bool> SetItemJsonAsync(string key, string json)
         {
-            string funcName = $"set{GetStorageFunctionPrefix()}Item";
             try
             {
-                var result = await JS.InvokeAsync<bool>(funcName, key, json);
-                return result;
+                return await JS.InvokeAsync<bool>("setItem", key, json);
             }
             catch
             {
@@ -48,10 +40,9 @@ namespace WEB.Services.LocalStorage
 
         private async Task<string?> GetItemJsonAsync(string key)
         {
-            string funcName = $"get{GetStorageFunctionPrefix()}Item";
             try
             {
-                return await JS.InvokeAsync<string>(funcName, key);
+                return await JS.InvokeAsync<string>("getItem", key);
             }
             catch
             {
@@ -61,20 +52,18 @@ namespace WEB.Services.LocalStorage
 
         private async Task DeleteItemJsonAsync(string key)
         {
-            string funcName = $"delete{GetStorageFunctionPrefix()}Item";
             try
             {
-                await JS.InvokeVoidAsync(funcName, key);
+                await JS.InvokeVoidAsync("deleteItem", key);
             }
             catch { }
         }
 
         private async Task ClearStorageJsonAsync()
         {
-            string funcName = $"clear{GetStorageFunctionPrefix()}Storage";
             try
             {
-                await JS.InvokeVoidAsync(funcName);
+                await JS.InvokeVoidAsync("clearSessionStorage");
             }
             catch { }
         }

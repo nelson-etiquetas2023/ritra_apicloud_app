@@ -1,33 +1,16 @@
 @inject IOrdenCompraService servicio
-@inject ICargasInicialesService cargaServicio
+@inject IInventarioTeoricoService cargaServicio
 @inject ToastService ToastService
 @inject IJSRuntime JS
 @page "/mobile"
-@using WEB.Pages.CargaInicial
-@using Shared.Dtos.CargasIniciales
+@using WEB.Pages.InventarioTeorico
+@using WEB.Pages.InventarioFisico
+@using Shared.Dtos.Inventarios
 
 <ModalDetailsOrdenCompra @ref="modalDetails" />
 <ModalProcesarOrdenCompra @ref="modalProcesar" OnProcesado="OnProcesado" />
-<ModalDetailsCargaInicial @ref="modalDetailsCarga" />
-
-<Modal @ref="modalProcesarCarga" Title="Resultado del procesamiento" Size="ModalSize.Large">
-    <BodyTemplate>
-        @if (procesarCargaResult != null)
-        {
-            <div class="alert @(procesarCargaResult.Success ? "alert-success" : "alert-danger")">
-                <Icon Name="@(procesarCargaResult.Success ? IconName.CheckCircle : IconName.XCircle)" /> @procesarCargaResult.Message
-            </div>
-            @if (procesarCargaResult.Errors.Count > 0)
-            {
-                <h6>Errores:</h6>
-                <pre style="white-space:pre-wrap;font-family:inherit;max-height:200px;overflow-y:auto;">@(string.Join(Environment.NewLine, procesarCargaResult.Errors.Select(e => e.Message)))</pre>
-            }
-        }
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="CloseProcesarCargaModal">Cerrar</Button>
-    </FooterTemplate>
-</Modal>
+<ModalDetailsInventarioTeorico @ref="modalDetailsCarga" />
+<ModalDetailsInventarioFisico @ref="modalDetailsFisico" />
 
 <h3>Conexion con Aplicacion movil.</h3>
 <button class="btn btn-primary" @onclick="LoadActiveTab">Sincronizar</button>
@@ -178,23 +161,29 @@
 }
 else
 {
-    <h5 class="mt-3">Documentos de stock inicial sincronizados</h5>
+    <h5 class="mt-3">Documentos de stock inicial (físicos) sincronizados</h5>
+
+    <div class="alert alert-info py-2">
+        <Icon Name="IconName.InfoCircle" />
+        Esta lista es de solo lectura. Para comparar o aplicar un conteo al inventario use
+        <a href="/InventarioFisico">Inventario Físico</a>.
+    </div>
 
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="text-muted small">Numero de Documentos: @CargasIniciales?.Count</span>
+        <span class="text-muted small">Numero de Documentos: @Fisicos?.Count</span>
         <div class="d-flex gap-2">
             <input type="text" class="form-control form-control-sm" style="max-width:300px;" placeholder="Buscar por numero, comentario, producto o ubicacion..." value="@searchCargasText" @oninput="OnSearchCargasInput" @onkeydown="HandleEnterCargasKey" />
             <Button Color="ButtonColor.Primary" @onclick="buscarCargas"><Icon Name="IconName.Search" /></Button>
         </div>
     </div>
 
-    @if (CargasIniciales == null)
+    @if (Fisicos == null)
     {
         <div class="d-flex justify-content-center align-items-center p-5">
             <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
         </div>
     }
-    else if (cargasFiltered == null || !cargasFiltered.Any())
+    else if (fisicosFiltered == null || !fisicosFiltered.Any())
     {
         <div class="text-center py-5">
             <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
@@ -203,13 +192,16 @@ else
     }
     else
     {
-        <QuickGrid Items="cargasFiltered.AsQueryable()" ItemsPerPage="@pageSizeCarga" class="table table-hover table-bordered table-striped" Pagination="@paginationIndexCarga" Style="font-size:0.9rem;">
+        <QuickGrid Items="fisicosFiltered.AsQueryable()" ItemsPerPage="@pageSizeCarga" class="table table-hover table-bordered table-striped" Pagination="@paginationIndexCarga" Style="font-size:0.9rem;">
             <TemplateColumn Title="Numero" Sortable="true">
                 <strong>@context.Numero</strong>
             </TemplateColumn>
             <TemplateColumn Title="Fecha Doc." Sortable="true">
                 <Icon Name="IconName.CalendarDate" />
                 @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
+            </TemplateColumn>
+            <TemplateColumn Title="Doc. Teórico" Sortable="true">
+                @context.DocumentoTeorico
             </TemplateColumn>
             <PropertyColumn Property="@(c => c.Comentario)" Title="Comentario" Sortable="true" />
             <TemplateColumn Title="Items" Sortable="true">
@@ -247,16 +239,8 @@ else
                 }
             </TemplateColumn>
             <TemplateColumn Title="Acciones">
-                @if (context.Status != 4 && context.Status != 5)
-                {
-                    <Tooltip Title="Procesar" Placement="TooltipPlacement.Top">
-                        <a href="javascript:void(0)" @onclick="() => ProcesarCarga(context)" style="cursor: pointer; margin-left:10px;">
-                            <Icon Name="IconName.PlayCircleFill" Size="IconSize.x5" Color="IconColor.Success" />
-                        </a>
-                    </Tooltip>
-                }
                 <Tooltip Title="Ver Detalles" Placement="TooltipPlacement.Top">
-                    <a href="javascript:void(0)" @onclick="() => ShowCargaDetails(context)" style="cursor: pointer; margin-left:10px;">
+                    <a href="javascript:void(0)" @onclick="() => ShowFisicoDetails(context)" style="cursor: pointer; margin-left:10px;">
                         <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
                     </a>
                 </Tooltip>
@@ -276,9 +260,8 @@ else
 
     ModalDetailsOrdenCompra modalDetails { get; set; } = default!;
     ModalProcesarOrdenCompra modalProcesar { get; set; } = default!;
-    ModalDetailsCargaInicial modalDetailsCarga { get; set; } = default!;
-    private Modal? modalProcesarCarga;
-    private CargaInicialSaveResult? procesarCargaResult;
+    ModalDetailsInventarioTeorico modalDetailsCarga { get; set; } = default!;
+    ModalDetailsInventarioFisico modalDetailsFisico { get; set; } = default!;
 
     private int activeTab = 0;
 
@@ -288,8 +271,8 @@ else
     private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
     private int pageSize = 15;
 
-    private List<Inicial>? CargasIniciales;
-    private IEnumerable<Inicial>? cargasFiltered;
+    private List<InventarioFisico>? Fisicos;
+    private IEnumerable<InventarioFisico>? fisicosFiltered;
     private string searchCargasText = "";
     private PaginationState paginationIndexCarga = new PaginationState { ItemsPerPage = 15 };
     private int pageSizeCarga = 15;
@@ -360,24 +343,24 @@ else
 
     private async Task LoadCargas()
     {
-        CargasIniciales = await cargaServicio.GetAllAsync();
+        Fisicos = await cargaServicio.GetInventarioFisicoAsync();
         buscarCargas();
     }
 
     private void buscarCargas()
     {
-        if (CargasIniciales == null) return;
+        if (Fisicos == null) return;
 
         if (string.IsNullOrWhiteSpace(searchCargasText))
         {
-            cargasFiltered = CargasIniciales
+            fisicosFiltered = Fisicos
                 .OrderByDescending(c => c.FechaCreacion)
                 .ThenByDescending(c => c.Numero)
                 .AsEnumerable();
         }
         else
         {
-            cargasFiltered = CargasIniciales.Where(c =>
+            fisicosFiltered = Fisicos.Where(c =>
                 (c.Numero != null && c.Numero.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
                 (c.Comentario != null && c.Comentario.Contains(searchCargasText, StringComparison.OrdinalIgnoreCase)) ||
                 c.Detalles.Any(d =>
@@ -417,30 +400,13 @@ else
         await LoadOrders();
     }
 
-    private async Task ShowCargaDetails(Inicial carga)
+    private async Task ShowInventarioTeoricoDetails(InventarioTeorico carga)
     {
         await modalDetailsCarga.ShowAsync(carga);
     }
 
-    private async Task ProcesarCarga(Inicial carga)
+    private async Task ShowFisicoDetails(InventarioFisico fisico)
     {
-        var confirm = await JS.InvokeAsync<bool>("confirm",
-            $"¿Estás seguro de que deseas procesar la carga inicial {carga.Numero}? El stock de los productos se incrementará.");
-        if (!confirm) return;
-
-        procesarCargaResult = null;
-        if (modalProcesarCarga != null)
-            await modalProcesarCarga.ShowAsync();
-
-        procesarCargaResult = await cargaServicio.ProcesarAsync(carga.Id);
-        await LoadCargas();
-        StateHasChanged();
+        await modalDetailsFisico.ShowAsync(fisico);
     }
-
-    private async Task CloseProcesarCargaModal()
-    {
-        if (modalProcesarCarga != null)
-            await modalProcesarCarga.HideAsync();
-    }
-
 }
