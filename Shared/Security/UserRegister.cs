@@ -7,6 +7,10 @@ namespace Shared.Security
         [Required(ErrorMessage ="el correo es un valor necesario..."), EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "el nickname es necesario...")]
+        [MaxLength(50)]
+        public string Nickname { get; set; } = string.Empty;
+
         [Required(ErrorMessage ="el nombre del usuario es necesario...")]
         public string UserName { get; set; } = string.Empty;
 

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Shared.Dtos.CargasIniciales;
+using Shared.Dtos.Inventarios;
 
 namespace Shared.Dtos.Ventas
 {
@@ -36,6 +36,8 @@ namespace Shared.Dtos.Ventas
 
         public int Status { get; set; }
 
+        public int? TurnoId { get; set; }
+
         public decimal Subtotal { get; set; }
 
         public decimal Descuento { get; set; }
@@ -45,6 +47,8 @@ namespace Shared.Dtos.Ventas
         public decimal Total { get; set; }
 
         public ICollection<DetalleVenta> Items { get; set; } = [];
+
+        public ICollection<VentaPago> Pagos { get; set; } = [];
 
         [JsonIgnore]
         public string StatusTexto => Status switch
@@ -93,6 +97,30 @@ namespace Shared.Dtos.Ventas
 
         [JsonIgnore]
         public decimal Importe => Subtotal - Subtotal * (Descuento / 100m);
+    }
+
+    public static class MetodoPago
+    {
+        public const string Efectivo = "Efectivo";
+        public const string Tarjeta = "Tarjeta";
+        public const string Transferencia = "Transferencia";
+    }
+
+    public class VentaPago
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int PedidoVentaId { get; set; }
+
+        [JsonIgnore]
+        public PedidoVenta? PedidoVenta { get; set; }
+
+        public string Metodo { get; set; } = MetodoPago.Efectivo;
+
+        public decimal Monto { get; set; }
+
+        public string Referencia { get; set; } = "";
     }
 
     public class PedidoVentaSaveResult

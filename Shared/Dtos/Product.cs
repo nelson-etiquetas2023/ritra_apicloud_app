@@ -29,12 +29,17 @@ namespace Shared.Dtos
         public double Stock { get; set; } = 0;
         public double Stock_Mix { get; set; }
         public double Stock_Max { get; set; }
-        public string StockStatus { get; set; } = null!;
-        public string Description { get; set; } = null!;
-        public string SkuNumber { get; set; } = null!;
-        public string PartNumber { get; set; } = null!;
-        public string Model { get; set; } = null!;
-        public string Marca { get; set; } = null!;
-        public string StatusProducts { get; set; } = null!;
+        public DateTime? FechaVencimiento { get; set; }
+        public bool ManejaVencimiento { get; set; }
+        public bool ManejaSeriales { get; set; }
+        public bool ManejaLotes { get; set; }
+        public string? StockStatus { get; set; } = "";
+        public string? Description { get; set; } = "";
+        public string? SkuNumber { get; set; } = "";
+        public string? PartNumber { get; set; } = "";
+        public string? Model { get; set; } = "";
+        public string? Marca { get; set; } = "";
+        public string? StatusProducts { get; set; } = "";
+        public bool IsActive { get; set; } = true;
     }
 }
