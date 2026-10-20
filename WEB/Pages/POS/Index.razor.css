@@ -1,0 +1,98 @@
+.pos-cart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 38vh;
+    overflow-y: auto;
+}
+
+.pos-cart-list.sin-scroll {
+    max-height: none;
+    overflow-y: visible;
+}
+
+.pos-cart-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.pos-cart-row.anulado {
+    background: #e9ecef;
+    color: #6c757d;
+    border-color: #ced4da;
+}
+
+.pos-cart-row.anulado strong {
+    text-decoration: line-through;
+}
+
+.pos-cart-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.pos-cart-info strong {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pos-cart-qty {
+    flex: 0 0 118px;
+}
+
+.pos-cart-qty .btn {
+    min-height: 38px;
+    min-width: 34px;
+}
+
+.pos-cart-total {
+    flex: 0 0 auto;
+    min-width: 74px;
+    text-align: right;
+    font-weight: 700;
+}
+
+/* Pestañas estilo búsqueda avanzada (verdes), en tamaño táctil */
+.pos-tabs {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 2px solid #147a3d;
+    background: #f6f8fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.pos-tab {
+    flex: 1 1 0;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    min-height: 56px;
+    padding: 0.6rem 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #66767f;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.pos-tab:hover {
+    color: #147a3d;
+}
+
+.pos-tab.active {
+    border-bottom-color: #28BB5B;
+    background: rgba(40, 187, 91, 0.18);
+    color: #147a3d;
+    font-weight: 700;
+}

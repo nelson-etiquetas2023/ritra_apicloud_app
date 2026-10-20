@@ -1,0 +1,122 @@
+@using Shared.Dtos
+@inject IEtiquetasService Etiquetas
+@inject ToastService ToastService
+
+<Modal @ref="modal" Title="@titulo">
+    <BodyTemplate>
+        <div class="mb-2">
+            <label class="form-label"><strong>Nombre</strong></label>
+            <InputText class="form-control" @bind-Value="modelo.Name" />
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label"><strong>Modelo</strong></label>
+                <InputText class="form-control" @bind-Value="modelo.Model" placeholder="ZD220, ZT230..." />
+            </div>
+            <div class="col-6">
+                <label class="form-label"><strong>DPI</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.Dpi">
+                    <option value="152">152</option>
+                    <option value="203">203</option>
+                    <option value="300">300</option>
+                    <option value="600">600</option>
+                </InputSelect>
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label"><strong>Conexión</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.Connection">
+                    @foreach (var c in PrinterConnection.All)
+                    {
+                        <option value="@c">@c@(c == PrinterConnection.Tcp ? " (cola servidor)" : " (directo navegador)")</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-6">
+                <label class="form-label"><strong>Endpoint</strong></label>
+                <InputText class="form-control" @bind-Value="modelo.Endpoint" placeholder="COM1, LPT1, MAC, uid..." />
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-8">
+                <label class="form-label"><strong>IP (solo TCP/red)</strong></label>
+                <InputText class="form-control" @bind-Value="modelo.Ip" placeholder="192.168.10.50" />
+            </div>
+            <div class="col-4">
+                <label class="form-label"><strong>Puerto</strong></label>
+                <InputNumber class="form-control" @bind-Value="modelo.Port" />
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label"><strong>Ancho máx (in)</strong></label>
+            <InputNumber class="form-control" @bind-Value="modelo.AnchoMaxIn" step="0.5" />
+        </div>
+        <div class="form-check">
+            <InputCheckbox class="form-check-input" @bind-Value="modelo.IsActive" />
+            <label class="form-check-label">Activa</label>
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync">Cancelar</Button>
+        <Button Color="ButtonColor.Success" @onclick="Guardar">Guardar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+    private Printer modelo = new();
+    private bool esNuevo = true;
+    private string titulo = "Impresora";
+
+    [Parameter] public EventCallback OnGuardado { get; set; }
+
+    public async Task ShowAsync(Printer? printer)
+    {
+        esNuevo = printer == null;
+        modelo = printer == null
+            ? new Printer { Port = 9100, Dpi = 203, AnchoMaxIn = 4, Connection = PrinterConnection.Tcp }
+            : new Printer
+            {
+                Id = printer.Id,
+                Code = printer.Code,
+                Name = printer.Name,
+                Model = printer.Model,
+                Connection = printer.Connection,
+                Ip = printer.Ip,
+                Port = printer.Port,
+                Endpoint = printer.Endpoint,
+                Dpi = printer.Dpi,
+                AnchoMaxIn = printer.AnchoMaxIn,
+                IsActive = printer.IsActive,
+            };
+        titulo = esNuevo ? "Nueva impresora" : $"Editar {printer!.Code}";
+        StateHasChanged();
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync() => await modal.HideAsync();
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(modelo.Name))
+        {
+            ToastService.Notify(new(ToastType.Warning, "Falta el nombre."));
+            return;
+        }
+
+        bool ok = esNuevo
+            ? await Etiquetas.CreatePrinterAsync(modelo) != null
+            : await Etiquetas.UpdatePrinterAsync(modelo.Id, modelo);
+
+        if (!ok)
+        {
+            ToastService.Notify(new(ToastType.Danger, "No se pudo guardar la impresora."));
+            return;
+        }
+
+        ToastService.Notify(new(ToastType.Success, "Impresora guardada."));
+        await modal.HideAsync();
+        await OnGuardado.InvokeAsync();
+    }
+}

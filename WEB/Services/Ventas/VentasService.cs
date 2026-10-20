@@ -7,6 +7,7 @@ namespace WEB.Services.Ventas
     public interface IVentasService
     {
         Task<List<PedidoVenta>> GetAllAsync();
+        Task<List<PedidoVenta>> GetByTurnoAsync(int turnoId);
         Task<PedidoVenta> GetByIdAsync(int id);
         Task<PedidoVentaSaveResult> CreateAsync(PedidoVenta pedido);
         Task<PedidoVentaSaveResult> UpdateAsync(int id, PedidoVenta pedido);
@@ -36,6 +37,24 @@ namespace WEB.Services.Ventas
             if (string.IsNullOrWhiteSpace(json)) return [];
             return await JsonSerializer.DeserializeAsync<List<PedidoVenta>>(
                 new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+        }
+
+        public async Task<List<PedidoVenta>> GetByTurnoAsync(int turnoId)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.GetAsync($"api/ventas/turno/{turnoId}");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return [];
+                return await JsonSerializer.DeserializeAsync<List<PedidoVenta>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
+            }
+            catch
+            {
+                return [];
+            }
         }
 
         public async Task<PedidoVenta> GetByIdAsync(int id)

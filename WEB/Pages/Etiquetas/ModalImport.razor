@@ -1,0 +1,118 @@
+@using Shared.Dtos
+@inject IEtiquetasService Etiquetas
+@inject ToastService ToastService
+
+<Modal @ref="modal" Title="Importar ZPL de ZPLDesigner" Size="ModalSize.Large">
+    <BodyTemplate>
+        <p class="text-muted small">
+            Diseña en <a href="https://app.zpldesigner.com" target="_blank">ZPLDesigner</a>
+            (usa tokens <code>{{Product_Name}}</code>, <code>{{Codebar}}</code>, etc.),
+            descarga el <code>.zpl</code> y pégalo aquí.
+        </p>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label"><strong>Nombre</strong></label>
+                <InputText class="form-control" @bind-Value="nombre" />
+            </div>
+            <div class="col-6">
+                <label class="form-label"><strong>Categoría</strong></label>
+                <InputSelect class="form-select" @bind-Value="categoria">
+                    @foreach (var c in LabelCategories.All)
+                    {
+                        <option value="@c">@c</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-4">
+                <label class="form-label"><strong>Ancho (in)</strong></label>
+                <InputNumber class="form-control" @bind-Value="widthIn" step="0.25" />
+            </div>
+            <div class="col-4">
+                <label class="form-label"><strong>Alto (in)</strong></label>
+                <InputNumber class="form-control" @bind-Value="heightIn" step="0.25" />
+            </div>
+            <div class="col-4">
+                <label class="form-label"><strong>DPI</strong></label>
+                <InputSelect class="form-select" @bind-Value="dpi">
+                    <option value="152">152</option>
+                    <option value="203">203</option>
+                    <option value="300">300</option>
+                    <option value="600">600</option>
+                </InputSelect>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label"><strong>Contenido .zpl</strong></label>
+            <InputTextArea class="form-control font-monospace" rows="12" @bind-Value="zpl" />
+        </div>
+        @if (!string.IsNullOrWhiteSpace(errorMsg))
+        {
+            <div class="alert alert-danger">@errorMsg</div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync">Cancelar</Button>
+        <Button Color="ButtonColor.Success" @onclick="Importar">Importar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+    private string nombre = "";
+    private string categoria = LabelCategories.Producto;
+    private double widthIn = 2;
+    private double heightIn = 1;
+    private int dpi = 203;
+    private string zpl = "";
+    private string errorMsg = "";
+
+    [Parameter] public EventCallback OnGuardado { get; set; }
+
+    public async Task ShowAsync()
+    {
+        nombre = "";
+        categoria = LabelCategories.Producto;
+        widthIn = 2;
+        heightIn = 1;
+        dpi = 203;
+        zpl = "";
+        errorMsg = "";
+        StateHasChanged();
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync() => await modal.HideAsync();
+
+    private async Task Importar()
+    {
+        errorMsg = "";
+        if (string.IsNullOrWhiteSpace(nombre)) { errorMsg = "Falta el nombre."; return; }
+        if (string.IsNullOrWhiteSpace(zpl) || !zpl.Contains("^XA"))
+        {
+            errorMsg = "Pega un ZPL válido (debe contener ^XA...^XZ).";
+            return;
+        }
+
+        var created = await Etiquetas.CreateTemplateAsync(new LabelTemplate
+        {
+            Nombre = nombre.Trim(),
+            Categoria = categoria,
+            WidthIn = widthIn,
+            HeightIn = heightIn,
+            Dpi = dpi,
+            ZplTemplate = zpl.Trim(),
+        });
+
+        if (created == null)
+        {
+            errorMsg = "No se pudo importar.";
+            return;
+        }
+
+        ToastService.Notify(new(ToastType.Success, $"Importada como {created.Codigo}."));
+        await modal.HideAsync();
+        await OnGuardado.InvokeAsync();
+    }
+}

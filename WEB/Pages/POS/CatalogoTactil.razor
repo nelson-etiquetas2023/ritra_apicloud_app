@@ -1,0 +1,204 @@
+@using Shared.Dtos
+@using Shared.Dtos.Ventas
+@inject WEB.Services.Products.IProductsService ProductsService
+@inject ToastService ToastService
+
+<div class="touch-catalog">
+    <div class="touch-search">
+        <input type="text" class="form-control form-control-lg" placeholder="🔍 Buscar plato o producto..."
+               @bind="filtro" @bind:event="oninput" @bind:after="() => pagina = 0" autocomplete="off" />
+    </div>
+
+    @if (Categorias.Count > 0)
+    {
+        <div class="touch-chips">
+            <button type="button" class="touch-chip @(string.IsNullOrEmpty(categoria) ? "active" : "")" @onclick='() => ElegirCategoria("")'>Todos</button>
+            @foreach (var c in Categorias)
+            {
+                <button type="button" class="touch-chip @(categoria == c ? "active" : "")" @onclick="() => ElegirCategoria(c)">@c</button>
+            }
+        </div>
+    }
+
+    @if (Pagina.Count == 0)
+    {
+        <div class="text-center text-muted py-4">Sin resultados. Ajusta la búsqueda o la categoría.</div>
+    }
+    else
+    {
+        <div class="touch-grid">
+            @foreach (var p in Pagina)
+            {
+                var foto = p.Images?.OrderBy(i => i.ImageIndex).FirstOrDefault();
+                var enCarrito = EnCarrito(p);
+                var sinStock = p.Stock <= 0;
+                <button type="button" class="touch-card" @onclick="() => Toque(p)">
+                    <span class="touch-photo">
+                        <span class="touch-avatar">@Inicial(p)</span>
+                        @if (foto != null && !imagenRota.Contains(foto.Id))
+                        {
+                            <img src="@ProductsService.GetImageUrl(foto.Id, p.Product_id)" alt="@p.Product_Name" loading="lazy" @onerror="() => imagenRota.Add(foto.Id)" />
+                        }
+                        @if (enCarrito > 0)
+                        {
+                            <span class="touch-incart">x@(enCarrito)</span>
+                        }
+                    </span>
+                    <span class="touch-name">@p.Product_Name</span>
+                    <span class="touch-price @(p.Price <= 0 ? "noprice" : "")">@(p.Price > 0 ? ((decimal)p.Price).ToString("N2") : "Sin precio")</span>
+                    <span class="touch-stock @(sinStock ? "out" : "")">@(sinStock ? "Sin stock" : $"Stock: {p.Stock:N0}")</span>
+                </button>
+            }
+        </div>
+
+        <div class="touch-pager">
+            <button type="button" class="btn btn-secondary btn-lg" disabled="@(pagina == 0)" @onclick="() => pagina--">‹ Ant</button>
+            <span class="touch-pageinfo">@(pagina + 1) / @TotalPags (@Filtrados.Count)</span>
+            <button type="button" class="btn btn-secondary btn-lg" disabled="@(pagina >= TotalPags - 1)" @onclick="() => pagina++">Sig ›</button>
+        </div>
+    }
+</div>
+
+<Modal @ref="modalPrecio" Title="Poner precio" Size="ModalSize.Small">
+    <BodyTemplate>
+        @if (productoPrecio != null)
+        {
+            <p class="fw-semibold mb-1">@productoPrecio.Product_Name</p>
+            <p class="text-muted small">@productoPrecio.Product_Code · Sin precio registrado</p>
+            <label class="form-label small fw-semibold">Precio de venta <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-lg" step="0.01" min="0.01" @bind="precioNuevo" @bind:event="oninput" />
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarPrecio">Cancelar</Button>
+        <Button Color="ButtonColor.Success" Disabled="guardandoPrecio" @onclick="GuardarPrecio">
+            @if (guardandoPrecio) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Guardar y agregar</span> }
+        </Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    [Parameter] public List<Product> Productos { get; set; } = [];
+    [Parameter] public List<DetalleVenta> Carrito { get; set; } = [];
+    [Parameter] public EventCallback<Product> OnAgregar { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+
+    private string filtro = "";
+    private string categoria = "";
+    private int pagina;
+    private const int PageSize = 24;
+    private readonly HashSet<int> imagenRota = [];
+    private Modal modalPrecio = default!;
+    private Product? productoPrecio;
+    private decimal precioNuevo;
+    private bool guardandoPrecio;
+
+    private async Task Toque(Product p)
+    {
+        if (Deshabilitado)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Abre un turno antes de agregar productos."));
+            return;
+        }
+        if (p.Price <= 0)
+        {
+            productoPrecio = p;
+            precioNuevo = 0;
+            try { await modalPrecio.ShowAsync(); } catch { }
+            return;
+        }
+        await OnAgregar.InvokeAsync(p);
+    }
+
+    private async Task CerrarPrecio()
+    {
+        try { await modalPrecio.HideAsync(); } catch { }
+        productoPrecio = null;
+    }
+
+    private async Task GuardarPrecio()
+    {
+        if (productoPrecio == null) return;
+        if (precioNuevo <= 0)
+        {
+            ToastService.Notify(new(ToastType.Warning, "Indica un precio mayor a cero."));
+            return;
+        }
+        guardandoPrecio = true;
+        var anterior = productoPrecio.Price;
+        try
+        {
+            productoPrecio.Price = (double)precioNuevo;
+            var r = await ProductsService.UpdateProductAsync(productoPrecio.Product_id, productoPrecio);
+            if (!r.Success || r.Data == null)
+            {
+                productoPrecio.Price = anterior;
+                ToastService.Notify(new(ToastType.Danger, r.Message ?? "No se pudo guardar el precio."));
+                return;
+            }
+            productoPrecio.Price = r.Data.Price;
+            try { await modalPrecio.HideAsync(); } catch { }
+            ToastService.Notify(new(ToastType.Success, $"Precio actualizado: {productoPrecio.Product_Name} = {productoPrecio.Price:N2}"));
+            var p = productoPrecio;
+            productoPrecio = null;
+            await OnAgregar.InvokeAsync(p);
+        }
+        finally
+        {
+            guardandoPrecio = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<string> Categorias => Productos
+        .Select(p => p.Product_Type ?? "")
+        .Where(t => !string.IsNullOrWhiteSpace(t))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order()
+        .ToList();
+
+    private List<Product> Filtrados
+    {
+        get
+        {
+            IEnumerable<Product> q = Productos;
+            if (!string.IsNullOrWhiteSpace(categoria))
+                q = q.Where(p => (p.Product_Type ?? "").Equals(categoria, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(filtro))
+                q = q.Where(p => (p.Product_Name ?? "").Contains(filtro, StringComparison.OrdinalIgnoreCase)
+                    || (p.Product_Code ?? "").Contains(filtro, StringComparison.OrdinalIgnoreCase)
+                    || (p.Codebar ?? "").Contains(filtro, StringComparison.OrdinalIgnoreCase));
+            return q.OrderBy(p => p.Product_Name).ToList();
+        }
+    }
+
+    private int TotalPags => Math.Max(1, (int)Math.Ceiling(Filtrados.Count / (double)PageSize));
+
+    private List<Product> Pagina
+    {
+        get
+        {
+            if (pagina >= TotalPags) pagina = TotalPags - 1;
+            if (pagina < 0) pagina = 0;
+            return Filtrados.Skip(pagina * PageSize).Take(PageSize).ToList();
+        }
+    }
+
+    private void ElegirCategoria(string c)
+    {
+        categoria = c;
+        pagina = 0;
+    }
+
+    private int EnCarrito(Product p)
+    {
+        var codigo = !string.IsNullOrWhiteSpace(p.Codebar) ? p.Codebar.Trim() : (p.Product_Code ?? "").Trim();
+        return Carrito.Where(i => i.Product_id == codigo).Sum(i => i.Cantidad);
+    }
+
+    private static string Inicial(Product p)
+    {
+        var nombre = (p.Product_Name ?? "").Trim();
+        return nombre.Length > 0 ? nombre[..1].ToUpper() : "?";
+    }
+}

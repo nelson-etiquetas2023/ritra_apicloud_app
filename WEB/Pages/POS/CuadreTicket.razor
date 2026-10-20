@@ -1,0 +1,51 @@
+@using Shared.Dtos.Turnos
+
+@* Reporte de cuadre 80mm. El contenedor #pos-ticket es lo único que sale en window.print(). *@
+<div id="pos-ticket" class="pos-ticket">
+    <div class="text-center">
+        <div class="ticket-empresa">@(Empresa ?? "Mi Empresa")</div>
+        <div>CUADRE DE CAJA</div>
+    </div>
+    <div class="ticket-sep">--------------------------------</div>
+    <div>Caja: <strong>@Turno?.Caja</strong></div>
+    <div>Cajero: @Turno?.Cajero</div>
+    <div>Apertura: @Turno?.FechaApertura.ToString("dd/MM/yyyy HH:mm")</div>
+    <div>Cierre: @(Turno?.FechaCierre?.ToString("dd/MM/yyyy HH:mm") ?? "—")</div>
+    <div class="ticket-sep">--------------------------------</div>
+    <div class="ticket-tot"><span>Fondo inicial</span><span>@Resumen?.FondoInicial.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Ventas (@Resumen?.VentasProcesadas)</span><span>@Resumen?.VentasEfectivo.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Ventas electrón.</span><span>@Resumen?.VentasElectronico.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Anuladas (@Resumen?.FacturasAnuladas)</span><span>-@Resumen?.MontoAnulado.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Venta neta</span><span>@Resumen?.VentaNeta.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Entradas</span><span>@Resumen?.Entradas.ToString("N2")</span></div>
+    <div class="ticket-tot"><span>Salidas</span><span>-@Resumen?.Salidas.ToString("N2")</span></div>
+    <div class="ticket-tot ticket-total"><span>ESPERADO</span><span>@Esperado.ToString("N2")</span></div>
+    <div class="ticket-tot ticket-total"><span>CONTADO</span><span>@Contado.ToString("N2")</span></div>
+    <div class="ticket-tot ticket-total"><span>DIFERENCIA</span><span>@Diferencia.ToString("N2")</span></div>
+    @if (Conteos.Count > 0)
+    {
+        <div class="ticket-sep">--------------------------------</div>
+        <div>Conteo físico:</div>
+        @foreach (var c in Conteos.OrderByDescending(c => c.Denominacion))
+        {
+            <div class="ticket-tot"><span>@DenominacionesDOP.Etiqueta(c.Denominacion) x @c.Cantidad</span><span>@((c.Denominacion * c.Cantidad).ToString("N2"))</span></div>
+        }
+    }
+    @if (!string.IsNullOrWhiteSpace(Turno?.Observacion))
+    {
+        <div class="ticket-sep">--------------------------------</div>
+        <div>Obs: @Turno.Observacion</div>
+    }
+    <div class="ticket-sep">--------------------------------</div>
+    <div class="text-center">Firma cajero: ________________</div>
+</div>
+
+@code {
+    [Parameter] public string? Empresa { get; set; }
+    [Parameter] public TurnoCaja? Turno { get; set; }
+    [Parameter] public TurnoResumen? Resumen { get; set; }
+    [Parameter] public List<TurnoDenominacion> Conteos { get; set; } = [];
+    [Parameter] public decimal Esperado { get; set; }
+    [Parameter] public decimal Contado { get; set; }
+    [Parameter] public decimal Diferencia { get; set; }
+}

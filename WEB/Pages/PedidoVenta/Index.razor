@@ -3,7 +3,9 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject IVentasService VentaService
+@inject IPickingService PickingService
 @using WEB.Pages.PedidoVenta
+@using WEB.Services.Picking
 @using Microsoft.AspNetCore.Components.QuickGrid
 
 <ModalDetailsPedidoVenta @ref="modalDetails" />
@@ -11,9 +13,14 @@
 
 <div class="d-flex justify-content-between align-items-center mt-0">
     <h2 class="mb-0"><Icon Name="IconName.Cart4" Size="IconSize.x2" /> Pedido de Venta</h2>
-    <button class="btn btn-primary" type="button" @onclick="NuevoPV">
-        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nuevo Pedido
-    </button>
+    <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-outline-success" type="button" disabled="@(selected.Count == 0 || procesando)" @onclick="TransferirAPicking">
+            <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" /> Transferir a Picking (@selected.Count)
+        </button>
+        <button class="btn btn-primary" type="button" @onclick="NuevoPV">
+            <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nuevo Pedido
+        </button>
+    </div>
 </div>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
@@ -49,7 +56,17 @@ else if (!pedidosFiltered!.Any())
 else
 {
     <QuickGrid Items="pedidosFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
-        <TemplateColumn Title="Numero" Sortable="true">
+    <TemplateColumn Title="Sel">
+        <HeaderTemplate>
+            <input type="checkbox"
+                   checked="@(pedidosFiltered is not null && pedidosFiltered.Any() && pedidosFiltered.All(p => selected.Contains(p.Id)))"
+                   @onchange="@(e => ToggleSeleccionarTodo((bool)(e.Value ?? false)))" />
+        </HeaderTemplate>
+        <ChildContent>
+            <input type="checkbox" checked="@selected.Contains(context.Id)" @onchange="@(e => ToggleSeleccion(context.Id, (bool)(e.Value ?? false)))" />
+        </ChildContent>
+    </TemplateColumn>
+    <TemplateColumn Title="Numero" Sortable="true">
             <strong>@context.Numero</strong>
         </TemplateColumn>
         <TemplateColumn Title="Fecha" Sortable="true">
@@ -131,6 +148,7 @@ else
 
 @code {
 
+    private HashSet<int> selected = [];
     private List<PedidoVenta>? Pedidos;
     private IEnumerable<PedidoVenta>? pedidosFiltered;
     private string searchText = "";
@@ -171,6 +189,62 @@ else
         Navigation.NavigateTo("/pedidoventa/nueva");
     }
 
+    private void ToggleSeleccion(int id, bool on)
+    {
+        if (on) selected.Add(id); else selected.Remove(id);
+        StateHasChanged();
+    }
+
+    private void ToggleSeleccionarTodo(bool on)
+    {
+        if (pedidosFiltered is null) return;
+        foreach (var p in pedidosFiltered)
+        {
+            if (on) selected.Add(p.Id); else selected.Remove(p.Id);
+        }
+        StateHasChanged();
+    }
+
+    private bool procesando = false;
+
+    private async Task TransferirAPicking()
+    {
+        if (selected.Count == 0 || Pedidos is null) return;
+
+        var aTransferir = Pedidos.Where(p => selected.Contains(p.Id)).ToList();
+        if (aTransferir.Count == 0) { ToastService.Notify(new(ToastType.Warning, "No hay pedidos válidos para transferir.")); return; }
+
+        procesando = true;
+        StateHasChanged();
+
+        try
+        {
+            var numeros = aTransferir.Select(p => p.Numero).ToList();
+            var result = await PickingService.TransferirAPickingAsync(numeros, null);
+
+            if (result.Success)
+            {
+                ToastService.Notify(new(ToastType.Success, result.Message));
+            }
+            else
+            {
+                ToastService.Notify(new(ToastType.Danger, result.Message));
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error al transferir a picking: {ex.Message}"));
+        }
+        finally
+        {
+            procesando = false;
+        }
+
+        selected.Clear();
+        Pedidos = await VentaService.GetAllAsync();
+        buscar();
+    }
+
     private void Editar(PedidoVenta pv)
     {
         Navigation.NavigateTo($"/pedidoventa/editar/{pv.Id}");
@@ -188,6 +262,7 @@ else
 
     private async Task RecargarPedidos()
     {
+        selected.Clear();
         Pedidos = await VentaService.GetAllAsync();
         buscar();
     }

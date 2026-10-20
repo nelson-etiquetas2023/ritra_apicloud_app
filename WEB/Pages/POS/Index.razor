@@ -1,0 +1,1064 @@
+@page "/pos"
+@using Shared.Dtos
+@using Shared.Dtos.Ventas
+@using Shared.Dtos.Turnos
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject WEB.Services.Ventas.IVentasService VentaService
+@inject WEB.Services.Products.IProductsService ProductsService
+@inject WEB.Services.Customers.ICustomersService CustomersService
+@inject WEB.Services.Enterprises.IEnterprisesService EnterprisesService
+@inject WEB.Services.Turnos.ITurnosService TurnosService
+@inject WEB.Services.Pos.PosSesionService Sesion
+@inject IJSRuntime JS
+
+<PageTitle>POS de Venta (Prueba)</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"><Icon Name="IconName.LightningChargeFill" Size="IconSize.x4" /> POS de Venta <Badge Color="BadgeColor.Warning">PRUEBA</Badge></h3>
+    <span class="text-muted small">Venta inmediata: crea + procesa en un paso (descuenta stock)</span>
+</div>
+
+@if (!turnoCargando && turnoAbierto == null)
+{
+    <div class="card mt-2 mb-2 border-warning">
+        <div class="card-header fw-semibold"><Icon Name="IconName.ClockHistory" /> Abrir turno — Caja 1</div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Cajero <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-lg" @bind="cajeroTurno" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Fondo inicial</label>
+                    <input type="number" class="form-control form-control-lg" step="0.01" min="0" @bind="fondoTurno" />
+                </div>
+                <div class="col-md-3 d-grid">
+                    <Button Color="ButtonColor.Success" Size="ButtonSize.Large" Disabled="abriendoTurno" @onclick="AbrirTurno">
+                        @if (abriendoTurno) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.Unlock" /> Abrir turno</span> }
+                    </Button>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Large" @onclick='() => Navigation.NavigateTo("/pos/turnos")'>Turnos</Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (turnoAbierto != null)
+{
+    <div class="alert alert-success mt-2 py-1 small d-flex justify-content-between align-items-center">
+        <span>Turno abierto: <strong>@turnoAbierto.Caja</strong> — @turnoAbierto.Cajero (@turnoAbierto.FechaApertura.ToString("dd/MM HH:mm"))</span>
+        <span class="d-flex gap-2">
+            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick='() => Navigation.NavigateTo("/pos/turnos")'><Icon Name="IconName.ClockHistory" /> Turnos</Button>
+            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="AbrirModalMov"><Icon Name="IconName.ArrowLeftRight" /> Entrada/Salida</Button>
+            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="AbrirModalCierre"><Icon Name="IconName.Lock" /> Cerrar turno</Button>
+        </span>
+    </div>
+}
+
+<div class="row mt-2">
+    @* IZQUIERDA: pistola + cliente + catálogo *@
+    <div class="col-lg-7">
+        <div class="pos-tabs mb-2" role="tablist">
+            <button type="button" role="tab" aria-selected='@(tabPos == "productos")' class="pos-tab @(tabPos == "productos" ? "active" : "")" @onclick='() => tabPos = "productos"'><Icon Name="IconName.Grid" /> Catálogo</button>
+            <button type="button" role="tab" aria-selected='@(tabPos == "ventas")' class="pos-tab @(tabPos == "ventas" ? "active" : "")" @onclick="VerVentasTab"><Icon Name="IconName.Receipt" /> Ventas (@ventasTurno.Count)</button>
+        </div>
+        @if (tabPos == "productos")
+        {
+        <div class="card mb-2">
+            <div class="card-header fw-semibold"><Icon Name="IconName.Person" /> Cliente y documento</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Cliente <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select class="form-select" @bind="clienteId" disabled="@(clienteGenerico || turnoAbierto == null)">
+                                <option value="0">@(clientes.Count == 0 ? "Cargando..." : "Seleccione cliente...")</option>
+                                @foreach (var c in clientes)
+                                {
+                                    <option value="@c.customer_id">@c.CustomerName</option>
+                                }
+                            </select>
+                            <Button Color="ButtonColor.Primary" Disabled="@(turnoAbierto == null)" @onclick="AbrirModalCliente" title="Registrar cliente nuevo"><Icon Name="IconName.PersonPlus" /></Button>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="cliGenerico" @bind="clienteGenerico" disabled="@(turnoAbierto == null)" />
+                            <label class="form-check-label small" for="cliGenerico">Cliente ocasional (solo nombre, sin registrar)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Próximo número</label>
+                        <input type="text" class="form-control" value="@proximoNumero" disabled />
+                        @if (clienteGenerico)
+                        {
+                            <label class="form-label small fw-semibold mt-2">Nombre para la factura <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" placeholder="Nombre del cliente..." @bind="nombreGenerico" @bind:event="oninput" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-2">
+            <div class="card-header fw-semibold"><Icon Name="IconName.Grid" /> Catálogo táctil (toque para agregar)</div>
+            <div class="card-body">
+                <CatalogoTactil Productos="productos" Carrito="carrito" OnAgregar="AgregarToque" Deshabilitado="@(turnoAbierto == null)" />
+            </div>
+        </div>
+        }
+        else
+        {
+        <div class="card mb-2">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span><Icon Name="IconName.Receipt" /> Ventas del turno (@ventasTurno.Count)</span>
+                <span class="fw-bold">Total: @ventasTurno.Where(v => v.Estado != "Anulado").Sum(v => v.Total).ToString("N2")</span>
+            </div>
+            <div class="card-body p-2">
+                <input type="text" class="form-control mb-2" placeholder="🔍 Buscar por cliente o número..." @bind="filtroVentas" @bind:event="oninput" />
+                @if (cargandoVentas)
+                {
+                    <div class="text-center text-muted py-3"><Spinner Size="SpinnerSize.Small" /> Cargando ventas del turno...</div>
+                }
+                else if (turnoAbierto == null && ventasTurno.Count == 0)
+                {
+                    <div class="text-center text-muted py-3">Abre un turno para ver sus ventas.</div>
+                }
+                else if (ventasTurno.Count == 0)
+                {
+                    <div class="text-center text-muted py-3">Aún no hay ventas en este turno. Cobra y aparecerán aquí.</div>
+                }
+                else if (VentasFiltradas.Count == 0)
+                {
+                    <div class="text-center text-muted py-3">Sin resultados para "@filtroVentas".</div>
+                }
+                else
+                {
+                    <div class="pos-cart-list sin-scroll">
+                        @foreach (var v in VentasFiltradas)
+                        {
+                            <div class="pos-cart-row @(v.Estado == "Anulado" ? "anulado" : "")">
+                                <div class="pos-cart-info">
+                                    <strong>@v.Numero</strong>
+                                    <small class="text-muted">@v.Fecha.ToString("HH:mm") · @v.ClienteNombre · @v.Unidades uds. · @v.Estado</small>
+                                    @if (!string.IsNullOrEmpty(v.ResumenPagos))
+                                    {
+                                        <small class="text-muted">@v.ResumenPagos</small>
+                                    }
+                                </div>
+                                <div class="pos-cart-total">@v.Total.ToString("N2")</div>
+                                @if (v.Estado != "Anulado")
+                                {
+                                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ReimprimirSesion(v)"><Icon Name="IconName.Printer" /> Ticket</Button>
+                                }
+                                @if (v.PedidoId > 0 && v.Estado != "Anulado")
+                                {
+                                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => AnularVenta(v)"><Icon Name="IconName.XCircle" /> Anular</Button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+
+    @* DERECHA: carrito + totales + pago *@
+    <div class="col-lg-5">
+        <div class="card mb-2">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span><Icon Name="IconName.Cart4" /> Carrito (@carrito.Count líneas, @carrito.Sum(i => i.Cantidad) uds.)</span>
+                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="Limpiar"><Icon Name="IconName.Trash" /> Limpiar</Button>
+            </div>
+            <div class="card-body p-2">
+                @if (carrito.Count == 0)
+                {
+                    <div class="text-center py-3 text-muted">
+                        <Icon Name="IconName.Cart4" Size="IconSize.x2" />
+                        <p class="mb-0 small">Toca un producto o escanea para empezar.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="pos-cart-list">
+                        @foreach (var item in carrito)
+                        {
+                            <div class="pos-cart-row">
+                                <div class="pos-cart-info">
+                                    <strong>@item.Product_name</strong>
+                                    <small class="text-muted">@item.Precio.ToString("N2") c/u</small>
+                                </div>
+                                <div class="input-group input-group-sm pos-cart-qty">
+                                    <button class="btn btn-outline-secondary" @onclick="() => CambiarCantidad(item, -1)">−</button>
+                                    <input type="number" class="form-control text-center" min="1" @bind="item.Cantidad" @bind:event="onchange" @bind:after="Recalcular" />
+                                    <button class="btn btn-outline-secondary" @onclick="() => CambiarCantidad(item, 1)">+</button>
+                                </div>
+                                <div class="pos-cart-total">@((item.Cantidad * item.Precio).ToString("N2"))</div>
+                                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => Quitar(item)"><Icon Name="IconName.X" /></Button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card mb-2">
+            <div class="card-header fw-semibold">Totales</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>@subtotal.ToString("N2")</span></div>
+                <div class="row g-2 align-items-center my-1">
+                    <div class="col-6"><label class="form-label small fw-semibold mb-0">Descuento %</label></div>
+                    <div class="col-6"><input type="number" class="form-control text-end" step="0.5" min="0" max="100" disabled="@(turnoAbierto == null)" @bind="descuentoGlobal" @bind:event="oninput" @bind:after="Recalcular" /></div>
+                </div>
+                @if (descuentoMonto > 0)
+                {
+                    <div class="d-flex justify-content-between text-success"><span>Descuento (@descuentoGlobal.ToString("N2")%)</span><span>-@descuentoMonto.ToString("N2")</span></div>
+                }
+                <div class="d-flex justify-content-between"><span class="text-muted">ITBIS (18%)</span><span>@impuesto.ToString("N2")</span></div>
+                <hr />
+                <div class="d-flex justify-content-between fs-4 fw-bold"><span>Total</span><span>@total.ToString("N2")</span></div>
+            </div>
+        </div>
+
+        <div class="card mb-2">
+            <div class="card-header fw-semibold">Pago (mixto)</div>
+            <div class="card-body">
+                <label class="form-label small fw-semibold">Efectivo recibido</label>
+                <div class="d-flex gap-2 mb-2">
+                    <input type="number" class="form-control form-control-lg" step="0.01" min="0" disabled="@(turnoAbierto == null)" @bind="montoEfectivo" @bind:event="oninput" />
+                    <Button Color="ButtonColor.Secondary" Disabled="@(turnoAbierto == null)" @onclick="PonerExacto">Exacto</Button>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Tarjeta</label>
+                        <input type="number" class="form-control" step="0.01" min="0" placeholder="0.00" disabled="@(turnoAbierto == null)" @bind="montoTarjeta" @bind:event="oninput" />
+                        <input type="text" class="form-control mt-1" placeholder="# autorización..." disabled="@(turnoAbierto == null)" @bind="refTarjeta" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Transferencia</label>
+                        <input type="number" class="form-control" step="0.01" min="0" placeholder="0.00" disabled="@(turnoAbierto == null)" @bind="montoTransf" @bind:event="oninput" />
+                        <input type="text" class="form-control mt-1" placeholder="# comprobante..." disabled="@(turnoAbierto == null)" @bind="refTransf" />
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between fs-5">
+                    <span>Cambio</span>
+                    <strong class="@(cambio < 0 ? "text-danger" : "text-success")">@cambio.ToString("N2")</strong>
+                </div>
+                @if (pendiente > 0.005m)
+                {
+                    <small class="text-danger">Faltan @(pendiente.ToString("N2"))</small>
+                }
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <Button Color="ButtonColor.Success" Size="ButtonSize.Large" Disabled="@(procesando || carrito.Count == 0 || turnoAbierto == null || pendiente > 0.005m || cambio < 0)" @onclick="Cobrar">
+                @if (procesando)
+                {
+                    <Spinner Size="SpinnerSize.Small" /> <span class="ms-1">Cobrando...</span>
+                }
+                else
+                {
+                    <span><Icon Name="IconName.Cash" /> Cobrar @total.ToString("N2")</span>
+                }
+            </Button>
+            <Button Color="ButtonColor.Secondary" @onclick='() => Navigation.NavigateTo("/pedidoventa")'>Ver pedidos</Button>
+            <Button Color="ButtonColor.Primary" @onclick='() => Navigation.NavigateTo("/pos/ventas")'><Icon Name="IconName.Receipt" /> Historial (@ventasTurno.Count)</Button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ultimoTicket))
+        {
+            <div class="alert @(ultimaVentaOk ? "alert-success" : "alert-danger") mt-2" style="white-space:pre-line;">
+                @ultimoTicket
+            </div>
+            @if (ultimaVentaOk && ticketItems.Count > 0)
+            {
+                <div class="d-grid gap-2 mt-2">
+                    <Button Color="ButtonColor.Primary" @onclick="MostrarTicket"><Icon Name="IconName.Receipt" /> Ver / imprimir ticket @ticketNumero</Button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<ConfirmDialog @ref="dialogAnular" />
+<Modal @ref="modalCliente" Title="Registrar cliente" Size="ModalSize.Small">
+    <BodyTemplate>
+        <div class="mb-2">
+            <label class="form-label small fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-lg" placeholder="Nombre del cliente..." @bind="nuevoClienteNombre" />
+        </div>
+        <div class="row g-2">
+            <div class="col-6">
+                <label class="form-label small fw-semibold">RNC / Cédula</label>
+                <input type="text" class="form-control" @bind="nuevoClienteRNC" />
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-semibold">Teléfono</label>
+                <input type="text" class="form-control" @bind="nuevoClienteTel" />
+            </div>
+        </div>
+        <div class="mt-2">
+            <label class="form-label small fw-semibold">Dirección</label>
+            <input type="text" class="form-control" @bind="nuevoClienteDir" />
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarModalCliente">Cancelar</Button>
+        <Button Color="ButtonColor.Success" Disabled="guardandoCliente" @onclick="GuardarCliente">
+            @if (guardandoCliente) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Guardar</span> }
+        </Button>
+    </FooterTemplate>
+</Modal>
+<Modal @ref="modalMov" Title="Entrada / salida de efectivo" Size="ModalSize.Small">
+    <BodyTemplate>
+        <div class="mb-2">
+            <label class="form-label small fw-semibold">Tipo</label>
+            <select class="form-select form-select-lg" @bind="tipoMov">
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small fw-semibold">Monto <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-lg" step="0.01" min="0.01" @bind="montoMov" />
+        </div>
+        <div>
+            <label class="form-label small fw-semibold">Motivo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" placeholder="Ej: pago a proveedor..." @bind="motivoMov" />
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarModalMov">Cancelar</Button>
+        <Button Color="ButtonColor.Warning" Disabled="guardandoMov" @onclick="GuardarMovimiento">
+            @if (guardandoMov) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Registrar</span> }
+        </Button>
+    </FooterTemplate>
+</Modal>
+<Modal @ref="modalCierre" Title="Cerrar turno y cuadre" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (turnoCerrado != null)
+        {
+            <CuadreTicket Empresa="@(empresa?.Nombre_Empresa ?? "")" Turno="turnoCerrado" Resumen="resumenCierre"
+                          Conteos="conteosCierre" Esperado="turnoCerrado.Esperado" Contado="turnoCerrado.Contado" Diferencia="turnoCerrado.Diferencia" />
+        }
+        else if (turnoAbierto != null)
+        {
+            <div class="d-flex justify-content-between"><span class="text-muted">Turno @turnoAbierto.Caja — @turnoAbierto.Cajero</span><span class="fw-bold">Esperado: @((resumenCierre?.Esperado ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small"><span class="text-muted">Fondo inicial</span><span>@((resumenCierre?.FondoInicial ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small"><span class="text-muted">Ventas (@(resumenCierre?.VentasProcesadas ?? 0))</span><span>@((resumenCierre?.VentasEfectivo ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small"><span class="text-muted">Ventas electrón.</span><span>@((resumenCierre?.VentasElectronico ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small"><span class="text-muted">Anuladas (@(resumenCierre?.FacturasAnuladas ?? 0))</span><span>-@((resumenCierre?.MontoAnulado ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small fw-bold"><span>Venta neta</span><span>@((resumenCierre?.VentaNeta ?? 0).ToString("N2"))</span></div>
+            <div class="d-flex justify-content-between small"><span class="text-muted">Entradas / Salidas</span><span>@((resumenCierre?.Entradas ?? 0).ToString("N2")) / -@((resumenCierre?.Salidas ?? 0).ToString("N2"))</span></div>
+            <hr />
+            @foreach (var d in DenominacionesDOP.Todas)
+            {
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-semibold" style="min-width:90px;">@DenominacionesDOP.Etiqueta(d)</span>
+                    <div class="input-group" style="max-width:220px;">
+                        <button class="btn btn-outline-secondary btn-lg" @onclick="() => CambiarConteo(d, -1)">−</button>
+                        <input type="number" class="form-control form-control-lg text-center" min="0" value="@GetConteo(d)" @onchange="(e => SetConteo(d, e))" />
+                        <button class="btn btn-outline-secondary btn-lg" @onclick="() => CambiarConteo(d, 1)">+</button>
+                    </div>
+                    <span class="text-muted">@((d * GetConteo(d)).ToString("N2"))</span>
+                </div>
+            }
+            <hr />
+            <div class="d-flex justify-content-between"><span class="text-muted">Contado</span><span>@ContadoCierre.ToString("N2")</span></div>
+            <div class="d-flex justify-content-between fs-5 fw-bold">
+                <span>Diferencia</span>
+                <span class="@(DiferenciaCierre == 0 ? "text-success" : "text-danger")">@DiferenciaCierre.ToString("N2") @(DiferenciaCierre == 0 ? "(cuadrado)" : DiferenciaCierre > 0 ? "(sobrante)" : "(faltante)")</span>
+            </div>
+            @if (DiferenciaCierre != 0)
+            {
+                <div class="mt-2">
+                    <label class="form-label small fw-semibold">Motivo de la diferencia <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" placeholder="Obligatorio para cerrar con diferencia..." @bind="observacionCierre" />
+                </div>
+            }
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        @if (turnoCerrado != null)
+        {
+            <Button Color="ButtonColor.Secondary" @onclick="CerrarModalCierre">Cerrar</Button>
+            <Button Color="ButtonColor.Primary" @onclick="ImprimirCuadre"><Icon Name="IconName.Printer" /> Imprimir (80mm)</Button>
+        }
+        else
+        {
+            <Button Color="ButtonColor.Secondary" @onclick="CerrarModalCierre">Cancelar</Button>
+            <Button Color="ButtonColor.Danger" Disabled="cerrandoTurno" @onclick="CerrarTurno">
+                @if (cerrandoTurno) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Confirmar cierre</span> }
+            </Button>
+        }
+    </FooterTemplate>
+</Modal>
+<Modal @ref="modalTicket" Title="Ticket de venta" Size="ModalSize.Small">
+    <BodyTemplate>
+        <TicketVenta Empresa="empresa" Numero="@ticketNumero" Fecha="ticketFecha" ClienteNombre="@ticketCliente"
+                     Items="ticketItems" Subtotal="ticketSubtotal" Descuento="ticketDescuento" Impuesto="ticketImpuesto" Total="ticketTotal"
+                     Pagos="ticketPagos" Recibido="ticketRecibido" Cambio="ticketCambio" />
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarTicket">Cerrar</Button>
+        <Button Color="ButtonColor.Primary" @onclick="ImprimirTicket"><Icon Name="IconName.Printer" /> Imprimir (80mm)</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private List<Product> productos = [];
+    private List<Customer> clientes = [];
+    private List<DetalleVenta> carrito = [];
+    private int clienteId;
+    private bool clienteGenerico;
+    private string nombreGenerico = "";
+    private string tabPos = "productos";
+    private List<WEB.Services.Pos.VentaSesion> ventasTurno = [];
+    private bool cargandoVentas;
+    private string filtroVentas = "";
+
+    private List<WEB.Services.Pos.VentaSesion> VentasFiltradas =>
+        string.IsNullOrWhiteSpace(filtroVentas)
+            ? ventasTurno
+            : ventasTurno.Where(v =>
+                v.ClienteNombre.Contains(filtroVentas.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                v.Numero.Contains(filtroVentas.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+    private string proximoNumero = "generando...";
+    private decimal montoEfectivo;
+    private decimal montoTarjeta;
+    private string refTarjeta = "";
+    private decimal montoTransf;
+    private string refTransf = "";
+    private bool procesando;
+    private string ultimoTicket = "";
+    private bool ultimaVentaOk;
+    private Enterprise? empresa;
+    private Modal modalTicket = default!;
+    private ConfirmDialog dialogAnular = default!;
+    private Modal modalCliente = default!;
+    private string nuevoClienteNombre = "";
+    private string nuevoClienteRNC = "";
+    private string nuevoClienteTel = "";
+    private string nuevoClienteDir = "";
+    private bool guardandoCliente;
+    private Shared.Dtos.Turnos.TurnoCaja? turnoAbierto;
+    private bool turnoCargando = true;
+    private string cajeroTurno = "";
+    private decimal fondoTurno;
+    private bool abriendoTurno;
+    private Modal modalCierre = default!;
+    private Modal modalMov = default!;
+    private string tipoMov = "Salida";
+    private decimal montoMov;
+    private string motivoMov = "";
+    private bool guardandoMov;
+    private Dictionary<decimal, int> conteoCierre = new();
+    private string observacionCierre = "";
+    private bool cerrandoTurno;
+    private TurnoResumen? resumenCierre;
+    private TurnoCaja? turnoCerrado;
+    private List<TurnoDenominacion> conteosCierre = [];
+
+    private string ticketNumero = "";
+    private DateTime ticketFecha = DateTime.Now;
+    private string ticketCliente = "";
+    private List<DetalleVenta> ticketItems = [];
+    private List<VentaPago> ticketPagos = [];
+    private decimal ticketSubtotal;
+    private decimal ticketDescuento;
+    private decimal ticketImpuesto;
+    private decimal ticketTotal;
+    private decimal ticketRecibido;
+    private decimal ticketCambio;
+
+    private decimal subtotal;
+    private decimal descuentoGlobal;
+    private decimal descuentoMonto;
+    private decimal impuesto;
+    private decimal total;
+    private decimal electronico => Math.Max(0, montoTarjeta) + Math.Max(0, montoTransf);
+    private decimal efectivoCubre => total - electronico;
+    private decimal cambio => montoEfectivo - efectivoCubre;
+    private decimal pendiente => total - (montoEfectivo + electronico);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var tProd = ProductsService.GetProductAsync();
+            var tCli = CustomersService.GetCustomersAsync();
+            var tNum = VentaService.GetNextNumAsync();
+            await Task.WhenAll(tProd, tCli, tNum);
+            productos = (await tProd).Where(p => p.IsActive).ToList();
+            clientes = await tCli;
+            proximoNumero = await tNum;
+            if (string.IsNullOrWhiteSpace(proximoNumero)) proximoNumero = "(lo asigna el servidor)";
+            if (clientes.Count == 1) clienteId = clientes[0].customer_id;
+            try { empresa = await EnterprisesService.GetEnterpriseAsync(); } catch { }
+            try { turnoAbierto = await TurnosService.GetAbiertoAsync("Caja 1"); }
+            catch { turnoAbierto = null; }
+            finally { turnoCargando = false; }
+            await CargarVentasTurno();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error cargando POS: {ex.Message}"));
+        }
+    }
+
+    private async Task AbrirModalCliente()
+    {
+        nuevoClienteNombre = "";
+        nuevoClienteRNC = "";
+        nuevoClienteTel = "";
+        nuevoClienteDir = "";
+        try { await modalCliente.ShowAsync(); } catch { }
+    }
+
+    private async Task CerrarModalCliente()
+    {
+        try { await modalCliente.HideAsync(); } catch { }
+    }
+
+    private async Task GuardarCliente()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoClienteNombre))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el nombre del cliente."));
+            return;
+        }
+        guardandoCliente = true;
+        try
+        {
+            var idsAntes = clientes.Select(c => c.customer_id).ToHashSet();
+            var ok = await CustomersService.CreateCustomerAsync(new Customer
+            {
+                CustomerName = nuevoClienteNombre.Trim(),
+                RNC = nuevoClienteRNC.Trim(),
+                Telefono = nuevoClienteTel.Trim(),
+                Direccion = nuevoClienteDir.Trim()
+            });
+            if (!ok)
+            {
+                ToastService.Notify(new(ToastType.Danger, "No se pudo registrar el cliente."));
+                return;
+            }
+            clientes = await CustomersService.GetCustomersAsync();
+            var nuevo = clientes.Where(c => !idsAntes.Contains(c.customer_id)).ToList();
+            var sel = nuevo.FirstOrDefault(c => c.CustomerName.Equals(nuevoClienteNombre.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? nuevo.LastOrDefault();
+            if (sel != null)
+            {
+                clienteId = sel.customer_id;
+                clienteGenerico = false;
+            }
+            try { await modalCliente.HideAsync(); } catch { }
+            ToastService.Notify(new(ToastType.Success, $"Cliente '{nuevoClienteNombre.Trim()}' registrado y seleccionado."));
+        }
+        finally
+        {
+            guardandoCliente = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerVentasTab()
+    {
+        tabPos = "ventas";
+        await CargarVentasTurno();
+    }
+
+    private async Task CargarVentasTurno()
+    {
+        if (turnoAbierto == null) { ventasTurno = [.. Sesion.Ventas]; return; }
+        cargandoVentas = true;
+        try
+        {
+            var pedidos = await VentaService.GetByTurnoAsync(turnoAbierto.Id);
+            ventasTurno = Sesion.VistaTurno(pedidos);
+        }
+        catch
+        {
+            ventasTurno = [.. Sesion.Ventas];
+        }
+        finally
+        {
+            cargandoVentas = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AgregarToque(Product p) => AgregarProducto(p, 1);
+
+    private void AgregarProducto(Product p, int cantidad)
+    {
+        if (turnoAbierto == null)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Abre un turno antes de agregar productos."));
+            return;
+        }
+        if (p.Price <= 0)
+        {
+            ToastService.Notify(new(ToastType.Warning, $"'{p.Product_Name}' no tiene precio y no se puede facturar."));
+            return;
+        }
+        var codigo = !string.IsNullOrWhiteSpace(p.Codebar) ? p.Codebar.Trim() : (p.Product_Code ?? "").Trim();
+        var existente = carrito.FirstOrDefault(i => i.Product_id == codigo);
+        if (existente is null)
+        {
+            carrito.Add(new DetalleVenta
+            {
+                Product_id = codigo,
+                Product_name = p.Product_Name ?? codigo,
+                Cantidad = Math.Max(1, cantidad),
+                Precio = (decimal)p.Price,
+                Stock = (decimal)p.Stock,
+                Comentario = "POS"
+            });
+        }
+        else
+        {
+            existente.Cantidad += Math.Max(1, cantidad);
+        }
+        Recalcular();
+    }
+
+    private void CambiarCantidad(DetalleVenta item, int delta)
+    {
+        item.Cantidad = Math.Max(1, item.Cantidad + delta);
+        Recalcular();
+    }
+
+    private void Quitar(DetalleVenta item)
+    {
+        carrito.Remove(item);
+        Recalcular();
+    }
+
+    private void Limpiar()
+    {
+        carrito.Clear();
+        LimpiarPagos();
+        ultimoTicket = "";
+        Recalcular();
+    }
+
+    private void LimpiarPagos()
+    {
+        montoEfectivo = 0;
+        montoTarjeta = 0;
+        refTarjeta = "";
+        montoTransf = 0;
+        refTransf = "";
+    }
+
+    private void PonerExacto()
+    {
+        montoEfectivo = total;
+        montoTarjeta = 0;
+        montoTransf = 0;
+    }
+
+    private void Recalcular()
+    {
+        subtotal = carrito.Sum(i => i.Cantidad * i.Precio);
+        descuentoGlobal = Math.Clamp(descuentoGlobal, 0, 100);
+        descuentoMonto = Math.Round(subtotal * (descuentoGlobal / 100m), 2);
+        var neto = subtotal - descuentoMonto;
+        impuesto = Math.Round(neto * 0.18m, 2);
+        total = neto + impuesto;
+        StateHasChanged();
+    }
+
+    private List<VentaPago> ArmarPagos(decimal ef, decimal tj, decimal tr)
+    {
+        var lista = new List<VentaPago>();
+        if (ef > 0) lista.Add(new VentaPago { Metodo = MetodoPago.Efectivo, Monto = ef });
+        if (tj > 0) lista.Add(new VentaPago { Metodo = MetodoPago.Tarjeta, Monto = tj, Referencia = refTarjeta.Trim() });
+        if (tr > 0) lista.Add(new VentaPago { Metodo = MetodoPago.Transferencia, Monto = tr, Referencia = refTransf.Trim() });
+        return lista;
+    }
+
+    private async Task Cobrar()
+    {
+        if (carrito.Count == 0) return;
+        if (turnoAbierto == null)
+        {
+            ToastService.Notify(new(ToastType.Danger, "No hay turno abierto. Abre el turno antes de cobrar."));
+            return;
+        }
+        if (clienteGenerico && string.IsNullOrWhiteSpace(nombreGenerico))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Escriba el nombre del cliente ocasional."));
+            return;
+        }
+        if (!clienteGenerico && clienteId <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Seleccione un cliente o active cliente ocasional."));
+            return;
+        }
+        if (pendiente > 0.005m)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Faltan {pendiente:N2} para completar el total ({total:N2})."));
+            return;
+        }
+        if (cambio < 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "El efectivo no cubre su parte del total."));
+            return;
+        }
+        var tj = Math.Round(Math.Max(0, montoTarjeta), 2);
+        var tr = Math.Round(Math.Max(0, montoTransf), 2);
+        if (tj > 0 && string.IsNullOrWhiteSpace(refTarjeta))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el # de autorización de la tarjeta."));
+            return;
+        }
+        if (tr > 0 && string.IsNullOrWhiteSpace(refTransf))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el # de comprobante de la transferencia."));
+            return;
+        }
+        var ef = Math.Round(efectivoCubre, 2);
+        if (Math.Abs(ef + tj + tr - total) > 0.01m)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Los pagos no cuadran con el total. Revise los montos."));
+            return;
+        }
+
+        procesando = true;
+        try
+        {
+            var numero = await VentaService.GetNextNumAsync();
+            if (string.IsNullOrWhiteSpace(numero))
+            {
+                ToastService.Notify(new(ToastType.Danger, "No se pudo obtener el número de documento."));
+                return;
+            }
+            var cli = clienteGenerico ? null : clientes.FirstOrDefault(c => c.customer_id == clienteId);
+            var nombreCli = clienteGenerico ? nombreGenerico.Trim() : (cli?.CustomerName ?? "");
+            var pedido = new PedidoVenta
+            {
+                Numero = numero,
+                Fecha = DateTime.Now,
+                FechaCreacion = DateTime.Now,
+                Cliente_Id = clienteGenerico ? 0 : clienteId,
+                TurnoId = turnoAbierto.Id,
+                Cliente_Nombre = nombreCli,
+                Cliente_RNC = cli?.RNC ?? "",
+                DireccionEntrega = cli?.Direccion ?? "POS mostrador",
+                Vendedor = "POS",
+                WarehouseName = "POS",
+                Prioridad = "Normal",
+                Reference = $"POS ef:{ef:N2} tj:{tj:N2} tr:{tr:N2}",
+                Description = "Venta POS (prueba)",
+                Items = carrito.Select(i => new DetalleVenta
+                {
+                    Product_id = i.Product_id,
+                    Product_name = i.Product_name,
+                    Cantidad = i.Cantidad,
+                    Precio = i.Precio,
+                    Descuento = descuentoGlobal,
+                    Stock = i.Stock,
+                    Comentario = "POS"
+                }).ToList(),
+                Pagos = ArmarPagos(ef, tj, tr)
+            };
+
+            var creado = await VentaService.CreateAsync(pedido);
+            if (!creado.Success)
+            {
+                ultimaVentaOk = false;
+                ultimoTicket = $"NO SE GUARDÓ {numero}\n{creado.Message}";
+                ToastService.Notify(new(ToastType.Danger, creado.Message));
+                return;
+            }
+
+            var proc = await VentaService.ProcesarPedidoAsync(numero);
+            if (proc is null)
+            {
+                ultimaVentaOk = false;
+                ultimoTicket = $"Se guardó {numero} pero no respondió procesar. Revísalo en Pedidos.";
+                ToastService.Notify(new(ToastType.Warning, ultimoTicket));
+                return;
+            }
+
+            ultimaVentaOk = proc.Success;
+            var lineas = string.Join("\n", carrito.Select(i => $"• {i.Product_name} x{i.Cantidad} = {(i.Cantidad * i.Precio):N2}"));
+            var erroresLineas = string.Join("\n", (proc.Items ?? []).Where(x => !x.Ok).Select(x => $"• {x.ProductName}: {x.Error}"));
+            ultimoTicket = proc.Success
+                ? $"VENTA {numero} OK\n{lineas}\nSubtotal: {subtotal:N2} | Desc: {descuentoMonto:N2} | Total: {total:N2} | Ef: {ef:N2} Tj: {tj:N2} Tr: {tr:N2} | Cambio: {cambio:N2}\n{proc.Message}"
+                : $"VENTA {numero} CON FALLOS\n{proc.Message}\n{erroresLineas}";
+
+            ToastService.Notify(new(ultimaVentaOk ? ToastType.Success : ToastType.Warning, proc.Message));
+
+            if (proc.Success)
+            {
+                ticketNumero = numero;
+                ticketFecha = DateTime.Now;
+                ticketCliente = nombreCli;
+                ticketItems = pedido.Items.ToList();
+                ticketSubtotal = subtotal;
+                ticketDescuento = descuentoMonto;
+                ticketImpuesto = impuesto;
+                ticketTotal = total;
+                ticketRecibido = montoEfectivo;
+                ticketCambio = cambio;
+                ticketPagos = pedido.Pagos.ToList();
+                Sesion.Agregar(new WEB.Services.Pos.VentaSesion
+                {
+                    PedidoId = creado.Data?.Id ?? 0,
+                    Numero = numero,
+                    Fecha = ticketFecha,
+                    ClienteNombre = ticketCliente,
+                    Estado = "Procesado",
+                    Items = ticketItems,
+                    Subtotal = ticketSubtotal,
+                    Descuento = ticketDescuento,
+                    Impuesto = ticketImpuesto,
+                    Total = ticketTotal,
+                    Recibido = ticketRecibido,
+                    Cambio = ticketCambio,
+                    Pagos = ticketPagos
+                });
+                carrito.Clear();
+                LimpiarPagos();
+                descuentoGlobal = 0;
+                descuentoMonto = 0;
+                clienteId = 0;
+                clienteGenerico = false;
+                nombreGenerico = "";
+                Recalcular();
+                proximoNumero = await VentaService.GetNextNumAsync();
+                await CargarVentasTurno();
+                ToastService.Notify(new(ToastType.Success, $"Venta {numero} en la lista de Ventas ({ventasTurno.Count} en el turno). Form en blanco para la siguiente."));
+                await MostrarTicket();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error cobrando: {ex.Message}"));
+        }
+        finally
+        {
+            procesando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MostrarTicket()
+    {
+        try { await modalTicket.ShowAsync(); } catch { }
+    }
+
+    private async Task ReimprimirSesion(WEB.Services.Pos.VentaSesion v)
+    {
+        if (v.Estado == "Anulado")
+        {
+            ToastService.Notify(new(ToastType.Warning, $"La venta {v.Numero} está anulada y no se puede imprimir."));
+            return;
+        }
+        ticketNumero = v.Numero;
+        ticketFecha = v.Fecha;
+        ticketCliente = v.ClienteNombre;
+        ticketItems = v.Items;
+        ticketSubtotal = v.Subtotal;
+        ticketDescuento = v.Descuento;
+        ticketImpuesto = v.Impuesto;
+        ticketTotal = v.Total;
+        ticketRecibido = v.Recibido;
+        ticketCambio = v.Cambio;
+        ticketPagos = v.Pagos;
+        await MostrarTicket();
+    }
+
+    private async Task AnularVenta(WEB.Services.Pos.VentaSesion v)
+    {
+        if (v.PedidoId <= 0) return;
+        if (turnoAbierto == null)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Abre un turno antes de anular ventas."));
+            return;
+        }
+        var confirm = await dialogAnular.ShowAsync(title: $"¿Anular la venta {v.Numero}?",
+            message1: "Se marcará como anulada y se devolverá el stock descontado.",
+            message2: "¿Está seguro de proceder?");
+        if (!confirm) return;
+        var ok = await VentaService.AnularAsync(v.PedidoId);
+        if (ok)
+        {
+            var s = Sesion.Ventas.FirstOrDefault(x => x.Numero == v.Numero);
+            if (s != null) s.Estado = "Anulado";
+            await CargarVentasTurno();
+            ToastService.Notify(new(ToastType.Success, $"Venta {v.Numero} anulada."));
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo anular {v.Numero} (¿turno cerrado?)."));
+        }
+    }
+
+    private async Task AbrirTurno()
+    {
+        if (string.IsNullOrWhiteSpace(cajeroTurno))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el cajero para abrir el turno."));
+            return;
+        }
+        abriendoTurno = true;
+        try
+        {
+            var r = await TurnosService.AbrirAsync("Caja 1", cajeroTurno.Trim(), fondoTurno);
+            if (!r.Success)
+            {
+                ToastService.Notify(new(ToastType.Danger, r.Message));
+                return;
+            }
+            turnoAbierto = r.Data ?? await TurnosService.GetAbiertoAsync("Caja 1");
+            turnoCargando = false;
+            cajeroTurno = "";
+            fondoTurno = 0;
+            await CargarVentasTurno();
+            ToastService.Notify(new(ToastType.Success, $"Turno abierto ({turnoAbierto?.Caja}). Ya puedes cobrar."));
+        }
+        finally
+        {
+            abriendoTurno = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AbrirModalMov()
+    {
+        if (turnoAbierto == null) return;
+        tipoMov = "Salida";
+        montoMov = 0;
+        motivoMov = "";
+        try { await modalMov.ShowAsync(); } catch { }
+    }
+
+    private async Task CerrarModalMov()
+    {
+        try { await modalMov.HideAsync(); } catch { }
+    }
+
+    private async Task GuardarMovimiento()
+    {
+        if (turnoAbierto == null) return;
+        if (montoMov <= 0)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica un monto mayor a cero."));
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(motivoMov))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el motivo del movimiento."));
+            return;
+        }
+        guardandoMov = true;
+        try
+        {
+            var tipo = tipoMov;
+            var monto = montoMov;
+            var r = await TurnosService.AgregarMovimientoAsync(turnoAbierto.Id, tipo, monto, motivoMov.Trim());
+            if (!r.Success)
+            {
+                ToastService.Notify(new(ToastType.Danger, r.Message));
+                return;
+            }
+            try { await modalMov.HideAsync(); } catch { }
+            tipoMov = "Salida";
+            montoMov = 0;
+            motivoMov = "";
+            ToastService.Notify(new(ToastType.Success, $"{tipo} registrada: {monto:N2}"));
+        }
+        finally
+        {
+            guardandoMov = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AbrirModalCierre()
+    {
+        if (turnoAbierto == null) return;
+        conteoCierre.Clear();
+        observacionCierre = "";
+        turnoCerrado = null;
+        conteosCierre = [];
+        resumenCierre = await TurnosService.GetResumenAsync(turnoAbierto.Id);
+        try { await modalCierre.ShowAsync(); } catch { }
+    }
+
+    private int GetConteo(decimal d) => conteoCierre.TryGetValue(d, out var v) ? v : 0;
+
+    private void CambiarConteo(decimal d, int delta)
+    {
+        conteoCierre[d] = Math.Max(0, GetConteo(d) + delta);
+    }
+
+    private void SetConteo(decimal d, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v)) conteoCierre[d] = Math.Max(0, v);
+    }
+
+    private decimal ContadoCierre => conteoCierre.Sum(kv => kv.Key * kv.Value);
+
+    private decimal DiferenciaCierre => ContadoCierre - (resumenCierre?.Esperado ?? 0);
+
+    private async Task CerrarTurno()
+    {
+        if (turnoAbierto == null || resumenCierre == null) return;
+        if (DiferenciaCierre != 0 && string.IsNullOrWhiteSpace(observacionCierre))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el motivo de la diferencia para cerrar."));
+            return;
+        }
+        cerrandoTurno = true;
+        try
+        {
+            var lista = conteoCierre.Where(kv => kv.Value > 0)
+                .Select(kv => new ConteoDenominacion { Denominacion = kv.Key, Cantidad = kv.Value }).ToList();
+            var r = await TurnosService.CerrarAsync(turnoAbierto.Id, lista, observacionCierre.Trim(), turnoAbierto.Cajero);
+            if (r == null || !r.Success)
+            {
+                ToastService.Notify(new(ToastType.Danger, r?.Message ?? "No se pudo cerrar el turno."));
+                return;
+            }
+            turnoCerrado = r.Turno;
+            conteosCierre = r.Conteos;
+            turnoAbierto = null;
+            conteoCierre.Clear();
+            observacionCierre = "";
+            await CargarVentasTurno();
+            ToastService.Notify(new(ToastType.Success, $"Turno cerrado. Diferencia: {turnoCerrado?.Diferencia:N2}"));
+        }
+        finally
+        {
+            cerrandoTurno = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CerrarModalCierre()
+    {
+        try { await modalCierre.HideAsync(); } catch { }
+        turnoCerrado = null;
+    }
+
+    private async Task ImprimirCuadre()
+    {
+        try { await JS.InvokeVoidAsync("printPosTicket"); } catch { await JS.InvokeVoidAsync("window.print"); }
+    }
+
+    private async Task CerrarTicket()
+    {
+        try { await modalTicket.HideAsync(); } catch { }
+    }
+
+    private async Task ImprimirTicket()
+    {
+        try { await JS.InvokeVoidAsync("printPosTicket"); } catch { await JS.InvokeVoidAsync("window.print"); }
+    }
+}

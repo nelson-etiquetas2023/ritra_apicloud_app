@@ -1,0 +1,171 @@
+@using Shared.Dtos
+@inject IEtiquetasService Etiquetas
+@inject ToastService ToastService
+
+<Modal @ref="modal" Title="@titulo" Size="ModalSize.Large">
+    <BodyTemplate>
+        <div class="mb-2">
+            <label class="form-label"><strong>Nombre</strong></label>
+            <InputText class="form-control" @bind-Value="modelo.Nombre" />
+        </div>
+        <div class="row mb-2">
+            <div class="col-4">
+                <label class="form-label"><strong>Categoría</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.Categoria">
+                    @foreach (var c in LabelCategories.All)
+                    {
+                        <option value="@c">@c</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-3">
+                <label class="form-label"><strong>Ancho (in)</strong></label>
+                <InputNumber class="form-control" @bind-Value="modelo.WidthIn" step="0.25" />
+            </div>
+            <div class="col-3">
+                <label class="form-label"><strong>Alto (in)</strong></label>
+                <InputNumber class="form-control" @bind-Value="modelo.HeightIn" step="0.25" />
+            </div>
+            <div class="col-2">
+                <label class="form-label"><strong>DPI</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.Dpi">
+                    <option value="152">152</option>
+                    <option value="203">203</option>
+                    <option value="300">300</option>
+                    <option value="600">600</option>
+                </InputSelect>
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label"><strong>Impresora por defecto</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.PrinterId">
+                    <option value="">-- ninguna --</option>
+                    @foreach (var p in Printers)
+                    {
+                        <option value="@p.Id">@p.Name (@p.Ip)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-6">
+                <label class="form-label"><strong>Empresa del encabezado</strong></label>
+                <InputSelect class="form-select" @bind-Value="modelo.EnterpriseId">
+                    <option value="">-- primera del sistema --</option>
+                    @foreach (var e in Enterprises)
+                    {
+                        <option value="@e.enterprise_id">@e.Nombre_Empresa</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <div class="mb-2">
+            <div class="form-check">
+                <InputCheckbox class="form-check-input" @bind-Value="modelo.IsActive" />
+                <label class="form-check-label">Activa</label>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label"><strong>ZPL (tokens {{...}})</strong></label>
+            <InputTextArea class="form-control font-monospace" rows="12" @bind-Value="modelo.ZplTemplate" />
+        </div>
+        @if (!string.IsNullOrWhiteSpace(errorZpl))
+        {
+            <div class="alert alert-danger">@errorZpl</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(zplGenerado))
+        {
+            <div class="mb-2">
+                <strong>ZPL fusionado (muestra):</strong>
+                <pre class="border p-2 small">@zplGenerado</pre>
+            </div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync">Cancelar</Button>
+        <a class="btn btn-info" target="_blank" href="@DesignerUrl()">Abrir en ZPLDesigner</a>
+        <Button Color="ButtonColor.Info" @onclick="Previsualizar">Vista previa</Button>
+        <Button Color="ButtonColor.Success" @onclick="Guardar">Guardar</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+    private LabelTemplate modelo = new();
+    private bool esNuevo = true;
+    private string titulo = "Plantilla";
+    private string errorZpl = "";
+    private string zplGenerado = "";
+
+    [Parameter] public List<Printer> Printers { get; set; } = [];
+    [Parameter] public List<Enterprise> Enterprises { get; set; } = [];
+    [Parameter] public EventCallback OnGuardado { get; set; }
+
+    public async Task ShowAsync(LabelTemplate? template)
+    {
+        errorZpl = "";
+        zplGenerado = "";
+        esNuevo = template == null;
+        modelo = template == null
+            ? new LabelTemplate()
+            : new LabelTemplate
+            {
+                Id = template.Id,
+                Codigo = template.Codigo,
+                Nombre = template.Nombre,
+                Categoria = template.Categoria,
+                WidthIn = template.WidthIn,
+                HeightIn = template.HeightIn,
+                Dpi = template.Dpi,
+                DesignJson = template.DesignJson,
+                ZplTemplate = template.ZplTemplate,
+                ThumbnailBase64 = template.ThumbnailBase64,
+                PrinterId = template.PrinterId,
+                EnterpriseId = template.EnterpriseId,
+                IsActive = template.IsActive,
+            };
+        titulo = esNuevo ? "Nueva plantilla" : $"Editar {template!.Codigo}";
+        StateHasChanged();
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync() => await modal.HideAsync();
+
+    private string DesignerUrl()
+    {
+        var b64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(modelo.ZplTemplate ?? ""));
+        return $"https://app.zpldesigner.com/?zpl={Uri.EscapeDataString(b64)}&dpi={modelo.Dpi}&format={modelo.WidthIn:0.##}x{modelo.HeightIn:0.##}in";
+    }
+
+    private async Task Previsualizar()
+    {
+        errorZpl = "";
+        var zpl = await Etiquetas.PreviewZplAsync(esNuevo ? null : modelo.Id, modelo.ZplTemplate, null);
+        if (zpl == null) errorZpl = "No se pudo generar el ZPL (¿tokens sin valor?).";
+        else zplGenerado = zpl;
+    }
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(modelo.Nombre))
+        {
+            ToastService.Notify(new(ToastType.Warning, "La plantilla necesita nombre."));
+            return;
+        }
+
+        bool ok;
+        if (esNuevo)
+            ok = await Etiquetas.CreateTemplateAsync(modelo) != null;
+        else
+            ok = await Etiquetas.UpdateTemplateAsync(modelo.Id, modelo);
+
+        if (!ok)
+        {
+            ToastService.Notify(new(ToastType.Danger, "No se pudo guardar la plantilla."));
+            return;
+        }
+
+        ToastService.Notify(new(ToastType.Success, "Plantilla guardada."));
+        await modal.HideAsync();
+        await OnGuardado.InvokeAsync();
+    }
+}

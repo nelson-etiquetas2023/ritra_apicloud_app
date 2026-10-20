@@ -1,0 +1,226 @@
+@page "/pos/ventas"
+@using Shared.Dtos
+@using Shared.Dtos.Ventas
+@using WEB.Services.Pos
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject PosSesionService Sesion
+@inject WEB.Services.Turnos.ITurnosService TurnosService
+@inject WEB.Services.Ventas.IVentasService VentaService
+@inject WEB.Services.Enterprises.IEnterprisesService EnterprisesService
+@inject IJSRuntime JS
+
+<PageTitle>Historial de ventas del turno</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"><Icon Name="IconName.Receipt" Size="IconSize.x4" /> Historial del turno@(turnoAbierto == null ? "" : $" — {turnoAbierto.Caja}")</h3>
+    <div class="d-flex gap-2">
+        <Button Color="ButtonColor.Success" @onclick='() => Navigation.NavigateTo("/pos")'><Icon Name="IconName.Plus" /> Nueva venta</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="CargarHistorial"><Icon Name="IconName.ArrowClockwise" /> Recargar</Button>
+    </div>
+</div>
+
+<div class="row mt-2">
+    <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="fs-4 fw-bold">@ventas.Count</div><div class="text-muted small">Ventas del turno</div></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="fs-4 fw-bold">@ventas.Sum(v => v.Unidades)</div><div class="text-muted small">Unidades</div></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="fs-4 fw-bold">@ventas.Where(v => v.Estado != "Anulado").Sum(v => v.Total).ToString("N2")</div><div class="text-muted small">Total vendido (sin anuladas)</div></div></div>
+    </div>
+</div>
+
+<div class="card mt-2">
+    <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+        <span>Ventas guardadas en base de datos (@ventas.Count)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="p-2">
+            <input type="text" class="form-control" placeholder="🔍 Buscar por cliente o número..." @bind="filtroHistorial" @bind:event="oninput" />
+        </div>
+        @if (cargando)
+        {
+            <div class="text-center py-5 text-muted"><Spinner Size="SpinnerSize.Small" /> Cargando historial...</div>
+        }
+        else if (turnoAbierto == null)
+        {
+            <div class="text-center py-5 text-muted">
+                <Icon Name="IconName.Inbox" Size="IconSize.x2" />
+                <p class="mb-0">No hay turno abierto. Abre uno en <a href="/pos/turnos">Turnos de caja</a>.</p>
+            </div>
+        }
+        else if (ventas.Count == 0)
+        {
+            <div class="text-center py-5 text-muted">
+                <Icon Name="IconName.Inbox" Size="IconSize.x2" />
+                <p class="mb-0">Aún no hay ventas en este turno. Cobra en el <a href="/pos">POS</a> y aparecerán aquí.</p>
+            </div>
+        }
+        else if (HistorialFiltrado.Count == 0)
+        {
+            <div class="text-center py-5 text-muted">
+                <p class="mb-0">Sin resultados para "@filtroHistorial".</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Número</th>
+                            <th>Cliente</th>
+                            <th>Estado</th>
+                            <th>Pago</th>
+                            <th class="text-center">Líneas</th>
+                            <th class="text-center">Uds.</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Recibido</th>
+                            <th class="text-end">Cambio</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in HistorialFiltrado)
+                        {
+                            <tr class="@(v.Estado == "Anulado" ? "table-secondary" : "")">
+                                <td>@v.Fecha.ToString("HH:mm:ss")</td>
+                                <td><strong>@v.Numero</strong></td>
+                                <td>@v.ClienteNombre</td>
+                                <td><small class="text-muted">@v.Estado</small></td>
+                                <td><small>@v.ResumenPagos</small></td>
+                                <td class="text-center">@v.Items.Count</td>
+                                <td class="text-center">@v.Unidades</td>
+                                <td class="text-end fw-semibold">@v.Total.ToString("N2")</td>
+                                <td class="text-end">@v.Recibido.ToString("N2")</td>
+                                <td class="text-end">@v.Cambio.ToString("N2")</td>
+                                <td class="text-nowrap">
+                                    @if (v.Estado != "Anulado")
+                                    {
+                                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => Reimprimir(v)"><Icon Name="IconName.Printer" /> Ticket</Button>
+                                    }
+                                    @if (v.PedidoId > 0 && v.Estado != "Anulado")
+                                    {
+                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => AnularVenta(v)"><Icon Name="IconName.XCircle" /> Anular</Button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<ConfirmDialog @ref="dialogAnular" />
+<Modal @ref="modalTicket" Title="Ticket de venta" Size="ModalSize.Small">
+    <BodyTemplate>
+        @if (seleccionada != null)
+        {
+            <TicketVenta Empresa="empresa" Numero="@seleccionada.Numero" Fecha="seleccionada.Fecha" ClienteNombre="@seleccionada.ClienteNombre"
+                         Items="seleccionada.Items" Subtotal="seleccionada.Subtotal" Descuento="seleccionada.Descuento" Impuesto="seleccionada.Impuesto" Total="seleccionada.Total"
+                         Pagos="seleccionada.Pagos" Recibido="seleccionada.Recibido" Cambio="seleccionada.Cambio" />
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarTicket">Cerrar</Button>
+        <Button Color="ButtonColor.Primary" @onclick="ImprimirTicket"><Icon Name="IconName.Printer" /> Imprimir (80mm)</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Enterprise? empresa;
+    private Modal modalTicket = default!;
+    private ConfirmDialog dialogAnular = default!;
+    private VentaSesion? seleccionada;
+    private Shared.Dtos.Turnos.TurnoCaja? turnoAbierto;
+    private List<VentaSesion> ventas = [];
+    private bool cargando = true;
+    private string filtroHistorial = "";
+
+    private List<VentaSesion> HistorialFiltrado =>
+        string.IsNullOrWhiteSpace(filtroHistorial)
+            ? ventas
+            : ventas.Where(v =>
+                v.ClienteNombre.Contains(filtroHistorial.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                v.Numero.Contains(filtroHistorial.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { empresa = await EnterprisesService.GetEnterpriseAsync(); } catch { }
+        try { turnoAbierto = await TurnosService.GetAbiertoAsync("Caja 1"); }
+        catch { turnoAbierto = null; }
+        await CargarHistorial();
+    }
+
+    private async Task CargarHistorial()
+    {
+        if (turnoAbierto == null) { ventas = []; cargando = false; return; }
+        cargando = true;
+        try
+        {
+            var pedidos = await VentaService.GetByTurnoAsync(turnoAbierto.Id);
+            ventas = Sesion.VistaTurno(pedidos);
+        }
+        catch
+        {
+            ventas = [.. Sesion.Ventas];
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Reimprimir(VentaSesion v)
+    {
+        if (v.Estado == "Anulado")
+        {
+            ToastService.Notify(new(ToastType.Warning, $"La venta {v.Numero} está anulada y no se puede imprimir."));
+            return;
+        }
+        seleccionada = v;
+        try { await modalTicket.ShowAsync(); } catch { }
+    }
+
+    private async Task AnularVenta(VentaSesion v)
+    {
+        if (v.PedidoId <= 0) return;
+        if (turnoAbierto == null)
+        {
+            ToastService.Notify(new(ToastType.Danger, "Abre un turno antes de anular ventas."));
+            return;
+        }
+        var confirm = await dialogAnular.ShowAsync(title: $"¿Anular la venta {v.Numero}?",
+            message1: "Se marcará como anulada y se devolverá el stock descontado.",
+            message2: "¿Está seguro de proceder?");
+        if (!confirm) return;
+        var ok = await VentaService.AnularAsync(v.PedidoId);
+        if (ok)
+        {
+            var s = Sesion.Ventas.FirstOrDefault(x => x.Numero == v.Numero);
+            if (s != null) s.Estado = "Anulado";
+            await CargarHistorial();
+            ToastService.Notify(new(ToastType.Success, $"Venta {v.Numero} anulada."));
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, $"No se pudo anular {v.Numero} (¿turno cerrado?)."));
+        }
+    }
+
+    private async Task CerrarTicket()
+    {
+        try { await modalTicket.HideAsync(); } catch { }
+    }
+
+    private async Task ImprimirTicket()
+    {
+        try { await JS.InvokeVoidAsync("printPosTicket"); } catch { await JS.InvokeVoidAsync("window.print"); }
+    }
+}

@@ -1,0 +1,539 @@
+@page "/pos/turnos"
+@using Shared.Dtos.Turnos
+@using Shared.Dtos.Ventas
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+@inject WEB.Services.Turnos.ITurnosService TurnosService
+@inject WEB.Services.Ventas.IVentasService VentaService
+@inject WEB.Services.Enterprises.IEnterprisesService EnterprisesService
+@inject IJSRuntime JS
+
+<PageTitle>Turnos de caja</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center">
+    <h3 class="mb-0"><Icon Name="IconName.ClockHistory" Size="IconSize.x4" /> Turnos de caja</h3>
+    <div class="d-flex gap-2">
+        <Button Color="ButtonColor.Primary" @onclick="AlternarHistorial"><Icon Name="IconName.ListUl" /> @(verHistorial ? "Turno actual" : "Ver todos los turnos")</Button>
+        <Button Color="ButtonColor.Secondary" @onclick='() => Navigation.NavigateTo("/pos")'><Icon Name="IconName.ArrowLeft" /> Volver al POS</Button>
+    </div>
+</div>
+
+@if (verHistorial)
+{
+    <div class="card mt-2">
+        <div class="card-header fw-semibold">Todos los turnos (@turnosLista.Count)</div>
+        <div class="card-body p-0">
+            @if (cargandoLista)
+            {
+                <div class="text-center py-4 text-muted"><Spinner Size="SpinnerSize.Small" /> Cargando turnos...</div>
+            }
+            else if (turnosLista.Count == 0)
+            {
+                <div class="text-center py-4 text-muted">No hay turnos registrados.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" style="font-size:0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Caja</th>
+                                <th>Cajero</th>
+                                <th>Apertura</th>
+                                <th>Cierre</th>
+                                <th>Estado</th>
+                                <th class="text-end">Esperado</th>
+                                <th class="text-end">Diferencia</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in turnosLista)
+                            {
+                                <tr class="@(t.Status == TurnoStatus.Cerrado ? "table-secondary" : "")">
+                                    <td>@t.Id</td>
+                                    <td>@t.Caja</td>
+                                    <td>@t.Cajero</td>
+                                    <td>@t.FechaApertura.ToString("dd/MM HH:mm")</td>
+                                    <td>@(t.FechaCierre?.ToString("dd/MM HH:mm") ?? "—")</td>
+                                    <td><Badge Color="@(t.Status == TurnoStatus.Abierto ? BadgeColor.Success : BadgeColor.Secondary)">@t.StatusTexto</Badge></td>
+                                    <td class="text-end">@t.Esperado.ToString("N2")</td>
+                                    <td class="text-end">@t.Diferencia.ToString("N2")</td>
+                                    <td class="text-nowrap">
+                                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => VerTurno(t)"><Icon Name="IconName.Eye" /> Detalle</Button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (turnoSel != null)
+    {
+        <div class="card mt-2">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span>Detalle turno #@turnoSel.Id — @turnoSel.Caja (@turnoSel.Cajero) · @turnoSel.StatusTexto</span>
+                @if (turnoSel.Status == TurnoStatus.Cerrado)
+                {
+                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="ImprimirCuadreSel"><Icon Name="IconName.Printer" /> Cuadre</Button>
+                }
+            </div>
+            <div class="card-body">
+                @if (cargandoSel)
+                {
+                    <div class="text-center text-muted py-3"><Spinner Size="SpinnerSize.Small" /> Cargando detalle...</div>
+                }
+                else
+                {
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3"><small class="text-muted">Apertura</small><div class="fw-semibold">@turnoSel.FechaApertura.ToString("dd/MM/yyyy HH:mm")</div></div>
+                        <div class="col-md-3"><small class="text-muted">Cierre</small><div class="fw-semibold">@(turnoSel.FechaCierre?.ToString("dd/MM/yyyy HH:mm") ?? "—")</div></div>
+                        <div class="col-md-3"><small class="text-muted">Fondo inicial</small><div class="fw-semibold">@turnoSel.FondoInicial.ToString("N2")</div></div>
+                        <div class="col-md-3"><small class="text-muted">Diferencia</small><div class="fw-semibold">@turnoSel.Diferencia.ToString("N2")</div></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3"><small class="text-muted">Ventas (@(resumenSel?.VentasProcesadas ?? 0))</small><div>@((resumenSel?.VentasEfectivo ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Ventas electrón.</small><div>@((resumenSel?.VentasElectronico ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Anuladas (@(resumenSel?.FacturasAnuladas ?? 0))</small><div>-@((resumenSel?.MontoAnulado ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Venta neta</small><div class="fw-bold">@((resumenSel?.VentaNeta ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Entradas</small><div>@((resumenSel?.Entradas ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Salidas</small><div>-@((resumenSel?.Salidas ?? 0).ToString("N2"))</div></div>
+                        <div class="col-md-3"><small class="text-muted">Esperado</small><div class="fw-bold">@((resumenSel?.Esperado ?? 0).ToString("N2"))</div></div>
+                    </div>
+                    <h6 class="mt-3">Ventas del turno (@ventasSel.Count)</h6>
+                    @if (ventasSel.Count == 0)
+                    {
+                        <div class="text-muted small">Sin ventas en este turno.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-3" style="font-size:0.85rem;">
+                                <thead><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>Estado</th><th class="text-end">Total</th></tr></thead>
+                                <tbody>
+                                    @foreach (var v in ventasSel)
+                                    {
+                                        <tr class="@(v.Status == 6 ? "table-secondary" : "")">
+                                            <td><strong>@v.Numero</strong></td>
+                                            <td>@v.Fecha.ToString("dd/MM HH:mm")</td>
+                                            <td>@v.Cliente_Nombre</td>
+                                            <td><small class="text-muted">@v.StatusTexto</small></td>
+                                            <td class="text-end fw-semibold">@v.Total.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    <h6>Movimientos (@movsSel.Count)</h6>
+                    @if (movsSel.Count == 0)
+                    {
+                        <div class="text-muted small">Sin entradas ni salidas manuales.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped" style="font-size:0.85rem;">
+                                <thead><tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th class="text-end">Monto</th></tr></thead>
+                                <tbody>
+                                    @foreach (var m in movsSel)
+                                    {
+                                        <tr><td>@m.Fecha.ToString("dd/MM HH:mm")</td><td>@m.Tipo</td><td>@m.Motivo</td><td class="text-end">@m.Monto.ToString("N2")</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+else if (cargando)
+{
+    <div class="d-flex justify-content-center align-items-center p-5">
+        <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando turno...</strong>
+    </div>
+}
+else if (turno == null)
+{
+    <div class="card mt-2 col-lg-6">
+        <div class="card-header fw-semibold">Abrir turno — Caja 1</div>
+        <div class="card-body">
+            <div class="mb-2">
+                <label class="form-label small fw-semibold">Cajero</label>
+                <input type="text" class="form-control form-control-lg" @bind="cajero" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Fondo inicial (efectivo)</label>
+                <input type="number" class="form-control form-control-lg" step="0.01" min="0" @bind="fondoInicial" />
+            </div>
+            <div class="d-grid">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Large" Disabled="abriendo" @onclick="Abrir">
+                    @if (abriendo) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.Unlock" /> Abrir turno</span> }
+                </Button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row mt-2">
+        <div class="col-lg-5">
+            <div class="card mb-2">
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                    <span>Turno abierto — @turno.Caja</span>
+                    <Badge Color="BadgeColor.Success">Abierto</Badge>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between"><span class="text-muted">Cajero</span><strong>@turno.Cajero</strong></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Apertura</span><span>@turno.FechaApertura.ToString("dd/MM/yyyy HH:mm")</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Fondo inicial</span><span>@turno.FondoInicial.ToString("N2")</span></div>
+                    <hr />
+                    @if (resumen == null)
+                    {
+                        <span class="text-muted">Cargando resumen...</span>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between"><span class="text-muted">Ventas (@resumen.VentasProcesadas)</span><span>@resumen.VentasEfectivo.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Ventas electrón.</span><span>@resumen.VentasElectronico.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Anuladas (@resumen.FacturasAnuladas)</span><span>-@resumen.MontoAnulado.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Venta neta</span><span class="fw-bold">@resumen.VentaNeta.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Entradas</span><span>@resumen.Entradas.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Salidas</span><span>-@resumen.Salidas.ToString("N2")</span></div>
+                        <hr />
+                        <div class="d-flex justify-content-between fs-5 fw-bold"><span>Esperado en caja</span><span>@resumen.Esperado.ToString("N2")</span></div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header fw-semibold">Entrada / salida de efectivo</div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <select class="form-select form-select-lg" @bind="tipoMov">
+                                <option value="Salida">Salida</option>
+                                <option value="Entrada">Entrada</option>
+                            </select>
+                        </div>
+                        <div class="col-3">
+                            <input type="number" class="form-control form-control-lg" step="0.01" min="0" placeholder="Monto" @bind="montoMov" />
+                        </div>
+                        <div class="col-5">
+                            <div class="d-flex gap-2">
+                                <input type="text" class="form-control form-control-lg" placeholder="Motivo..." @bind="motivoMov" />
+                                <Button Color="ButtonColor.Primary" @onclick="AgregarMovimiento"><Icon Name="IconName.Plus" /></Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid">
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Large" @onclick="() => mostrarCierre = !mostrarCierre"><Icon Name="IconName.Lock" /> Cerrar turno y hacer cuadre</Button>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card mb-2">
+                <div class="card-header fw-semibold">Movimientos (@movimientos.Count)</div>
+                <div class="card-body p-0">
+                    @if (movimientos.Count == 0)
+                    {
+                        <div class="text-center text-muted py-3">Sin entradas ni salidas manuales.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-striped mb-0" style="font-size:0.9rem;">
+                            <thead><tr><th>Hora</th><th>Tipo</th><th>Motivo</th><th class="text-end">Monto</th></tr></thead>
+                            <tbody>
+                                @foreach (var m in movimientos)
+                                {
+                                    <tr>
+                                        <td>@m.Fecha.ToString("HH:mm")</td>
+                                        <td><Badge Color="@(m.Tipo == "Entrada" ? BadgeColor.Success : BadgeColor.Warning)">@m.Tipo</Badge></td>
+                                        <td>@m.Motivo</td>
+                                        <td class="text-end">@m.Monto.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            @if (mostrarCierre)
+            {
+                <div class="card mb-2 border-danger">
+                    <div class="card-header fw-semibold text-danger">Conteo físico de billetes y monedas</div>
+                    <div class="card-body">
+                        @foreach (var d in DenominacionesDOP.Todas)
+                        {
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="fw-semibold" style="min-width:90px;">@DenominacionesDOP.Etiqueta(d)</span>
+                                <div class="input-group" style="max-width:220px;">
+                                    <button class="btn btn-outline-secondary btn-lg" @onclick="() => CambiarConteo(d, -1)">−</button>
+                                    <input type="number" class="form-control form-control-lg text-center" min="0" value="@GetConteo(d)" @onchange="(e => SetConteo(d, e))" />
+                                    <button class="btn btn-outline-secondary btn-lg" @onclick="() => CambiarConteo(d, 1)">+</button>
+                                </div>
+                                <span class="text-muted">@((d * GetConteo(d)).ToString("N2"))</span>
+                            </div>
+                        }
+                        <hr />
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Fondo inicial</span><span>@((resumen?.FondoInicial ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Ventas (@(resumen?.VentasProcesadas ?? 0))</span><span>@((resumen?.VentasEfectivo ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Ventas electrón.</span><span>@((resumen?.VentasElectronico ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Anuladas (@(resumen?.FacturasAnuladas ?? 0))</span><span>-@((resumen?.MontoAnulado ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between small fw-bold"><span>Venta neta</span><span>@((resumen?.VentaNeta ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Entradas / Salidas</span><span>@((resumen?.Entradas ?? 0).ToString("N2")) / -@((resumen?.Salidas ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Esperado</span><span>@((resumen?.Esperado ?? 0).ToString("N2"))</span></div>
+                        <div class="d-flex justify-content-between"><span class="text-muted">Contado</span><span>@ContadoCierre.ToString("N2")</span></div>
+                        <div class="d-flex justify-content-between fs-5 fw-bold">
+                            <span>Diferencia</span>
+                            <span class="@(DiferenciaCierre == 0 ? "text-success" : "text-danger")">@DiferenciaCierre.ToString("N2") @(DiferenciaCierre == 0 ? "(cuadrado)" : DiferenciaCierre > 0 ? "(sobrante)" : "(faltante)")</span>
+                        </div>
+                        @if (DiferenciaCierre != 0)
+                        {
+                            <div class="mt-2">
+                                <label class="form-label small fw-semibold">Motivo de la diferencia <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" placeholder="Obligatorio para cerrar con diferencia..." @bind="observacionCierre" />
+                            </div>
+                        }
+                        <div class="d-grid mt-3">
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Large" Disabled="cerrando" @onclick="Cerrar">
+                                @if (cerrando) { <Spinner Size="SpinnerSize.Small" /> } else { <span><Icon Name="IconName.CheckCircle" /> Confirmar cierre</span> }
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<Modal @ref="modalCuadre" Title="Cuadre de caja" Size="ModalSize.Small">
+    <BodyTemplate>
+        @if (turnoCerrado != null)
+        {
+            <CuadreTicket Empresa="empresaNombre" Turno="turnoCerrado" Resumen="resumenCierre"
+                          Conteos="conteosCierre" Esperado="turnoCerrado.Esperado" Contado="turnoCerrado.Contado" Diferencia="turnoCerrado.Diferencia" />
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CerrarModal">Cerrar</Button>
+        <Button Color="ButtonColor.Primary" @onclick="ImprimirCuadre"><Icon Name="IconName.Printer" /> Imprimir (80mm)</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private bool cargando = true;
+    private bool abriendo;
+    private bool cerrando;
+    private bool mostrarCierre;
+    private TurnoCaja? turno;
+    private TurnoResumen? resumen;
+    private List<TurnoMovimiento> movimientos = [];
+    private string cajero = "";
+    private decimal fondoInicial;
+    private string tipoMov = "Salida";
+    private decimal montoMov;
+    private string motivoMov = "";
+    private Dictionary<decimal, int> conteo = new();
+    private string observacionCierre = "";
+    private string empresaNombre = "";
+    private Modal modalCuadre = default!;
+    private TurnoCaja? turnoCerrado;
+    private TurnoResumen? resumenCierre;
+    private List<TurnoDenominacion> conteosCierre = [];
+    private bool verHistorial;
+    private bool cargandoLista;
+    private List<TurnoCaja> turnosLista = [];
+    private TurnoCaja? turnoSel;
+    private bool cargandoSel;
+    private TurnoResumen? resumenSel;
+    private List<TurnoMovimiento> movsSel = [];
+    private List<TurnoDenominacion> conteosSel = [];
+    private List<PedidoVenta> ventasSel = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthProvider.GetAuthenticationStateAsync();
+            cajero = auth.User.Identity?.Name ?? "POS";
+            var empresas = await EnterprisesService.GetAllAsync();
+            empresaNombre = empresas.FirstOrDefault()?.Nombre_Empresa ?? "";
+        }
+        catch { }
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        try
+        {
+            turno = await TurnosService.GetAbiertoAsync("Caja 1");
+            if (turno != null)
+            {
+                resumen = await TurnosService.GetResumenAsync(turno.Id);
+                movimientos = await TurnosService.GetMovimientosAsync(turno.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error cargando turno: {ex.Message}"));
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Abrir()
+    {
+        if (string.IsNullOrWhiteSpace(cajero))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el cajero."));
+            return;
+        }
+        abriendo = true;
+        try
+        {
+            var r = await TurnosService.AbrirAsync("Caja 1", cajero.Trim(), fondoInicial);
+            ToastService.Notify(new(r.Success ? ToastType.Success : ToastType.Danger, r.Message));
+            if (r.Success) await CargarAsync();
+        }
+        finally { abriendo = false; }
+    }
+
+    private async Task AgregarMovimiento()
+    {
+        if (turno == null) return;
+        var r = await TurnosService.AgregarMovimientoAsync(turno.Id, tipoMov, montoMov, motivoMov);
+        ToastService.Notify(new(r.Success ? ToastType.Success : ToastType.Danger, r.Message));
+        if (r.Success)
+        {
+            montoMov = 0;
+            motivoMov = "";
+            resumen = await TurnosService.GetResumenAsync(turno.Id);
+            movimientos = await TurnosService.GetMovimientosAsync(turno.Id);
+        }
+    }
+
+    private int GetConteo(decimal d) => conteo.TryGetValue(d, out var v) ? v : 0;
+
+    private void CambiarConteo(decimal d, int delta)
+    {
+        conteo[d] = Math.Max(0, GetConteo(d) + delta);
+    }
+
+    private void SetConteo(decimal d, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v)) conteo[d] = Math.Max(0, v);
+    }
+
+    private decimal ContadoCierre => conteo.Sum(kv => kv.Key * kv.Value);
+
+    private decimal DiferenciaCierre => ContadoCierre - (resumen?.Esperado ?? 0);
+
+    private async Task Cerrar()
+    {
+        if (turno == null || resumen == null) return;
+        if (DiferenciaCierre != 0 && string.IsNullOrWhiteSpace(observacionCierre))
+        {
+            ToastService.Notify(new(ToastType.Danger, "Indica el motivo de la diferencia para cerrar."));
+            return;
+        }
+        cerrando = true;
+        try
+        {
+            var lista = conteo.Where(kv => kv.Value > 0)
+                .Select(kv => new ConteoDenominacion { Denominacion = kv.Key, Cantidad = kv.Value }).ToList();
+            var r = await TurnosService.CerrarAsync(turno.Id, lista, observacionCierre.Trim(), cajero);
+            if (r == null || !r.Success)
+            {
+                ToastService.Notify(new(ToastType.Danger, r?.Message ?? "No se pudo cerrar el turno."));
+                return;
+            }
+            ToastService.Notify(new(ToastType.Success, r.Message));
+            turnoCerrado = r.Turno;
+            resumenCierre = resumen;
+            conteosCierre = r.Conteos;
+            turno = null;
+            mostrarCierre = false;
+            conteo.Clear();
+            observacionCierre = "";
+            try { await modalCuadre.ShowAsync(); } catch { }
+        }
+        finally { cerrando = false; }
+    }
+
+    private async Task CerrarModal()
+    {
+        try { await modalCuadre.HideAsync(); } catch { }
+    }
+
+    private async Task AlternarHistorial()
+    {
+        verHistorial = !verHistorial;
+        turnoSel = null;
+        if (verHistorial) await CargarHistorial();
+    }
+
+    private async Task CargarHistorial()
+    {
+        cargandoLista = true;
+        try { turnosLista = await TurnosService.GetAllAsync(); }
+        finally { cargandoLista = false; StateHasChanged(); }
+    }
+
+    private async Task VerTurno(TurnoCaja t)
+    {
+        turnoSel = t;
+        cargandoSel = true;
+        resumenSel = null;
+        movsSel = [];
+        conteosSel = [];
+        ventasSel = [];
+        try
+        {
+            var t1 = TurnosService.GetResumenAsync(t.Id);
+            var t2 = TurnosService.GetMovimientosAsync(t.Id);
+            var t3 = TurnosService.GetConteosAsync(t.Id);
+            var t4 = VentaService.GetByTurnoAsync(t.Id);
+            await Task.WhenAll(t1, t2, t3, t4);
+            resumenSel = await t1;
+            movsSel = await t2;
+            conteosSel = await t3;
+            ventasSel = await t4;
+        }
+        finally
+        {
+            cargandoSel = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImprimirCuadreSel()
+    {
+        if (turnoSel == null || turnoSel.Status != TurnoStatus.Cerrado) return;
+        turnoCerrado = turnoSel;
+        resumenCierre = resumenSel;
+        conteosCierre = conteosSel;
+        try { await modalCuadre.ShowAsync(); } catch { }
+    }
+
+    private async Task ImprimirCuadre()
+    {
+        try { await JS.InvokeVoidAsync("printPosTicket"); } catch { await JS.InvokeVoidAsync("window.print"); }
+    }
+}

@@ -1,0 +1,255 @@
+@using Shared.Dtos
+@using System.Text.Json
+@inject IEtiquetasService Etiquetas
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<Modal @ref="modal" Title="Imprimir etiqueta" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (ProductoActual != null)
+        {
+            <div class="alert alert-info">
+                <strong>@ProductoActual.Product_Name</strong><br />
+                <span class="small">Código: @ProductoActual.Product_Code · Barra: @(string.IsNullOrWhiteSpace(ProductoActual.Codebar) ? "-" : ProductoActual.Codebar) · Precio: @ProductoActual.Price · Stock: @ProductoActual.Stock</span>
+            </div>
+        }
+        <div class="mb-2">
+            <label class="form-label"><strong>Destino</strong></label>
+            <div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="destino" id="destServidor"
+                           checked="@(destino == "servidor")" @onchange='() => destino = "servidor"' />
+                    <label class="form-check-label" for="destServidor">Cola del servidor (red)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="destino" id="destLocal"
+                           checked="@(destino == "local")" @onchange='async () => { destino = "local"; await DescubrirLocal(); }' />
+                    <label class="form-check-label" for="destLocal">Impresora local USB (este equipo)</label>
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label"><strong>Plantilla</strong></label>
+            <InputSelect class="form-select" @bind-Value="templateId">
+                @foreach (var t in Templates.Where(t => t.IsActive))
+                {
+                    <option value="@t.Id">@t.Codigo - @t.Nombre (@t.WidthIn x @t.HeightIn in)</option>
+                }
+            </InputSelect>
+        </div>
+        @if (destino == "servidor")
+        {
+            <div class="mb-2">
+                <label class="form-label"><strong>Impresora</strong></label>
+                <InputSelect class="form-select" @bind-Value="printerId">
+                    @foreach (var p in Printers.Where(p => p.IsActive && PrinterConnection.EsRed(p.Connection)))
+                    {
+                        <option value="@p.Id">@p.Name (@p.Ip:@p.Port, @p.Dpi dpi)</option>
+                    }
+                </InputSelect>
+                <div class="form-text">Solo TCP/red. USB, serie, paralelo y Bluetooth van con destino local.</div>
+            </div>
+        }
+        else
+        {
+            <div class="mb-2">
+                <label class="form-label"><strong>Impresora local</strong></label>
+                <div class="d-flex gap-2">
+                    <select class="form-select" @bind="localUid">
+                        <option value="">-- elige --</option>
+                        @foreach (var d in dispositivos)
+                        {
+                            <option value="@d.Uid">@d.Name (@d.Connection)</option>
+                        }
+                    </select>
+                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="DescubrirLocal">Buscar</Button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(msgLocal))
+                {
+                    <div class="alert alert-warning mt-2">@msgLocal</div>
+                }
+                <div class="form-text">Requiere la app <strong>Zebra Browser Print</strong> instalada en este Windows.</div>
+            </div>
+        }
+        <div class="mb-2">
+            <label class="form-label"><strong>Empresa del encabezado</strong></label>
+            <InputSelect class="form-select" @bind-Value="enterpriseId">
+                <option value="">-- la de la plantilla --</option>
+                @foreach (var e in Enterprises)
+                {
+                    <option value="@e.enterprise_id">@e.Nombre_Empresa</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label"><strong>Copias</strong></label>
+                <InputNumber class="form-control" @bind-Value="copies" min="1" max="1000" />
+            </div>
+            <div class="col-6">
+                <label class="form-label"><strong>Product_id (opcional)</strong></label>
+                <InputNumber class="form-control" @bind-Value="productId" placeholder="vacío = valores tal cual" />
+            </div>
+        </div>
+        <p class="text-muted small">Sin producto se envía el ZPL con valores de muestra. Con producto se fusionan sus datos y se congela una copia en el trabajo.</p>
+        @if (!string.IsNullOrWhiteSpace(errorMsg))
+        {
+            <div class="alert alert-danger">@errorMsg</div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="HideAsync">Cancelar</Button>
+        <Button Color="ButtonColor.Success" @onclick="Aceptar">@(destino == "local" ? "Imprimir ahora" : "Encolar")</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+    private string destino = "servidor";
+    private int templateId;
+    private int printerId;
+    private int? enterpriseId;
+    private int copies = 1;
+    private int? productId;
+    private string errorMsg = "";
+    private string localUid = "";
+    private string msgLocal = "";
+    private List<LocalDevice> dispositivos = [];
+    private static readonly JsonSerializerOptions bridgeOptions = new() { PropertyNameCaseInsensitive = true };
+
+    [Parameter] public List<LabelTemplate> Templates { get; set; } = [];
+    [Parameter] public List<Printer> Printers { get; set; } = [];
+    [Parameter] public List<Enterprise> Enterprises { get; set; } = [];
+    [Parameter] public int DefaultTemplateId { get; set; }
+    [Parameter] public Product? ProductoActual { get; set; }
+    [Parameter] public EventCallback OnEnqueued { get; set; }
+
+    public async Task ShowAsync(int preselectTemplateId = 0, int? productId = null, Product? producto = null)
+    {
+        errorMsg = "";
+        copies = 1;
+        this.productId = productId ?? producto?.Product_id;
+        ProductoActual = producto;
+        enterpriseId = null;
+        if (preselectTemplateId != 0) templateId = preselectTemplateId;
+        else if (DefaultTemplateId != 0 && Templates.Any(t => t.Id == DefaultTemplateId)) templateId = DefaultTemplateId;
+        else if (Templates.Any()) templateId = Templates.First().Id;
+
+        var tpl = Templates.FirstOrDefault(t => t.Id == templateId);
+        if (tpl?.PrinterId.HasValue == true &&
+            Printers.Any(p => p.Id == tpl.PrinterId.Value && p.IsActive && PrinterConnection.EsRed(p.Connection)))
+            printerId = tpl.PrinterId.Value;
+        else if (Printers.Any(p => p.IsActive && PrinterConnection.EsRed(p.Connection)))
+            printerId = Printers.First(p => p.IsActive && PrinterConnection.EsRed(p.Connection)).Id;
+
+        StateHasChanged();
+        await modal.ShowAsync();
+    }
+
+    public async Task HideAsync() => await modal.HideAsync();
+
+    private async Task DescubrirLocal()
+    {
+        msgLocal = "Buscando impresoras locales...";
+        dispositivos = [];
+        StateHasChanged();
+        try
+        {
+            var res = await JS.InvokeAsync<BridgeResult>("scanproBrowserPrint.discover");
+            if (res?.Ok == true)
+            {
+                dispositivos = res.Devices ?? [];
+                msgLocal = dispositivos.Count == 0
+                    ? "No se encontró ninguna impresora local. Verifica Browser Print y el USB."
+                    : "";
+                var z = dispositivos.FirstOrDefault(d =>
+                    (d.Name ?? "").Contains("Zebra", StringComparison.OrdinalIgnoreCase));
+                if (z != null) localUid = z.Uid ?? "";
+            }
+            else
+            {
+                msgLocal = res?.Error ?? "Browser Print no disponible.";
+            }
+        }
+        catch (Exception ex)
+        {
+            msgLocal = $"Puente local no disponible: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task Aceptar()
+    {
+        if (destino == "local") await ImprimirLocal();
+        else await Encolar();
+    }
+
+    private async Task ImprimirLocal()
+    {
+        errorMsg = "";
+        if (templateId == 0) { errorMsg = "Elige plantilla."; return; }
+        if (string.IsNullOrWhiteSpace(localUid)) { errorMsg = "Elige la impresora local (pulsa Buscar)."; return; }
+
+        var n = copies < 1 ? 1 : copies;
+        var zpl = await Etiquetas.PreviewZplAsync(templateId, null, productId, n);
+        if (string.IsNullOrWhiteSpace(zpl)) { errorMsg = "No se pudo generar el ZPL (¿tokens sin valor?)."; return; }
+
+        try
+        {
+            var res = await JS.InvokeAsync<BridgeResult>("scanproBrowserPrint.send", localUid, zpl);
+            if (res?.Ok == true)
+            {
+                ToastService.Notify(new(ToastType.Success, $"Etiqueta enviada a la impresora local ({n} copia(s))."));
+                await modal.HideAsync();
+                await OnEnqueued.InvokeAsync();
+            }
+            else
+            {
+                errorMsg = res?.Error ?? "La impresora local no respondió.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Puente local no disponible: {ex.Message}";
+        }
+    }
+
+    private sealed class LocalDevice
+    {
+        public string? Uid { get; set; }
+        public string? Name { get; set; }
+        public string? Connection { get; set; }
+    }
+
+    private sealed class BridgeResult
+    {
+        public bool Ok { get; set; }
+        public List<LocalDevice>? Devices { get; set; }
+        public string? Error { get; set; }
+    }
+
+    private async Task Encolar()
+    {
+        errorMsg = "";
+        if (templateId == 0 || printerId == 0) { errorMsg = "Elige plantilla e impresora."; return; }
+
+        var (job, error) = await Etiquetas.EnqueueJobAsync(new PrintJobEnqueueRequest
+        {
+            TemplateId = templateId,
+            PrinterId = printerId,
+            ProductId = productId,
+            EnterpriseId = enterpriseId,
+            Copies = copies < 1 ? 1 : copies,
+        });
+
+        if (job == null)
+        {
+            errorMsg = error ?? "No se pudo encolar.";
+            return;
+        }
+
+        ToastService.Notify(new(ToastType.Success, $"Trabajo #{job.Id} en cola (lugar {job.Orden})."));
+        await modal.HideAsync();
+        await OnEnqueued.InvokeAsync();
+    }
+}

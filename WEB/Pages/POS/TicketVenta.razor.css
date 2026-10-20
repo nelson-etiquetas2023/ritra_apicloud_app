@@ -1,0 +1,72 @@
+.pos-ticket {
+    width: 72mm;
+    max-width: 100%;
+    margin: 0 auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #000;
+    background: #fff;
+    padding: 4px 2px;
+}
+
+.ticket-empresa {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.ticket-sep {
+    margin: 4px 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.ticket-item {
+    margin-bottom: 3px;
+}
+
+.ticket-item-name {
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.ticket-item-line {
+    display: flex;
+    justify-content: space-between;
+}
+
+.ticket-tot {
+    display: flex;
+    justify-content: space-between;
+}
+
+.ticket-total {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.ticket-copy {
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #pos-ticket, #pos-ticket * {
+        visibility: visible;
+    }
+    #pos-ticket {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 72mm;
+        margin: 0;
+        padding: 0;
+    }
+    @page {
+        size: 80mm auto;
+        margin: 2mm;
+    }
+}

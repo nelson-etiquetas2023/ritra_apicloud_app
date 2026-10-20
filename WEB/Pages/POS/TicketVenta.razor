@@ -1,0 +1,74 @@
+@using Shared.Dtos
+@using Shared.Dtos.Ventas
+
+@* Ticket de venta 80mm. El contenedor #pos-ticket es lo único que sale en window.print(). *@
+<div id="pos-ticket" class="pos-ticket">
+    <div class="text-center">
+        <div class="ticket-empresa">@(Empresa?.Nombre_Empresa ?? "Mi Empresa")</div>
+        @if (!string.IsNullOrWhiteSpace(Empresa?.Registro_Fiscal))
+        {
+            <div>RNC: @Empresa.Registro_Fiscal</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Empresa?.Direccion))
+        {
+            <div>@Empresa.Direccion</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Empresa?.Telefono))
+        {
+            <div>Tel: @Empresa.Telefono</div>
+        }
+    </div>
+    <div class="ticket-sep">--------------------------------</div>
+    <div>Ticket: <strong>@Numero</strong></div>
+    <div>Fecha: @Fecha.ToString("dd/MM/yyyy HH:mm")</div>
+    <div>Cliente: @(string.IsNullOrWhiteSpace(ClienteNombre) ? "Mostrador" : ClienteNombre)</div>
+    <div>Caja: POS-WEB</div>
+    <div class="ticket-sep">--------------------------------</div>
+    @foreach (var i in Items)
+    {
+        <div class="ticket-item">
+            <div class="ticket-item-name">@i.Product_name</div>
+            <div class="ticket-item-line">
+                <span>@i.Cantidad x @i.Precio.ToString("N2")</span>
+                <span>@((i.Cantidad * i.Precio).ToString("N2"))</span>
+            </div>
+        </div>
+    }
+    <div class="ticket-sep">--------------------------------</div>
+    <div class="ticket-tot"><span>Subtotal</span><span>@Subtotal.ToString("N2")</span></div>
+    @if (Descuento > 0)
+    {
+        <div class="ticket-tot"><span>Descuento</span><span>-@Descuento.ToString("N2")</span></div>
+    }
+    <div class="ticket-tot"><span>ITBIS 18%</span><span>@Impuesto.ToString("N2")</span></div>
+    <div class="ticket-tot ticket-total"><span>TOTAL</span><span>@Total.ToString("N2")</span></div>
+    @foreach (var g in Pagos)
+    {
+        <div class="ticket-tot"><span>@g.Metodo@(string.IsNullOrWhiteSpace(g.Referencia) ? "" : $" ({g.Referencia})")</span><span>@g.Monto.ToString("N2")</span></div>
+    }
+    @if (Pagos.Any(g => g.Metodo != MetodoPago.Efectivo))
+    {
+        <div class="ticket-tot"><span>Contado</span><span>@Pagos.Where(g => g.Metodo == MetodoPago.Efectivo).Sum(g => g.Monto).ToString("N2")</span></div>
+        <div class="ticket-tot"><span>Electrónico</span><span>@Pagos.Where(g => g.Metodo != MetodoPago.Efectivo).Sum(g => g.Monto).ToString("N2")</span></div>
+    }
+    <div class="ticket-tot"><span>Recibido</span><span>@Recibido.ToString("N2")</span></div>
+    <div class="ticket-tot ticket-total"><span>Cambio</span><span>@Cambio.ToString("N2")</span></div>
+    <div class="ticket-sep">--------------------------------</div>
+    <div class="text-center">¡Gracias por su compra!</div>
+    <div class="text-center ticket-copy">* Documento de prueba, sin valor fiscal *</div>
+</div>
+
+@code {
+    [Parameter] public Enterprise? Empresa { get; set; }
+    [Parameter] public string Numero { get; set; } = "";
+    [Parameter] public DateTime Fecha { get; set; } = DateTime.Now;
+    [Parameter] public string ClienteNombre { get; set; } = "";
+    [Parameter] public List<DetalleVenta> Items { get; set; } = [];
+    [Parameter] public List<VentaPago> Pagos { get; set; } = [];
+    [Parameter] public decimal Subtotal { get; set; }
+    [Parameter] public decimal Descuento { get; set; }
+    [Parameter] public decimal Impuesto { get; set; }
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public decimal Recibido { get; set; }
+    [Parameter] public decimal Cambio { get; set; }
+}

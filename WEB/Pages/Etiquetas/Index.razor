@@ -1,0 +1,321 @@
+@page "/etiquetas"
+@using Shared.Dtos
+@inject IEtiquetasService Etiquetas
+@inject IEnterprisesService Empresas
+@inject ToastService ToastService
+
+<PageTitle>Etiquetas</PageTitle>
+
+<ConfirmDialog @ref="dialog" />
+<Preload LoadingText="Cargando..." />
+
+<ModalTemplate @ref="modalTemplate" Printers="printers" Enterprises="enterprises" OnGuardado="RecargarTodo" />
+<ModalImport @ref="modalImport" OnGuardado="RecargarTodo" />
+<ModalPrinter @ref="modalPrinter" OnGuardado="RecargarTodo" />
+<ModalEnqueue @ref="modalEnqueue" Templates="templates" Printers="printers" Enterprises="enterprises" DefaultTemplateId="defaultTemplateId" OnEnqueued="RecargarCola" />
+<ModalPreview @ref="modalPreview" />
+
+<h3>Repositorio de Etiquetas</h3>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <Button Color="ButtonColor.Primary" @onclick="() => modalTemplate.ShowAsync(null)">
+        <Icon Name="IconName.Plus" /> Nueva plantilla
+    </Button>
+    <Button Color="ButtonColor.Secondary" @onclick="() => modalImport.ShowAsync()">
+        <Icon Name="IconName.Upload" /> Importar ZPL
+    </Button>
+    <Button Color="ButtonColor.Info" @onclick="RecargarCola">
+        <Icon Name="IconName.ListTask" /> Cola (@cola.Count)
+    </Button>
+    <select class="form-select w-auto" @bind="filtroCategoria">
+        <option value="">Todas</option>
+        @foreach (var c in LabelCategories.All)
+        {
+            <option value="@c">@c</option>
+        }
+    </select>
+</div>
+
+@if (templates == null)
+{
+    <p>Cargando plantillas...</p>
+}
+else if (!templatesFiltradas.Any())
+{
+    <p>No hay plantillas. Importa tu primer <strong>.zpl</strong> de ZPLDesigner.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+        @foreach (var t in templatesFiltradas)
+        {
+            <div class="col">
+                <Card>
+                    <CardBody>
+                        @if (!string.IsNullOrWhiteSpace(t.ThumbnailBase64))
+                        {
+                            <div class="mb-1 mx-auto border d-flex align-items-center justify-content-center bg-light overflow-hidden"
+                                 style="width:@(AnchoPx(t));max-width:100%;aspect-ratio:@(Ratio(t));">
+                                <img src="@t.ThumbnailBase64" class="w-100 h-100" style="object-fit:contain;" alt="@t.Nombre" />
+                            </div>
+                            <div class="text-muted small text-center mb-2">@t.WidthIn x @t.HeightIn in · @t.Dpi dpi (tamaño aprox.)</div>
+                        }
+                        else
+                        {
+                            <div class="border text-center text-muted py-4 mb-2">Sin vista previa</div>
+                        }
+                        <CardTitle>@t.Nombre</CardTitle>
+                        <CardSubTitle class="mb-2 text-muted">
+                            @t.Codigo · @t.WidthIn x @t.HeightIn in · @t.Dpi dpi · @t.Categoria
+                            @if (!t.IsActive)
+                            {
+                                <Badge Color="BadgeColor.Secondary">Inactiva</Badge>
+                            }
+                        </CardSubTitle>
+                        <div class="d-flex flex-wrap gap-1">
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Primary" @onclick="() => modalPreview.ShowAsync(t)">Ver</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Success" @onclick="() => modalEnqueue.ShowAsync(t.Id)">Imprimir</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Secondary" @onclick="() => modalTemplate.ShowAsync(t)">Editar</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Info" @onclick="() => Duplicar(t.Id)">Duplicar</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Danger" @onclick="() => Borrar(t.Id, t.Nombre)">Borrar</Button>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+        }
+    </div>
+}
+
+<h4>Cola de impresión (@cola.Count)</h4>
+@if (!cola.Any())
+{
+    <p class="text-muted">Cola vacía. Usa <strong>Imprimir</strong> en una plantilla para encolar el primer trabajo.</p>
+}
+else
+{
+    <div class="table-responsive">
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Plantilla</th>
+                <th>Impresora</th>
+                <th>Prod.</th>
+                <th>Copias</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var j in cola)
+            {
+                <tr>
+                    <td>@j.Orden</td>
+                    <td>@NombrePlantilla(j.TemplateId)</td>
+                    <td>@NombreImpresora(j.PrinterId)</td>
+                    <td>@(j.ProductId?.ToString() ?? "-")</td>
+                    <td>@j.Copies</td>
+                    <td><Badge Color="@ColorEstado(j.Status)">@j.Status</Badge></td>
+                    <td class="text-nowrap">
+                        @if (j.Status == PrintJobStatus.Pending)
+                        {
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Light" @onclick="() => Mover(j.Id, -1)" title="Subir">↑</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Light" @onclick="() => Mover(j.Id, 1)" title="Bajar">↓</Button>
+                            <Button Size="ButtonSize.Small" Color="ButtonColor.Danger" @onclick="() => Cancelar(j.Id)">X</Button>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(j.Error))
+                        {
+                            <span class="text-danger small" title="@j.Error">⚠</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    </div>
+}
+
+<h4 class="mt-4">Impresoras
+    <Button Size="ButtonSize.Small" Color="ButtonColor.Primary" @onclick="() => modalPrinter.ShowAsync(null)">+ Nueva</Button>
+</h4>
+@if (!printers.Any())
+{
+    <p class="text-muted">Sin impresoras registradas.</p>
+}
+else
+{
+    <div class="table-responsive">
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr><th>Código</th><th>Nombre</th><th>IP</th><th>DPI</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var p in printers)
+            {
+                <tr>
+                    <td>@p.Code</td>
+                    <td>@p.Name @(p.IsActive ? "" : "(inactiva)")</td>
+                    <td>@p.Ip:@p.Port</td>
+                    <td>@p.Dpi</td>
+                    <td class="text-nowrap">
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Info" @onclick="() => Probar(p.Id)">Probar</Button>
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Warning" @onclick="() => Calibrar(p.Id)">Calibrar</Button>
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Secondary" @onclick="() => modalPrinter.ShowAsync(p)">Editar</Button>
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Danger" @onclick="() => BorrarImpresora(p.Id, p.Name)">Borrar</Button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    </div>
+}
+
+@code {
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private ConfirmDialog dialog = default!;
+    private ModalTemplate modalTemplate = default!;
+    private ModalImport modalImport = default!;
+    private ModalPrinter modalPrinter = default!;
+    private ModalEnqueue modalEnqueue = default!;
+    private ModalPreview modalPreview = default!;
+
+    private List<LabelTemplate>? templates;
+    private List<Printer> printers = [];
+    private List<Enterprise> enterprises = [];
+    private List<PrintJob> cola = [];
+    private int defaultTemplateId;
+    private string filtroCategoria = "";
+
+    private IEnumerable<LabelTemplate> templatesFiltradas =>
+        templates?.Where(t => string.IsNullOrEmpty(filtroCategoria) || t.Categoria == filtroCategoria)
+        ?? Enumerable.Empty<LabelTemplate>();
+
+    protected override async Task OnInitializedAsync() => await RecargarTodo();
+
+    private async Task RecargarTodo()
+    {
+        PreloadService.Show(SpinnerColor.Dark, "Cargando...");
+        try
+        {
+            templates = await Etiquetas.GetTemplatesAsync();
+            printers = await Etiquetas.GetPrintersAsync();
+            enterprises = await Empresas.GetAllAsync();
+            var def = await Etiquetas.GetDefaultTemplateAsync();
+            defaultTemplateId = def?.Id ?? 0;
+            await RecargarCola();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error cargando etiquetas: {ex.Message}"));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task RecargarCola()
+    {
+        cola = await Etiquetas.GetPendingJobsAsync();
+        StateHasChanged();
+    }
+
+    private string NombrePlantilla(int id) =>
+        templates?.FirstOrDefault(t => t.Id == id)?.Nombre ?? $"#{id}";
+
+    private static string AspectoPct(LabelTemplate t)
+    {
+        if (t.WidthIn <= 0) return "100%";
+        var pct = t.HeightIn / t.WidthIn * 100;
+        return pct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+    }
+
+    private static string Inv(double v) =>
+        v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string AnchoPx(LabelTemplate t) => $"{Inv(t.WidthIn * 96)}px";
+    private static string Ratio(LabelTemplate t) => $"{Inv(t.WidthIn)} / {Inv(t.HeightIn)}";
+
+    private string NombreImpresora(int id) =>
+        printers.FirstOrDefault(p => p.Id == id)?.Name ?? $"#{id}";
+
+    private static BadgeColor ColorEstado(string status) => status switch
+    {
+        PrintJobStatus.Printing => BadgeColor.Info,
+        PrintJobStatus.Failed => BadgeColor.Danger,
+        PrintJobStatus.Done => BadgeColor.Success,
+        PrintJobStatus.Cancelled => BadgeColor.Secondary,
+        _ => BadgeColor.Warning,
+    };
+
+    private async Task Duplicar(int id)
+    {
+        var clone = await Etiquetas.DuplicateTemplateAsync(id);
+        if (clone == null) ToastService.Notify(new(ToastType.Danger, "No se pudo duplicar."));
+        else { ToastService.Notify(new(ToastType.Success, $"Duplicada como {clone.Codigo}.")); await RecargarTodo(); }
+    }
+
+    private async Task Borrar(int id, string nombre)
+    {
+        var ok = await dialog.ShowAsync(
+            title: $"Borrar plantilla {nombre}?",
+            message1: "Se eliminará del repositorio.",
+            message2: "No se puede borrar si tiene trabajos en cola. ¿Proceder?");
+        if (!ok) return;
+        if (await Etiquetas.DeleteTemplateAsync(id)) { ToastService.Notify(new(ToastType.Success, "Plantilla borrada.")); await RecargarTodo(); }
+        else ToastService.Notify(new(ToastType.Danger, "No se pudo borrar (¿trabajos en cola?)."));
+    }
+
+    private async Task Mover(int id, int delta)
+    {
+        var ordenados = cola.Where(j => j.Status == PrintJobStatus.Pending)
+            .OrderBy(j => j.Orden).ThenBy(j => j.CreatedAt).ToList();
+        var idx = ordenados.FindIndex(j => j.Id == id);
+        var otro = idx + delta;
+        if (idx < 0 || otro < 0 || otro >= ordenados.Count) return;
+
+        var a = ordenados[idx];
+        var b = ordenados[otro];
+        var ok = await Etiquetas.ReorderJobsAsync(new List<PrintJobReorderItem>
+        {
+            new() { Id = a.Id, Orden = b.Orden },
+            new() { Id = b.Id, Orden = a.Orden },
+        });
+        if (ok) await RecargarCola();
+        else ToastService.Notify(new(ToastType.Danger, "No se pudo reordenar."));
+    }
+
+    private async Task Cancelar(int id)
+    {
+        if (await Etiquetas.CancelJobAsync(id)) await RecargarCola();
+        else ToastService.Notify(new(ToastType.Danger, "No se pudo cancelar."));
+    }
+
+    private async Task Probar(int id)
+    {
+        var error = await Etiquetas.TestPrinterAsync(id);
+        ToastService.Notify(error == null
+            ? new(ToastType.Success, "Etiqueta de prueba enviada.")
+            : new(ToastType.Danger, $"Prueba falló: {error}"));
+    }
+
+    private async Task Calibrar(int id)
+    {
+        var error = await Etiquetas.CalibratePrinterAsync(id);
+        ToastService.Notify(error == null
+            ? new(ToastType.Success, "Calibrado gap enviado (avanza 2-3 etiquetas, ~10s). Luego pulsa Probar.")
+            : new(ToastType.Danger, $"Calibrado falló: {error}"));
+    }
+
+    private async Task BorrarImpresora(int id, string nombre)
+    {
+        var ok = await dialog.ShowAsync(
+            title: $"Borrar impresora {nombre}?",
+            message1: "Se eliminará del catálogo.",
+            message2: "No se puede borrar si tiene trabajos en cola. ¿Proceder?");
+        if (!ok) return;
+        if (await Etiquetas.DeletePrinterAsync(id)) { ToastService.Notify(new(ToastType.Success, "Impresora borrada.")); await RecargarTodo(); }
+        else ToastService.Notify(new(ToastType.Danger, "No se pudo borrar (¿trabajos en cola?)."));
+    }
+}
