@@ -252,7 +252,6 @@ namespace ScanProMovil.Migrations
             modelBuilder.Entity("ScanProMovil.Data.Entities.PickingOrder", b =>
                 {
                     b.Property<int>("PickingId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Estado")
