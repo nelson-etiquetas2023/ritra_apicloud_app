@@ -6,7 +6,7 @@ namespace API.Services.Picking
     public interface IPickingService
     {
         Task<PickingOrderResult> TransferirAPickingAsync(List<string> numerosPedido, string? usuario);
-        Task<List<PedidoVenta>> GetPedidosParaPickingAsync();
+        Task<List<PickingPendienteDto>> GetPedidosParaPickingAsync();
         Task<bool> CompletarPickingAsync(int pickingOrderId);
         Task<PickingOrderResult> CancelarPickingAsync(string? numeroPedido);
     }

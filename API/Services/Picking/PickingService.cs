@@ -105,23 +105,40 @@ namespace API.Services.Picking
             return result;
         }
 
-        public async Task<List<PedidoVenta>> GetPedidosParaPickingAsync()
+        public async Task<List<PickingPendienteDto>> GetPedidosParaPickingAsync()
         {
-            // Obtener números de pedido que tienen picking pendiente (Estado 0 o 1)
-            var numerosPicking = await context.PickingOrders
+            // Ordenes de picking que siguen abiertas (Estado 0 o 1)
+            var picking = await context.PickingOrders
                 .Where(po => po.Estado != 2)
-                .Select(po => po.NumeroPedidoVenta)
+                .OrderBy(po => po.Id)
                 .ToListAsync();
 
-            if (numerosPicking.Count == 0)
-                return new List<PedidoVenta>();
+            if (picking.Count == 0)
+                return [];
 
-            return await context.PedidoVenta
+            var numeros = picking.Select(po => po.NumeroPedidoVenta).ToList();
+
+            var pedidos = await context.PedidoVenta
                 .Include(p => p.Items)
                 .Include(p => p.Pagos)
-                .Where(p => numerosPicking.Contains(p.Numero))
-                .OrderByDescending(p => p.Id)
-                .ToListAsync();
+                .Where(p => numeros.Contains(p.Numero))
+                .ToDictionaryAsync(p => p.Numero);
+
+            // El dispositivo necesita el Id de la orden de picking para poder
+            // completarla en el servidor, por eso se devuelve junto al pedido.
+            return picking
+                .Where(po => pedidos.ContainsKey(po.NumeroPedidoVenta))
+                .Select(po => new PickingPendienteDto
+                {
+                    PickingId = po.Id,
+                    NumeroPedidoVenta = po.NumeroPedidoVenta,
+                    Estado = po.Estado,
+                    UsuarioAsignado = po.UsuarioAsignado,
+                    FechaCreacion = po.FechaCreacion,
+                    FechaCompletado = po.FechaCompletado,
+                    Pedido = pedidos[po.NumeroPedidoVenta]
+                })
+                .ToList();
         }
 
         public async Task<bool> CompletarPickingAsync(int pickingOrderId)

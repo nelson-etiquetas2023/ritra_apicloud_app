@@ -44,7 +44,7 @@ namespace WEB.Services.Picking
             }
         }
 
-        public async Task<List<PedidoVenta>> GetPedidosParaPickingAsync()
+        public async Task<List<PickingPendienteDto>> GetPedidosParaPickingAsync()
         {
             try
             {
@@ -53,7 +53,7 @@ namespace WEB.Services.Picking
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(json)) return [];
-                return await JsonSerializer.DeserializeAsync<List<PedidoVenta>>(
+                return await JsonSerializer.DeserializeAsync<List<PickingPendienteDto>>(
                     new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? [];
             }
             catch

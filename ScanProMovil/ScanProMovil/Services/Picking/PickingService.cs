@@ -6,6 +6,8 @@ using Shared.Dtos.Ventas;
 using System.Text;
 using System.Text.Json;
 using System.Collections.ObjectModel;
+// Alias: la entidad local PickingOrder choca con la del DTO compartido.
+using PickingPendienteDto = Shared.Dtos.Picking.PickingPendienteDto;
 
 namespace ScanProMovil.Services.Picking
 {
@@ -36,10 +38,10 @@ namespace ScanProMovil.Services.Picking
                 var json = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(json)) return new List<PickingOrder>();
 
-                var pedidosApi = await JsonSerializer.DeserializeAsync<List<PedidoVenta>>(
-                    new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? new List<PedidoVenta>();
+                var remotos = await JsonSerializer.DeserializeAsync<List<PickingPendienteDto>>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? new List<PickingPendienteDto>();
 
-                return MapearAPickingLocal(pedidosApi);
+                return MapearAPickingLocal(remotos);
             }
             catch (Exception ex)
             {
@@ -62,24 +64,71 @@ namespace ScanProMovil.Services.Picking
         {
             try
             {
-                var pedidosRemotos = await GetPedidosParaPickingRemotoAsync();
-                if (pedidosRemotos.Count == 0) return true;
+                var remotos = await GetPedidosParaPickingRemotoAsync();
+                if (remotos.Count == 0) return true;
 
                 await using var _context = await _contextFactory.CreateDbContextAsync();
 
-                // Obtener números ya sincronizados localmente
-                var numerosLocales = await _context.PickingOrders
-                    .Select(p => p.NumeroPedidoVenta)
-                    .ToHashSetAsync();
+                var idsRemotos = remotos.Select(p => p.PickingId).ToList();
 
-                var nuevos = pedidosRemotos.Where(p => !numerosLocales.Contains(p.NumeroPedidoVenta)).ToList();
+                var locales = await _context.PickingOrders
+                    .Include(p => p.Items)
+                    .Where(p => idsRemotos.Contains(p.PickingId))
+                    .ToListAsync();
 
-                foreach (var picking in nuevos)
+                var localesPorId = locales.ToDictionary(p => p.PickingId);
+
+                // Ordenes completadas en el dispositivo que el servidor aun no
+                // sabe: se cierran alli para que el pedido no vuelva a la lista.
+                var pendientesDeCerrar = new List<PickingOrder>();
+
+                foreach (var remoto in remotos)
                 {
-                    _context.PickingOrders.Add(picking);
+                    if (localesPorId.TryGetValue(remoto.PickingId, out var local))
+                    {
+                        // Ya existe: se actualiza el estado sin perder el
+                        // avance de los items marcados en el dispositivo.
+                        if (local.Estado != 2)
+                        {
+                            local.Estado = remoto.Estado;
+                            local.UsuarioAsignado = remoto.UsuarioAsignado ?? local.UsuarioAsignado;
+                            local.FechaCreacion = remoto.FechaCreacion;
+                        }
+                        else if (remoto.Estado != 2)
+                        {
+                            pendientesDeCerrar.Add(local);
+                        }
+
+                        // Items nuevos que todavia no estan en local.
+                        var codigosLocales = local.Items.Select(i => i.ProductCode).ToHashSet();
+                        foreach (var item in remoto.Items)
+                        {
+                            if (codigosLocales.Contains(item.ProductCode)) continue;
+
+                            local.Items.Add(new PickingOrderDetail
+                            {
+                                PickingId = local.PickingId,
+                                ProductCode = item.ProductCode,
+                                ProductName = item.ProductName,
+                                Cantidad = item.Cantidad,
+                                Completado = false
+                            });
+                        }
+                    }
+                    else
+                    {
+                        _context.PickingOrders.Add(remoto);
+                    }
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Propaga al servidor las ordenes que aqui ya estaban completas.
+                foreach (var local in pendientesDeCerrar)
+                {
+                    await CompletarOrdenRemotoAsync(local.PickingId);
+                }
+
                 return true;
             }
             catch (SqliteException ex)
@@ -155,22 +204,28 @@ namespace ScanProMovil.Services.Picking
             }
         }
 
-        private static List<PickingOrder> MapearAPickingLocal(List<PedidoVenta> pedidosApi)
+        private static List<PickingOrder> MapearAPickingLocal(List<PickingPendienteDto> remotos)
         {
             var resultado = new List<PickingOrder>();
 
-            foreach (var p in pedidosApi)
+            foreach (var remoto in remotos)
             {
+                var pedido = remoto.Pedido;
+
                 var picking = new PickingOrder
                 {
-                    NumeroPedidoVenta = p.Numero,
-                    Estado = 0, // Pendiente
-                    FechaCreacion = p.FechaCreacion,
-                    UsuarioAsignado = p.Vendedor,
+                    // El Id remoto es la clave primaria local: asi al completar
+                    // la orden se puede cerrar en el servidor sin ambiguedad.
+                    PickingId = remoto.PickingId,
+                    NumeroPedidoVenta = remoto.NumeroPedidoVenta,
+                    Estado = remoto.Estado,
+                    FechaCreacion = remoto.FechaCreacion,
+                    UsuarioAsignado = remoto.UsuarioAsignado ?? pedido.Vendedor,
+                    FechaCompletado = remoto.FechaCompletado,
                     Items = new ObservableCollection<PickingOrderDetail>()
                 };
 
-                foreach (var item in p.Items)
+                foreach (var item in pedido.Items)
                 {
                     picking.Items.Add(new PickingOrderDetail
                     {

@@ -115,6 +115,9 @@ namespace ScanProMovil.Data
             {
                 e.ToTable("PickingOrders");
                 e.HasKey(p => p.PickingId);
+                // El Id es el de la orden de picking en el servidor: se guarda
+                // tal cual para poder completarla alli sin ambiguedad.
+                e.Property(p => p.PickingId).ValueGeneratedNever();
                 e.HasIndex(p => p.NumeroPedidoVenta);
                 e.HasIndex(p => p.Estado);
                 e.HasMany(p => p.Items)

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Shared.Dtos.Ventas;
 
 namespace Shared.Dtos.Picking
 {
@@ -40,5 +41,26 @@ namespace Shared.Dtos.Picking
         public bool Success { get; set; }
         public string Message { get; set; } = "";
         public List<PickingOrder> Data { get; set; } = [];
+    }
+
+    /// <summary>
+    /// Orden de picking pendiente con el pedido asociado. El dispositivo
+    /// necesita el Id real de la orden para poder completarla en el servidor.
+    /// </summary>
+    public class PickingPendienteDto
+    {
+        public int PickingId { get; set; }
+
+        public string NumeroPedidoVenta { get; set; } = "";
+
+        public int Estado { get; set; } // 0 = Pendiente, 1 = Asignado, 2 = Completado
+
+        public string? UsuarioAsignado { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        public DateTime? FechaCompletado { get; set; }
+
+        public PedidoVenta Pedido { get; set; } = new();
     }
 }
