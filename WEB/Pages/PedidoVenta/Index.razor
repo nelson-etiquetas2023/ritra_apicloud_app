@@ -16,7 +16,7 @@
     <div class="d-flex gap-2 align-items-center">
         <button class="btn btn-outline-success" type="button"
                 data-testid="btn-enviar-picking"
-                disabled="@(seleccionablesCount == 0 || procesando)"
+                disabled="@(selected.Count == 0 || procesando)"
                 title="@($"De los {selected.Count} marcados, {seleccionablesCount} se pueden enviar a picking")"
                 @onclick="TransferirAPicking">
             <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" />
@@ -346,7 +346,7 @@ else
         if (validos.Count == 0)
         {
             ToastService.Notify(new(ToastType.Warning,
-                $"Ninguno de los pedidos marcados se puede enviar a picking: {MotivoNoTransferible(descartados[0])}"));
+                $"Ninguno de los {descartados.Count} pedidos marcados se puede enviar a picking: {MotivoNoTransferible(descartados[0])}"));
             return;
         }
 

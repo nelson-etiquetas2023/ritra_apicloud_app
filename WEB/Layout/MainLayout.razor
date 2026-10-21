@@ -39,6 +39,10 @@
             @Body
         </article>
     </main>
+
+    <!-- Sin este componente las notificaciones de ToastService.Notify no se
+         ven en ninguna pagina: el usuario no recibe ningun aviso. -->
+    <Toasts Placement="ToastsPlacement.TopRight" />
 </div>
 
 @code {
