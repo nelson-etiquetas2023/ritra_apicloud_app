@@ -173,6 +173,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
+app.MapGet("/", () => Results.Ok(new
+{
+    aplicacion = "ScanPro API",
+    estado = "activo",
+    entorno = app.Environment.EnvironmentName,
+    version = typeof(Program).Assembly.GetName().Version?.ToString(),
+    salud = "/health"
+}));
 app.MapGet("/error", () => Results.Problem("Ocurri? un error inesperado. Por favor, int?ntelo nuevamente."));
 app.Run();
 
