@@ -14,8 +14,17 @@
 <div class="d-flex justify-content-between align-items-center mt-0">
     <h2 class="mb-0"><Icon Name="IconName.Cart4" Size="IconSize.x2" /> Pedido de Venta</h2>
     <div class="d-flex gap-2 align-items-center">
-        <button class="btn btn-outline-success" type="button" disabled="@(selected.Count == 0 || procesando)" @onclick="TransferirAPicking">
-            <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" /> Enviar a Picking (@selected.Count)
+        <button class="btn btn-outline-success" type="button"
+                data-testid="btn-enviar-picking"
+                disabled="@(seleccionablesCount == 0 || procesando)"
+                title="@($"De los {selected.Count} marcados, {seleccionablesCount} se pueden enviar a picking")"
+                @onclick="TransferirAPicking">
+            <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" />
+            Enviar a Picking (@seleccionablesCount)
+            @if (selected.Count != seleccionablesCount)
+            {
+                <span class="ms-1 small">de @selected.Count marcados</span>
+            }
         </button>
         <button class="btn btn-primary" type="button" @onclick="NuevoPV">
             <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nuevo Pedido
@@ -35,7 +44,13 @@
                     <Icon Name="IconName.Search" />
                 </Button>
             </div>
-            <strong class="text-nowrap" style="width: 100px;">@pedidosFiltered?.Count().ToString() Items.</strong>
+            <button type="button" class="btn btn-sm @(soloParaPicking ? "btn-success" : "btn-outline-secondary")"
+                    data-testid="btn-solo-picking"
+                    title="Muestra solo los pedidos que se pueden enviar a picking"
+                    @onclick="AlternarSoloParaPicking">
+                <Icon Name="IconName.Filter" /> Solo para picking (@conteoEnviables)
+            </button>
+            <strong class="text-nowrap" style="width: 100px;">@PedidosFiltrados.Count() Items.</strong>
         </form>
     </div>
 </nav>
@@ -46,7 +61,7 @@
         <Spinner Size="SpinnerSize.Large" /> <strong style="margin-left:10px;"> Cargando datos...</strong>
     </div>
 }
-else if (!pedidosFiltered!.Any())
+else if (!PedidosFiltrados.Any())
 {
     <div class="text-center py-5">
         <h6 class="text-muted"><Icon Name="IconName.Inbox" /> No hay documentos</h6>
@@ -55,18 +70,23 @@ else if (!pedidosFiltered!.Any())
 }
 else
 {
-    <QuickGrid Items="pedidosFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
+    <QuickGrid @ref="grid" Items="@ItemsGrid" RowClass="@FilaClase" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
     <TemplateColumn Title="Sel">
         <HeaderTemplate>
-            <input type="checkbox"
-                   checked="@(pedidosFiltered is not null && pedidosFiltered.Any(p => PuedeTransferirA(p)) && pedidosFiltered.Where(p => PuedeTransferirA(p)).All(p => selected.Contains(p.Id)))"
-                   @onchange="@(e => ToggleSeleccionarTodo((bool)(e.Value ?? false)))" />
+            <div class="d-flex flex-column align-items-center gap-1">
+                <input type="checkbox"
+                       data-testid="sel-todos"
+                       checked="@(PedidosFiltrados.Any(p => PuedeTransferirA(p)) && PedidosFiltrados.Where(p => PuedeTransferirA(p)).All(p => selected.Contains(p.Id)))"
+                       @onchange="@(e => ToggleSeleccionarTodo((bool)(e.Value ?? false)))" />
+                <small class="text-muted" style="font-size:.65rem;">picking</small>
+            </div>
         </HeaderTemplate>
         <ChildContent>
             <input type="checkbox"
+                   data-testid="sel-pedido"
+                   class="@(PuedeTransferirA(context) ? "" : "opacity-50")"
                    checked="@selected.Contains(context.Id)"
-                   disabled="@(!PuedeTransferirA(context))"
-                   title="@(PuedeTransferirA(context) ? "" : "El pedido no se puede enviar a picking en su estado actual.")"
+                   title="@(PuedeTransferirA(context) ? "Marcar para enviar a picking" : MotivoNoTransferible(context))"
                    @onchange="@(e => ToggleSeleccion(context.Id, (bool)(e.Value ?? false)))" />
         </ChildContent>
     </TemplateColumn>
@@ -166,38 +186,87 @@ else
 
     private HashSet<int> selected = [];
     private List<PedidoVenta>? Pedidos;
-    private IEnumerable<PedidoVenta>? pedidosFiltered;
     private string searchText = "";
     private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
     private int pageSize = 15;
+    private QuickGrid<PedidoVenta>? grid;
     private ModalDetailsPedidoVenta modalDetails = default!;
     private ModalProcesarPedidoVenta modalProcesar = default!;
 
     protected override async Task OnInitializedAsync()
     {
         Pedidos = await VentaService.GetAllAsync();
-        buscar();
+        await buscar();
     }
 
-    private void buscar()
+    private async Task buscar()
     {
-        if (Pedidos == null) return;
+        // La consulta se invalida solo cuando cambia el filtro: QuickGrid
+        // vuelve a consultar cada vez que cambia la referencia de Items, y si
+        // se crea una nueva en cada render se queda en estado "cargando".
+        // No hay que llamar a RefreshDataAsync: el propio cambio de Items
+        // hace que el grid vuelva a pedir los datos.
+        _items = null;
+        await Task.CompletedTask;
+    }
 
-        if (string.IsNullOrWhiteSpace(searchText))
+    private IQueryable<PedidoVenta>? _items;
+
+    /// <summary>
+    /// Origen de datos del grid. Se mantiene la misma referencia entre renders
+    /// para que QuickGrid no vuelva a consultar en cada repintado.
+    /// Con el filtro activo se ponen primero los pedidos que se pueden enviar:
+    /// el numero de pedidos de la pagina no cambia, solo el orden.
+    /// </summary>
+    private IQueryable<PedidoVenta> ItemsGrid =>
+        _items ??= (soloParaPicking
+            ? PedidosFiltrados
+                .OrderBy(p => PuedeTransferirA(p) ? 0 : 1)
+                .ThenByDescending(o => o.Id)
+                .AsQueryable()
+            : PedidosFiltrados.OrderByDescending(o => o.Id).AsQueryable());
+
+    /// <summary>
+    /// pedidos que cumplen el filtro de busqueda y el de solo picking.
+    /// </summary>
+    private IEnumerable<PedidoVenta> PedidosFiltrados
+    {
+        get
         {
-            pedidosFiltered = Pedidos
-                .OrderByDescending(o => o.Id);
+            IEnumerable<PedidoVenta> filtrados = Pedidos ?? [];
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                filtrados = filtrados.Where(o =>
+                    (o.Numero != null && o.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (o.Cliente_Nombre != null && o.Cliente_Nombre.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (o.Description != null && o.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (o.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchText, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            return filtrados;
         }
-        else
-        {
-            pedidosFiltered = Pedidos.Where(o =>
-                (o.Numero != null && o.Numero.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.Cliente_Nombre != null && o.Cliente_Nombre.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.Description != null && o.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
-                (o.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss").Contains(searchText, StringComparison.OrdinalIgnoreCase)))
-                .OrderByDescending(o => o.Id);
-        }
-        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Con el filtro "Solo para picking" se ocultan las filas que no se pueden
+    /// enviar. Se oculta la fila en vez de quitar el pedido de la consulta
+    /// porque QuickGrid no recalcula bien el DOM cuando cambia el numero de
+    /// elementos de la pagina.
+    /// </summary>
+    private string FilaClase(PedidoVenta pedido) =>
+        soloParaPicking && !PuedeTransferirA(pedido) ? "d-none" : "";
+
+    private ValueTask<ItemsProviderResult<PedidoVenta>> ProveerPedidos(GridItemsProviderRequest<PedidoVenta> request)
+    {
+        var consulta = PedidosFiltrados.OrderByDescending(o => o.Id).AsQueryable();
+        var total = consulta.Count();
+        var items = consulta
+            .Skip(request.StartIndex)
+            .Take(request.Count ?? pageSize)
+            .ToList();
+
+        return ValueTask.FromResult(new ItemsProviderResult<PedidoVenta>(items, total));
     }
 
     private void NuevoPV()
@@ -207,6 +276,10 @@ else
 
     private void ToggleSeleccion(int id, bool on)
     {
+        // No se bloquea la casilla: Blazor solo reescribe el atributo cuando el
+        // valor cambia, asi que impedir la seleccion dejaba el checkbox
+        // marcado en el DOM sin estar en el conjunto. Se marca siempre y el
+        // boton indica cuantos son realmente enviables.
         if (on) selected.Add(id); else selected.Remove(id);
         StateHasChanged();
     }
@@ -219,12 +292,38 @@ else
         pedido.Status != PedidoVentaStatus.Anulado &&
         pedido.Status != PedidoVentaStatus.Picking;
 
+    private static string MotivoNoTransferible(PedidoVenta pedido) => pedido.Status switch
+    {
+        PedidoVentaStatus.Procesado => $"El pedido {pedido.Numero} ya fue procesado y no se puede enviar a picking.",
+        PedidoVentaStatus.Anulado => $"El pedido {pedido.Numero} está anulado y no se puede enviar a picking.",
+        PedidoVentaStatus.Picking => $"El pedido {pedido.Numero} ya está en picking.",
+        _ => $"El pedido {pedido.Numero} no se puede enviar a picking en su estado actual."
+    };
+
+    /// <summary>Cantidad de pedidos seleccionados que realmente se pueden enviar.</summary>
+    private int seleccionablesCount =>
+        Pedidos?.Count(p => selected.Contains(p.Id) && PuedeTransferirA(p)) ?? 0;
+
+    /// <summary>Cantidad de pedidos de la lista que se pueden enviar a picking.</summary>
+    private int conteoEnviables =>
+        Pedidos?.Count(p => PuedeTransferirA(p)) ?? 0;
+
+    private bool soloParaPicking;
+
+    private void AlternarSoloParaPicking()
+    {
+        // Se reordena la consulta: los pedidos enviables pasan a la primera
+        // pagina. El numero de pedidos no cambia, por eso el grid no deja
+        // filas en blanco.
+        soloParaPicking = !soloParaPicking;
+        _items = null;
+        StateHasChanged();
+    }
+
     private void ToggleSeleccionarTodo(bool on)
     {
-        if (pedidosFiltered is null) return;
-        foreach (var p in pedidosFiltered)
+        foreach (var p in PedidosFiltrados)
         {
-            if (!PuedeTransferirA(p)) continue;
             if (on) selected.Add(p.Id); else selected.Remove(p.Id);
         }
         StateHasChanged();
@@ -247,7 +346,7 @@ else
         if (validos.Count == 0)
         {
             ToastService.Notify(new(ToastType.Warning,
-                $"Los pedidos seleccionados no se pueden enviar a picking: {string.Join(", ", descartados.Select(p => p.Numero))}"));
+                $"Ninguno de los pedidos marcados se puede enviar a picking: {MotivoNoTransferible(descartados[0])}"));
             return;
         }
 
@@ -266,7 +365,7 @@ else
                 if (descartados.Count > 0)
                 {
                     ToastService.Notify(new(ToastType.Warning,
-                        $"No se enviaron a picking: {string.Join(", ", descartados.Select(p => p.Numero))}"));
+                        $"No se enviaron a picking ({descartados.Count}): {MotivoNoTransferible(descartados[0])}"));
                 }
             }
             else
@@ -285,7 +384,7 @@ else
 
         selected.Clear();
         Pedidos = await VentaService.GetAllAsync();
-        buscar();
+        await buscar();
     }
 
     private async Task CancelarPicking(PedidoVenta pv)
@@ -307,7 +406,7 @@ else
 
         selected.Clear();
         Pedidos = await VentaService.GetAllAsync();
-        buscar();
+        await buscar();
     }
 
     private void Editar(PedidoVenta pv)
@@ -329,7 +428,7 @@ else
     {
         selected.Clear();
         Pedidos = await VentaService.GetAllAsync();
-        buscar();
+        await buscar();
     }
 
     private async Task Eliminar(PedidoVenta pv)
@@ -348,7 +447,7 @@ else
         {
             ToastService.Notify(new(ToastType.Danger, $"No se pudo eliminar el pedido {pv.Numero}."));
         }
-        buscar();
+        await buscar();
     }
 
     private async Task Anular(PedidoVenta pv)
@@ -367,6 +466,9 @@ else
         {
             ToastService.Notify(new(ToastType.Danger, $"No se pudo anular el pedido {pv.Numero}."));
         }
-        buscar();
+        await buscar();
     }
 }
+
+
+
