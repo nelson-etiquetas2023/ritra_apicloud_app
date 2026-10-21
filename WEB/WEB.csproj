@@ -49,14 +49,6 @@
 
 
   <ItemGroup>
-    <Reference Include="Shared">
-      <HintPath>..\Shared\bin\Debug\net10.0\Shared.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-
-
-  <ItemGroup>
     <Folder Include="ExportData\" />
     <Folder Include="Tests\Services\CargasIniciales\" />
     <Folder Include="wwwroot\js\" />
