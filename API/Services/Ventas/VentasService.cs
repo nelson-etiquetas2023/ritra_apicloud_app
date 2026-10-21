@@ -189,6 +189,13 @@ namespace API.Services.Ventas
                 return result;
             }
 
+            if (existing.Status == PedidoVentaStatus.Picking)
+            {
+                result.Success = false;
+                result.Message = "El documento está en picking y no puede editarse hasta que salga de picking.";
+                return result;
+            }
+
             if (pedido.Cliente_Id <= 0)
             {
                 result.Success = false;
@@ -400,6 +407,18 @@ namespace API.Services.Ventas
             }
 
             pedido.Status = 6;
+
+            // Si el pedido estaba en picking se retira la orden para que el
+            // dispositivo deje de traerlo al sincronizar.
+            var pickingActivo = await context.PickingOrders
+                .Where(po => po.NumeroPedidoVenta == pedido.Numero && po.Estado != 2)
+                .ToListAsync();
+
+            if (pickingActivo.Count > 0)
+            {
+                context.PickingOrders.RemoveRange(pickingActivo);
+            }
+
             await context.SaveChangesAsync();
             return true;
         }

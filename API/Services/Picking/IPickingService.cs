@@ -8,5 +8,6 @@ namespace API.Services.Picking
         Task<PickingOrderResult> TransferirAPickingAsync(List<string> numerosPedido, string? usuario);
         Task<List<PedidoVenta>> GetPedidosParaPickingAsync();
         Task<bool> CompletarPickingAsync(int pickingOrderId);
+        Task<PickingOrderResult> CancelarPickingAsync(string? numeroPedido);
     }
 }

@@ -61,5 +61,35 @@ namespace WEB.Services.Picking
                 return [];
             }
         }
+
+        public async Task<PickingOrderResult> CancelarPickingAsync(string numeroPedido)
+        {
+            try
+            {
+                var clientHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clientHttp.PostAsync($"api/picking/cancel/{Uri.EscapeDataString(numeroPedido)}", null);
+                var responseJson = await response.Content.ReadAsStringAsync();
+
+                if (string.IsNullOrWhiteSpace(responseJson))
+                    return new PickingOrderResult { Success = false, Message = "El servidor no devolvió una respuesta válida." };
+
+                var result = await JsonSerializer.DeserializeAsync<PickingOrderResult>(
+                    new MemoryStream(Encoding.UTF8.GetBytes(responseJson)), jsonOptions);
+
+                if (result is null)
+                    return new PickingOrderResult { Success = false, Message = "No se pudo cancelar el picking." };
+
+                // El servidor responde 400 cuando el pedido no está en picking.
+                if (!response.IsSuccessStatusCode && result.Success)
+                    result.Success = false;
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Excepción]: No se pudo cancelar el picking. Detalle: {ex.Message}");
+                return new PickingOrderResult { Success = false, Message = $"No se pudo conectar con el servidor: {ex.Message}" };
+            }
+        }
     }
 }

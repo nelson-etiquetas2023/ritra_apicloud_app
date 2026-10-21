@@ -7,5 +7,6 @@ namespace WEB.Services.Picking
     {
         Task<PickingOrderResult> TransferirAPickingAsync(List<string> numerosPedido, string? usuario);
         Task<List<PedidoVenta>> GetPedidosParaPickingAsync();
+        Task<PickingOrderResult> CancelarPickingAsync(string numeroPedido);
     }
 }

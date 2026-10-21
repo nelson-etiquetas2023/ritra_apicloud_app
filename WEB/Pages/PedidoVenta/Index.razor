@@ -15,7 +15,7 @@
     <h2 class="mb-0"><Icon Name="IconName.Cart4" Size="IconSize.x2" /> Pedido de Venta</h2>
     <div class="d-flex gap-2 align-items-center">
         <button class="btn btn-outline-success" type="button" disabled="@(selected.Count == 0 || procesando)" @onclick="TransferirAPicking">
-            <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" /> Transferir a Picking (@selected.Count)
+            <Icon Name="IconName.BoxArrowRight" Size="IconSize.x4" /> Enviar a Picking (@selected.Count)
         </button>
         <button class="btn btn-primary" type="button" @onclick="NuevoPV">
             <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nuevo Pedido
@@ -59,11 +59,15 @@ else
     <TemplateColumn Title="Sel">
         <HeaderTemplate>
             <input type="checkbox"
-                   checked="@(pedidosFiltered is not null && pedidosFiltered.Any() && pedidosFiltered.All(p => selected.Contains(p.Id)))"
+                   checked="@(pedidosFiltered is not null && pedidosFiltered.Any(p => PuedeTransferirA(p)) && pedidosFiltered.Where(p => PuedeTransferirA(p)).All(p => selected.Contains(p.Id)))"
                    @onchange="@(e => ToggleSeleccionarTodo((bool)(e.Value ?? false)))" />
         </HeaderTemplate>
         <ChildContent>
-            <input type="checkbox" checked="@selected.Contains(context.Id)" @onchange="@(e => ToggleSeleccion(context.Id, (bool)(e.Value ?? false)))" />
+            <input type="checkbox"
+                   checked="@selected.Contains(context.Id)"
+                   disabled="@(!PuedeTransferirA(context))"
+                   title="@(PuedeTransferirA(context) ? "" : "El pedido no se puede enviar a picking en su estado actual.")"
+                   @onchange="@(e => ToggleSeleccion(context.Id, (bool)(e.Value ?? false)))" />
         </ChildContent>
     </TemplateColumn>
     <TemplateColumn Title="Numero" Sortable="true">
@@ -118,6 +122,10 @@ else
             {
                 <Badge Color="BadgeColor.Danger">Anulado</Badge>
             }
+            else if (context.Status == PedidoVentaStatus.Picking)
+            {
+                <Badge Color="BadgeColor.Primary">Picking</Badge>
+            }
             else
             {
                 <Badge Color="BadgeColor.Secondary">@context.Status</Badge>
@@ -135,6 +143,14 @@ else
                     <Tooltip Title="Anular" Placement="TooltipPlacement.Top">
                         <a href="javascript:void(0)" @onclick="() => Anular(context)" style="cursor: pointer; margin-left:10px;">
                             <Icon Name="IconName.XCircle" Size="IconSize.x5" Color="IconColor.Danger" />
+                        </a>
+                    </Tooltip>
+                }
+                @if (context.Status == PedidoVentaStatus.Picking)
+                {
+                    <Tooltip Title="Cancelar Picking" Placement="TooltipPlacement.Top">
+                        <a href="javascript:void(0)" @onclick="() => CancelarPicking(context)" style="cursor: pointer; margin-left:10px;">
+                            <Icon Name="IconName.XCircleFill" Size="IconSize.x5" Color="IconColor.Warning" />
                         </a>
                     </Tooltip>
                 }
@@ -195,11 +211,20 @@ else
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Solo los pedidos planificados o modificados pueden enviarse a picking.
+    /// </summary>
+    private static bool PuedeTransferirA(PedidoVenta pedido) =>
+        pedido.Status != PedidoVentaStatus.Procesado &&
+        pedido.Status != PedidoVentaStatus.Anulado &&
+        pedido.Status != PedidoVentaStatus.Picking;
+
     private void ToggleSeleccionarTodo(bool on)
     {
         if (pedidosFiltered is null) return;
         foreach (var p in pedidosFiltered)
         {
+            if (!PuedeTransferirA(p)) continue;
             if (on) selected.Add(p.Id); else selected.Remove(p.Id);
         }
         StateHasChanged();
@@ -214,17 +239,35 @@ else
         var aTransferir = Pedidos.Where(p => selected.Contains(p.Id)).ToList();
         if (aTransferir.Count == 0) { ToastService.Notify(new(ToastType.Warning, "No hay pedidos válidos para transferir.")); return; }
 
+        // Se descartan los que no son transferibles para avisar al usuario
+        // en vez de mandar al servidor un lote que va a ser rechazado entero.
+        var validos = aTransferir.Where(PuedeTransferirA).ToList();
+        var descartados = aTransferir.Where(p => !PuedeTransferirA(p)).ToList();
+
+        if (validos.Count == 0)
+        {
+            ToastService.Notify(new(ToastType.Warning,
+                $"Los pedidos seleccionados no se pueden enviar a picking: {string.Join(", ", descartados.Select(p => p.Numero))}"));
+            return;
+        }
+
         procesando = true;
         StateHasChanged();
 
         try
         {
-            var numeros = aTransferir.Select(p => p.Numero).ToList();
+            var numeros = validos.Select(p => p.Numero).ToList();
             var result = await PickingService.TransferirAPickingAsync(numeros, null);
 
             if (result.Success)
             {
                 ToastService.Notify(new(ToastType.Success, result.Message));
+
+                if (descartados.Count > 0)
+                {
+                    ToastService.Notify(new(ToastType.Warning,
+                        $"No se enviaron a picking: {string.Join(", ", descartados.Select(p => p.Numero))}"));
+                }
             }
             else
             {
@@ -238,6 +281,28 @@ else
         finally
         {
             procesando = false;
+        }
+
+        selected.Clear();
+        Pedidos = await VentaService.GetAllAsync();
+        buscar();
+    }
+
+    private async Task CancelarPicking(PedidoVenta pv)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Deseas sacar el pedido {pv.Numero} de picking? El dispositivo dejará de traerlo en la próxima sincronización.");
+        if (!confirm) return;
+
+        var result = await PickingService.CancelarPickingAsync(pv.Numero);
+
+        if (result.Success)
+        {
+            ToastService.Notify(new(ToastType.Success, result.Message));
+        }
+        else
+        {
+            ToastService.Notify(new(ToastType.Danger, result.Message));
         }
 
         selected.Clear();

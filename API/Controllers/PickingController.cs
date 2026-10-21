@@ -29,5 +29,13 @@ namespace API.Controllers
             if (!ok) return NotFound($"El registro de picking {id} no existe o ya está completado.");
             return Ok(new { message = "Picking completado correctamente." });
         }
+
+        [HttpPost("cancel/{numeroPedido}")]
+        public async Task<IActionResult> CancelarPicking(string numeroPedido)
+        {
+            var result = await service.CancelarPickingAsync(numeroPedido);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
     }
 }

@@ -58,16 +58,18 @@ namespace API.Services.Picking
                 return result;
             }
 
-            // Verificar que ninguno esté procesado (4) o anulado (6)
+            // Verificar que ninguno esté procesado (4), anulado (6) o ya en picking (7)
             var noTransferibles = pedidosExistentes
-                .Where(p => p.Status == 4 || p.Status == 6)
+                .Where(p => p.Status == PedidoVentaStatus.Procesado ||
+                            p.Status == PedidoVentaStatus.Anulado ||
+                            p.Status == PedidoVentaStatus.Picking)
                 .Select(p => p.Numero)
                 .ToList();
 
             if (noTransferibles.Count > 0)
             {
                 result.Success = false;
-                result.Message = $"Los siguientes pedidos no se pueden transferir (procesados o anulados): {string.Join(", ", noTransferibles)}";
+                result.Message = $"Los siguientes pedidos no se pueden transferir (procesados, anulados o ya en picking): {string.Join(", ", noTransferibles)}";
                 return result;
             }
 
@@ -87,6 +89,14 @@ namespace API.Services.Picking
             }
 
             context.PickingOrders.AddRange(pickingOrders);
+
+            // Los pedidos quedan marcados con estatus Picking para que la web
+            // los muestre como "en picking" y el device los traiga al sincronizar.
+            foreach (var pedido in pedidosExistentes)
+            {
+                pedido.Status = PedidoVentaStatus.Picking;
+            }
+
             await context.SaveChangesAsync();
 
             result.Success = true;
@@ -124,8 +134,58 @@ namespace API.Services.Picking
 
             picking.Estado = 2;
             picking.FechaCompletado = DateTime.Now;
+
+            // El pedido vuelve a quedar disponible para procesar en la web.
+            var pedido = await context.PedidoVenta
+                .FirstOrDefaultAsync(p => p.Numero == picking.NumeroPedidoVenta);
+
+            if (pedido != null && pedido.Status == PedidoVentaStatus.Picking)
+            {
+                pedido.Status = PedidoVentaStatus.Planificado;
+            }
+
             await context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<PickingOrderResult> CancelarPickingAsync(string? numeroPedido)
+        {
+            var result = new PickingOrderResult();
+
+            if (string.IsNullOrWhiteSpace(numeroPedido))
+            {
+                result.Success = false;
+                result.Message = "No se indicó el pedido a sacar de picking.";
+                return result;
+            }
+
+            var numero = numeroPedido.Trim();
+
+            var picking = await context.PickingOrders
+                .Where(po => po.NumeroPedidoVenta == numero && po.Estado != 2)
+                .OrderByDescending(po => po.Id)
+                .FirstOrDefaultAsync();
+
+            if (picking == null)
+            {
+                result.Success = false;
+                result.Message = $"El pedido {numero} no está en picking.";
+                return result;
+            }
+
+            context.PickingOrders.Remove(picking);
+
+            var pedido = await context.PedidoVenta.FirstOrDefaultAsync(p => p.Numero == numero);
+            if (pedido != null && pedido.Status == PedidoVentaStatus.Picking)
+            {
+                pedido.Status = PedidoVentaStatus.Planificado;
+            }
+
+            await context.SaveChangesAsync();
+
+            result.Success = true;
+            result.Message = $"El pedido {numero} salió de picking.";
+            return result;
         }
     }
 }

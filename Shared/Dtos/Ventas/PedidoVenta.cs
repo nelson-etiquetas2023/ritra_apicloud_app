@@ -4,6 +4,34 @@ using Shared.Dtos.Inventarios;
 
 namespace Shared.Dtos.Ventas
 {
+    /// <summary>
+    /// Estados posibles de un pedido de venta.
+    /// </summary>
+    public static class PedidoVentaStatus
+    {
+        public const int Planificado = 0;
+        public const int Modificado = 1;
+        public const int Sincronizado = 2;
+        public const int Cerrado = 3;
+        public const int Procesado = 4;
+        public const int TransaccionFallida = 5;
+        public const int Anulado = 6;
+        public const int Picking = 7;
+
+        public static string Texto(int status) => status switch
+        {
+            Planificado => "Planificado",
+            Modificado => "Modificado",
+            Sincronizado => "Sincronizado",
+            Cerrado => "Cerrado",
+            Procesado => "Procesado",
+            TransaccionFallida => "Transacción Fallida",
+            Anulado => "Anulado",
+            Picking => "Picking",
+            _ => status.ToString()
+        };
+    }
+
     public class PedidoVenta
     {
         [Key]
@@ -51,17 +79,7 @@ namespace Shared.Dtos.Ventas
         public ICollection<VentaPago> Pagos { get; set; } = [];
 
         [JsonIgnore]
-        public string StatusTexto => Status switch
-        {
-            0 => "Planificado",
-            1 => "Modificado",
-            2 => "Sincronizado",
-            3 => "Cerrado",
-            4 => "Procesado",
-            5 => "Transacción Fallida",
-            6 => "Anulado",
-            _ => Status.ToString()
-        };
+        public string StatusTexto => PedidoVentaStatus.Texto(Status);
     }
 
     public class DetalleVenta
