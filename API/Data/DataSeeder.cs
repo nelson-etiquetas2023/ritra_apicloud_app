@@ -8,19 +8,20 @@ namespace API.Data
     {
         public static void Seed(ApplicationDbContext context)
         {
-            const string defaultAdminEmail = "admin@scanpro.local";
-            const string defaultAdminNickname = "admin";
-            const string defaultAdminPassword = "admin";
+            const string defaultAdminEmail = "nelson.tecno2024@gmail.com";
+            const string defaultAdminNickname = "npino";
+            const string defaultAdminPassword = "Jossycar5%";
 
-            // Credenciales anteriores: se buscan primero para renombrar en
-            // caliente la base ya existente en vez de crear un segundo admin.
-            const string legacyAdminEmail = "nelson.tecno2024@gmail.com";
-            const string legacyAdminNickname = "npino";
+            // Identidades con las que la cuenta pudo quedar antes: se buscan
+            // para corregir en caliente la base ya instalada en vez de crear
+            // un segundo administrador.
+            const string adminEmailAlterno = "admin@scanpro.local";
+            const string adminNicknameAlterno = "admin";
 
             var admin = context.Users.FirstOrDefault(u =>
-                            u.Nickname == legacyAdminNickname || u.Email == legacyAdminEmail)
+                            u.Nickname == defaultAdminNickname || u.Email == defaultAdminEmail)
                         ?? context.Users.FirstOrDefault(u =>
-                            u.Nickname == defaultAdminNickname || u.Email == defaultAdminEmail);
+                            u.Nickname == adminNicknameAlterno || u.Email == adminEmailAlterno);
 
             if (admin is null)
             {
