@@ -12,16 +12,11 @@ namespace API.Data
             const string defaultAdminNickname = "npino";
             const string defaultAdminPassword = "Jossycar5%";
 
-            // Identidades con las que la cuenta pudo quedar antes: se buscan
-            // para corregir en caliente la base ya instalada en vez de crear
-            // un segundo administrador.
-            const string adminEmailAlterno = "admin@scanpro.local";
-            const string adminNicknameAlterno = "admin";
-
+            // Solo se busca por las identidades de esta cuenta. Si se buscasen
+            // otras, el seed podria renombrar y cambiarle la contrasena a una
+            // cuenta legitima (por ejemplo la de acceso rapido admin/admin).
             var admin = context.Users.FirstOrDefault(u =>
-                            u.Nickname == defaultAdminNickname || u.Email == defaultAdminEmail)
-                        ?? context.Users.FirstOrDefault(u =>
-                            u.Nickname == adminNicknameAlterno || u.Email == adminEmailAlterno);
+                u.Nickname == defaultAdminNickname || u.Email == defaultAdminEmail);
 
             if (admin is null)
             {
