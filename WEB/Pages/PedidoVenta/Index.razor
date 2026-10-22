@@ -84,9 +84,10 @@ else
         <ChildContent>
             <input type="checkbox"
                    data-testid="sel-pedido"
-                   class="@(PuedeTransferirA(context) ? "" : "opacity-50")"
+                   class="@(PuedeSeleccionar(context) ? "" : "opacity-50")"
                    checked="@selected.Contains(context.Id)"
-                   title="@(PuedeTransferirA(context) ? "Marcar para enviar a picking" : MotivoNoTransferible(context))"
+                   disabled="@(!PuedeSeleccionar(context))"
+                   title="@(PuedeSeleccionar(context) ? "Marcar para enviar a picking" : $"El pedido {context.Numero} ya está en picking: solo el dispositivo puede cambiar su estatus.")"
                    @onchange="@(e => ToggleSeleccion(context.Id, (bool)(e.Value ?? false)))" />
         </ChildContent>
     </TemplateColumn>
@@ -290,6 +291,14 @@ else
     private static bool PuedeTransferirA(PedidoVenta pedido) =>
         pedido.Status != PedidoVentaStatus.Procesado &&
         pedido.Status != PedidoVentaStatus.Anulado &&
+        pedido.Status != PedidoVentaStatus.Picking;
+
+    /// <summary>
+    /// Un pedido que ya esta en picking no se puede volver a marcar: de su
+    /// estatus solo se ocupa el dispositivo. El resto se puede marcar y el
+    /// boton explica al final los que no se pueden enviar.
+    /// </summary>
+    private static bool PuedeSeleccionar(PedidoVenta pedido) =>
         pedido.Status != PedidoVentaStatus.Picking;
 
     private static string MotivoNoTransferible(PedidoVenta pedido) => pedido.Status switch

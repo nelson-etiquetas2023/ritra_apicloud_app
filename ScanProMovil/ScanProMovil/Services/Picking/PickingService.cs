@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using ScanProMovil.Data;
 using ScanProMovil.Data.Entities;
+using ScanProMovil.Data.Services;
 using Shared.Dtos.Ventas;
 using System.Text;
 using System.Text.Json;
@@ -41,7 +42,7 @@ namespace ScanProMovil.Services.Picking
                 var remotos = await JsonSerializer.DeserializeAsync<List<PickingPendienteDto>>(
                     new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? new List<PickingPendienteDto>();
 
-                return MapearAPickingLocal(remotos);
+                return PickingSincronizador.Mapear(remotos);
             }
             catch (Exception ex)
             {
@@ -71,60 +72,10 @@ namespace ScanProMovil.Services.Picking
 
                 var idsRemotos = remotos.Select(p => p.PickingId).ToList();
 
-                var locales = await _context.PickingOrders
-                    .Include(p => p.Items)
-                    .Where(p => idsRemotos.Contains(p.PickingId))
-                    .ToListAsync();
-
-                var localesPorId = locales.ToDictionary(p => p.PickingId);
-
-                // Ordenes completadas en el dispositivo que el servidor aun no
-                // sabe: se cierran alli para que el pedido no vuelva a la lista.
-                var pendientesDeCerrar = new List<PickingOrder>();
-
-                foreach (var remoto in remotos)
-                {
-                    if (localesPorId.TryGetValue(remoto.PickingId, out var local))
-                    {
-                        // Ya existe: se actualiza el estado sin perder el
-                        // avance de los items marcados en el dispositivo.
-                        if (local.Estado != 2)
-                        {
-                            local.Estado = remoto.Estado;
-                            local.UsuarioAsignado = remoto.UsuarioAsignado ?? local.UsuarioAsignado;
-                            local.FechaCreacion = remoto.FechaCreacion;
-                        }
-                        else if (remoto.Estado != 2)
-                        {
-                            pendientesDeCerrar.Add(local);
-                        }
-
-                        // Items nuevos que todavia no estan en local.
-                        var codigosLocales = local.Items.Select(i => i.ProductCode).ToHashSet();
-                        foreach (var item in remoto.Items)
-                        {
-                            if (codigosLocales.Contains(item.ProductCode)) continue;
-
-                            local.Items.Add(new PickingOrderDetail
-                            {
-                                PickingId = local.PickingId,
-                                ProductCode = item.ProductCode,
-                                ProductName = item.ProductName,
-                                Cantidad = item.Cantidad,
-                                Completado = false
-                            });
-                        }
-                    }
-                    else
-                    {
-                        _context.PickingOrders.Add(remoto);
-                    }
-                }
-
-                await _context.SaveChangesAsync();
+                var resultado = await PickingSincronizador.AplicarAsync(_context, remotos, idsRemotos);
 
                 // Propaga al servidor las ordenes que aqui ya estaban completas.
-                foreach (var local in pendientesDeCerrar)
+                foreach (var local in resultado.PendientesDeCerrarRemoto)
                 {
                     await CompletarOrdenRemotoAsync(local.PickingId);
                 }
@@ -206,40 +157,9 @@ namespace ScanProMovil.Services.Picking
 
         private static List<PickingOrder> MapearAPickingLocal(List<PickingPendienteDto> remotos)
         {
-            var resultado = new List<PickingOrder>();
-
-            foreach (var remoto in remotos)
-            {
-                var pedido = remoto.Pedido;
-
-                var picking = new PickingOrder
-                {
-                    // El Id remoto es la clave primaria local: asi al completar
-                    // la orden se puede cerrar en el servidor sin ambiguedad.
-                    PickingId = remoto.PickingId,
-                    NumeroPedidoVenta = remoto.NumeroPedidoVenta,
-                    Estado = remoto.Estado,
-                    FechaCreacion = remoto.FechaCreacion,
-                    UsuarioAsignado = remoto.UsuarioAsignado ?? pedido.Vendedor,
-                    FechaCompletado = remoto.FechaCompletado,
-                    Items = new ObservableCollection<PickingOrderDetail>()
-                };
-
-                foreach (var item in pedido.Items)
-                {
-                    picking.Items.Add(new PickingOrderDetail
-                    {
-                        ProductCode = item.Product_id,
-                        ProductName = item.Product_name,
-                        Cantidad = item.Cantidad,
-                        Completado = false
-                    });
-                }
-
-                resultado.Add(picking);
-            }
-
-            return resultado;
+            // El mapeo vive en el proyecto de datos para poder probarlo sin
+            // dispositivo movil.
+            return PickingSincronizador.Mapear(remotos);
         }
     }
 }
