@@ -13,9 +13,10 @@ namespace ScanProMovil.Migrations
             // La clave primaria local ahora es el Id de la orden de picking en
             // el servidor. Las filas que se tenian con Id generado local ya
             // no significan nada, asi que se limpian: el dispositivo vuelve a
-            // descargarlas al sincronizar.
-            migrationBuilder.Sql("DELETE FROM PickingOrderItems;");
-            migrationBuilder.Sql("DELETE FROM PickingOrders;");
+            // descargarlas al sincronizar. Los DELETE van condicionados para
+            // que no fallen si en ese dispositivo las tablas aun no existian.
+            migrationBuilder.Sql("DELETE FROM PickingOrderItems WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='PickingOrderItems');");
+            migrationBuilder.Sql("DELETE FROM PickingOrders WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='PickingOrders');");
 
             migrationBuilder.AlterColumn<int>(
                 name: "PickingId",

@@ -14,6 +14,11 @@
                     WidthRequest="170"
                     HeightRequest="42"
                     IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
+            <Label Text="{Binding OrdenesPicking.Count, StringFormat='{0} pedidos'}"
+                   FontSize="13"
+                   FontAttributes="Bold"
+                   TextColor="#1D3557"
+                   VerticalOptions="Center"/>
             <Label Text="{Binding LoadingMessage}"
                    FontSize="10"
                    TextColor="Gray"

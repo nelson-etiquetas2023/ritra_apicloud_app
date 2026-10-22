@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Handlers;
 using System.Net.Http;
 using ScanProMovil.Data;
+using ScanProMovil.Services;
 using ScanProMovil.Services.Auth;
 using ScanProMovil.Services.Compras;
 using ScanProMovil.Services.Orders;
@@ -108,6 +109,7 @@ namespace ScanProMovil
             builder.Services.AddSingleton<IOrderServices, OrderService>();
             builder.Services.AddSingleton<IComprasService, ComprasService>();
             builder.Services.AddSingleton<IStockInitService, StockInitService>();
+            builder.Services.AddSingleton<IAlertaNotifier, AlertaNotifier>();
             builder.Services.AddTransient<IPickingService, PickingService>();
             builder.Services.AddTransient<PickingViewModel>();
             builder.Services.AddTransient<PickingPage>();
@@ -169,3 +171,4 @@ namespace ScanProMovil
         }
     }
 }
+

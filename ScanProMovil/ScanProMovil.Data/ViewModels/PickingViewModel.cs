@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Maui.Alerts;
 using ScanProMovil.Data.Entities;
+using ScanProMovil.Services;
 using ScanProMovil.Services.Picking;
 using System.Collections.ObjectModel;
 
@@ -10,6 +10,7 @@ namespace ScanProMovil.ViewModels
     public partial class PickingViewModel : ObservableObject
     {
         private readonly IPickingService _pickingService;
+        private readonly IAlertaNotifier _alerta;
 
         [ObservableProperty]
         private bool isLoading;
@@ -28,42 +29,44 @@ namespace ScanProMovil.ViewModels
 
         private List<PickingOrder> _allOrders = new();
 
-        public PickingViewModel(IPickingService pickingService)
+        /// <summary>Evita que se lancen dos sincronizaciones a la vez.</summary>
+        private bool _sincronizando;
+
+        public PickingViewModel(IPickingService pickingService, IAlertaNotifier alerta)
         {
             _pickingService = pickingService;
+            _alerta = alerta;
         }
 
         [RelayCommand]
         public async Task SincronizarPickingAsync()
         {
-            if (IsLoading) return;
+            if (_sincronizando) return;
 
             try
             {
+                _sincronizando = true;
                 IsLoading = true;
                 LoadingMessage = "Sincronizando picking desde el servidor...";
 
                 var ok = await _pickingService.SincronizarPickingDesdeApiAsync();
 
-                if (ok)
-                {
-                    await CargarPickingLocalAsync();
-                    var toast = Toast.Make("Picking sincronizado correctamente.", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await toast.Show();
-                }
-                else
-                {
-                    var toast = Toast.Make("Error al sincronizar picking.", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await toast.Show();
-                }
+                // La carga local se hace siempre, se haya sincronizado bien o
+                // no. Si se omitiera, la lista se quedaria igual y no se
+                // verian los pedidos que acaba de traer el servidor.
+                await CargarPickingLocalAsync();
+
+                await _alerta.MostrarAsync(
+                    ok ? "Picking sincronizado correctamente." : "Error al sincronizar picking.",
+                    ok ? TipoAlerta.Exito : TipoAlerta.Error);
             }
             catch (Exception ex)
             {
-                var toast = Toast.Make($"Error: {ex.Message}", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                await toast.Show();
+                await _alerta.MostrarAsync($"Error: {ex.Message}", TipoAlerta.Error);
             }
             finally
             {
+                _sincronizando = false;
                 IsLoading = false;
                 LoadingMessage = string.Empty;
             }
@@ -72,13 +75,8 @@ namespace ScanProMovil.ViewModels
         [RelayCommand]
         public async Task CargarPickingLocalAsync()
         {
-            if (IsLoading) return;
-
             try
             {
-                IsLoading = true;
-                LoadingMessage = "Cargando picking local...";
-
                 var result = await _pickingService.GetPickingOrdersLocalAsync();
                 _allOrders = result;
                 OrdenesPicking = new ObservableCollection<PickingOrder>(_allOrders);
@@ -87,11 +85,6 @@ namespace ScanProMovil.ViewModels
             catch (Exception ex)
             {
                 Console.WriteLine($"[PickingViewModel] Error cargando picking local: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
-                LoadingMessage = string.Empty;
             }
         }
 
