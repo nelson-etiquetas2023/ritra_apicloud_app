@@ -35,6 +35,7 @@ namespace ScanProMovil.Data.Services
                     Estado = remoto.Estado,
                     FechaCreacion = remoto.FechaCreacion,
                     UsuarioAsignado = remoto.UsuarioAsignado ?? pedido.Vendedor,
+                    ClienteNombre = pedido.Cliente_Nombre,
                     FechaCompletado = remoto.FechaCompletado,
                     Items = new ObservableCollection<EntidadDetalle>()
                 };
@@ -85,6 +86,7 @@ namespace ScanProMovil.Data.Services
                     {
                         local.Estado = remoto.Estado;
                         local.UsuarioAsignado = remoto.UsuarioAsignado ?? local.UsuarioAsignado;
+                        local.ClienteNombre = remoto.ClienteNombre ?? local.ClienteNombre;
                         local.FechaCreacion = remoto.FechaCreacion;
                     }
                     else if (remoto.Estado != 2)

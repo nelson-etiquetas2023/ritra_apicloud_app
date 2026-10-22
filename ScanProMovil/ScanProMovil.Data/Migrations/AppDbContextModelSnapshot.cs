@@ -254,6 +254,9 @@ namespace ScanProMovil.Migrations
                     b.Property<int>("PickingId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ClienteNombre")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Estado")
                         .HasColumnType("INTEGER");
 

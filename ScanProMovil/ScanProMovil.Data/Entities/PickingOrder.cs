@@ -17,6 +17,9 @@ namespace ScanProMovil.Data.Entities
 
         public string? UsuarioAsignado { get; set; }
 
+        /// <summary>Cliente del pedido, para saber a donde se entrega.</summary>
+        public string? ClienteNombre { get; set; }
+
         public DateTime? FechaCompletado { get; set; }
 
         public string EstadoTexto =>

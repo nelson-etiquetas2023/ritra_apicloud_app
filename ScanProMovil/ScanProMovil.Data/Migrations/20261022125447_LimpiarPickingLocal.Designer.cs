@@ -11,7 +11,7 @@ using ScanProMovil.Data;
 namespace ScanProMovil.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261021205909_LimpiarPickingLocal")]
+    [Migration("20261022125447_LimpiarPickingLocal")]
     partial class LimpiarPickingLocal
     {
         /// <inheritdoc />
@@ -256,6 +256,9 @@ namespace ScanProMovil.Migrations
                 {
                     b.Property<int>("PickingId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClienteNombre")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Estado")
                         .HasColumnType("INTEGER");

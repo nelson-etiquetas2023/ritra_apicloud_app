@@ -25,11 +25,21 @@ namespace ScanProMovil.Migrations
                 oldClrType: typeof(int),
                 oldType: "INTEGER")
                 .OldAnnotation("Sqlite:Autoincrement", true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ClienteNombre",
+                table: "PickingOrders",
+                type: "TEXT",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "ClienteNombre",
+                table: "PickingOrders");
+
             migrationBuilder.AlterColumn<int>(
                 name: "PickingId",
                 table: "PickingOrders",
