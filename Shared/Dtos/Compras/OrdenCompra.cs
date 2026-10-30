@@ -36,7 +36,7 @@ namespace Shared.Dtos.Compras
                 {
                     0 => "Publicado-Iniciado",
                     1 => "Modificado",
-                    2 => "Sincronizado",
+                    2 => "Por recibir",
                     3 => "Cerrado",
                     4 => "Procesado",
                     5 => "Transacción Fallida",

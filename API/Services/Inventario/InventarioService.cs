@@ -178,7 +178,7 @@ namespace API.Services.Inventario
                 result.Movimientos.Add(new MovimientoInventario
                 {
                     Numero = linea.o.Numero,
-                    TipoDocumento = string.IsNullOrWhiteSpace(linea.o.Tipo_Documento) ? "OC" : linea.o.Tipo_Documento,
+                    TipoDocumento = string.IsNullOrWhiteSpace(linea.o.Tipo_Documento) ? "PO" : linea.o.Tipo_Documento,
                     Fecha = linea.o.Fecha,
                     FechaProcesado = linea.d.FechaProcesado,
                     Proveedor = linea.o.Supply_Name,

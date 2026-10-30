@@ -46,7 +46,7 @@ namespace ScanProMovil.Data.Entities
                 {
                     0 => "Publicado-Iniciado",
                     1 => "Modificado",
-                    2 => "Sincronizado",
+                    2 => "Por recibir",
                     3 => "Cerrado",
                     _ => "Desconocido"
                 };
