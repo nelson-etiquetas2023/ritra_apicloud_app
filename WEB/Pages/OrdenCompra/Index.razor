@@ -58,6 +58,9 @@ else
             <button class="btn btn-success btn-sm ms-3" @onclick="AutorizarOleada" disabled="@autorizandoOleada">
                 <Icon Name="IconName.Send" Size="IconSize.x4" style="margin-right:4px;" />@(autorizandoOleada ? "Enviando..." : "Autorizar oleada a móvil")
             </button>
+            <button class="btn btn-primary btn-sm ms-2" @onclick="ProcesarSeleccionadas" disabled="@procesandoSeleccion">
+                <Icon Name="IconName.Check" Size="IconSize.x4" style="margin-right:4px;" />@(procesandoSeleccion ? "Procesando..." : "Procesar seleccionadas")
+            </button>
             <button class="btn btn-outline-secondary btn-sm ms-2" @onclick="LimpiarSeleccion">
                 <Icon Name="IconName.XCircle" Size="IconSize.x4" style="margin-right:4px;" />Limpiar
             </button>
@@ -221,6 +224,7 @@ else
     private string procesandoNumero = "";
     private HashSet<string> ordenesSeleccionadas = new();
     private bool autorizandoOleada;
+private bool procesandoSeleccion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -415,6 +419,42 @@ else
             StateHasChanged();
         }
     }
+
+    private async Task ProcesarSeleccionadas()
+    {
+        if (ordenesSeleccionadas.Count == 0 || procesandoSeleccion) return;
+
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de procesar {ordenesSeleccionadas.Count} orden(es) seleccionada(s)? Esto incrementará el inventario y no se podrá deshacer.");
+        if (!confirm) return;
+
+        procesandoSeleccion = true;
+        StateHasChanged();
+
+        try
+        {
+            int exitosos = 0;
+            foreach (var numero in ordenesSeleccionadas.ToList())
+            {
+                var resultado = await inventarioService.ProcesarOrdenAsync(numero);
+                if (resultado is not null && resultado.Success)
+                    exitosos++;
+            }
+            ToastService.Notify(new(ToastType.Success, $"Procesadas: {exitosos}/{ordenesSeleccionadas.Count} orden(es)."));
+            ordenesSeleccionadas.Clear();
+            await LoadOrders();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error al procesar órdenes: {ex.Message}"));
+        }
+        finally
+        {
+            procesandoSeleccion = false;
+            StateHasChanged();
+        }
+    }
+
 
     private async Task Eliminar(OrdenCompra oc)
     {
