@@ -70,7 +70,7 @@ else
     <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
 <TemplateColumn Title="Seleccionar" Sortable="false" HeaderTemplate="@HeaderCheckbox">
             <input type="checkbox"
-                   disabled="@(context.Status == 3 || context.Status == 4 || context.Status == 5 || context.Status == 6)"
+                   disabled="@(context.Status != 0)"
                    @onchange="() => ToggleSeleccion(context.Numero)"
                    checked="@ordenesSeleccionadas.Contains(context.Numero)" />
         </TemplateColumn>
@@ -312,7 +312,7 @@ private bool procesandoSeleccion;
         var oc = Ordenes?.FirstOrDefault(o => o.Numero == numero);
         if (oc == null) return;
         // No se seleccionan documentos terminales o ya procesados.
-        if (oc.Status == 3 || oc.Status == 4 || oc.Status == 5 || oc.Status == 6) return;
+        if (oc.Status != 0) return;
         if (ordenesSeleccionadas.Contains(numero))
             ordenesSeleccionadas.Remove(numero);
         else
@@ -322,7 +322,7 @@ private bool procesandoSeleccion;
     private void ToggleSeleccionarTodo()
     {
         if (ordenesFiltered == null) return;
-        var todos = ordenesFiltered.Where(o => !string.IsNullOrEmpty(o.Numero) && o.Status != 3 && o.Status != 4 && o.Status != 5 && o.Status != 6).Select(o => o.Numero!).ToList();
+        var todos = ordenesFiltered.Where(o => !string.IsNullOrEmpty(o.Numero) && o.Status == 0).Select(o => o.Numero!).ToList();
         if (ordenesSeleccionadas.Count == todos.Count && todos.Count > 0)
             ordenesSeleccionadas.Clear();
         else

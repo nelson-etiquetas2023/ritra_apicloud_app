@@ -45,7 +45,7 @@ namespace ScanProMovil.Data.Entities
                 return Status switch
                 {
                     0 => "Publicado-Iniciado",
-                    1 => "Modificado",
+                    1 => "Actualizado",
                     2 => "Por recibir",
                     3 => "Cerrado",
                     _ => "Desconocido"
