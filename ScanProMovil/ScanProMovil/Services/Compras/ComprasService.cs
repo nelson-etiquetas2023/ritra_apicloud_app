@@ -47,8 +47,11 @@ namespace ScanProMovil.Services.Compras
 
         private async Task UpdateConsecutivoAsync(OrdenCompra order)
         {
-            var tipo = string.IsNullOrWhiteSpace(order.Tipo_Documento) ? "OC" : order.Tipo_Documento;
-            var numeroUsado = int.TryParse(order.Numero, out var value) ? value : 0;
+            var tipo = string.IsNullOrWhiteSpace(order.Tipo_Documento) ? "PO" : order.Tipo_Documento;
+            var numeroLimpio = order.Numero?.StartsWith("PO-", StringComparison.OrdinalIgnoreCase) == true
+    ? order.Numero.Substring(3)
+    : order.Numero;
+var numeroUsado = int.TryParse(numeroLimpio, out var value) ? value : 0;
 
             await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
@@ -84,13 +87,13 @@ namespace ScanProMovil.Services.Compras
 
         public async Task<string> GetNextOrderNumberAsync()
         {
-            const string tipo = "OC";
+            const string tipo = "PO";
             await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Tipo_Documento == tipo);
 
-            return ((consecutivo?.UltimoNumero ?? 0) + 1).ToString("D4");
+            return $"PO-{((consecutivo?.UltimoNumero ?? 0) + 1):D4}";
         }
 
         public Task<List<OrdenCompra>> getOrders() => GetOrdersLocalSqliteAsync();

@@ -31,10 +31,10 @@ namespace API.Services.OcMovil
             var max = await context.Database.SqlQuery<int?>($"""
                 SELECT MAX(CAST(SUBSTRING(Numero, 4, 10) AS INT)) AS Value
                 FROM Compra
-                WHERE Numero LIKE 'OC-%' AND SUBSTRING(Numero, 4, 10) NOT LIKE '%[^0-9]%'
+                WHERE Numero LIKE 'PO-%' AND SUBSTRING(Numero, 4, 10) NOT LIKE '%[^0-9]%'
                 """).FirstOrDefaultAsync() ?? 0;
 
-            return $"OC-{max + 1:0000}";
+            return $"PO-{max + 1:0000}";
         }
 
         public async Task<OrdenCompra?> AddOrderAsync(OrdenCompra oc)
@@ -47,9 +47,9 @@ namespace API.Services.OcMovil
             if (string.IsNullOrWhiteSpace(oc.Numero))
             {
                 var siguiente = int.Parse((await GetNextNumAsync()).Substring(3));
-                while (await context.Compra.AnyAsync(o => o.Numero == $"OC-{siguiente:0000}"))
+                while (await context.Compra.AnyAsync(o => o.Numero == $"PO-{siguiente:0000}"))
                     siguiente++;
-                oc.Numero = $"OC-{siguiente:0000}";
+                oc.Numero = $"PO-{siguiente:0000}";
             }
             else if (await context.Compra.AnyAsync(o => o.Numero == oc.Numero))
             {

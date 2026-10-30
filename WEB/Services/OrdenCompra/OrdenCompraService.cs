@@ -149,11 +149,11 @@ namespace WEB.Services.OrdenCompra
                 var max = 0;
                 foreach (var o in ordenes)
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(o.Numero ?? "", @"^OC-(\d+)$");
+                    var match = System.Text.RegularExpressions.Regex.Match(o.Numero ?? "", @"^PO-(\d+)$");
                     if (match.Success && int.TryParse(match.Groups[1].Value, out var n) && n > max)
                         max = n;
                 }
-                return $"OC-{max + 1:0000}";
+                return $"PO-{max + 1:0000}";
             }
             catch
             {
