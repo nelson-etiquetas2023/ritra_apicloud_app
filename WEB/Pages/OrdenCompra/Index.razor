@@ -68,7 +68,7 @@ else
     }
 
     <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
-        <TemplateColumn Title="Seleccionar" Sortable="false">
+<TemplateColumn Title="Seleccionar" Sortable="false" HeaderTemplate="@HeaderCheckbox">
             <input type="checkbox"
                    disabled="@(context.Status == 3 || context.Status == 4 || context.Status == 5 || context.Status == 6)"
                    @onchange="() => ToggleSeleccion(context.Numero)"
@@ -226,6 +226,7 @@ else
     private bool autorizandoOleada;
 private bool procesandoSeleccion;
 
+    private RenderFragment<Microsoft.AspNetCore.Components.QuickGrid.ColumnBase<Shared.Dtos.Compras.OrdenCompra>> HeaderCheckbox => (column) => (builder) => { builder.OpenElement(0, "input"); builder.AddAttribute(1, "type", "checkbox"); builder.AddAttribute(2, "onchange", EventCallback.Factory.Create(this, ToggleSeleccionarTodo)); builder.AddAttribute(3, "checked", ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) && (ordenesFiltered?.Count() ?? 0) > 0); builder.CloseElement(); };
     protected override async Task OnInitializedAsync()
     {
         await LoadOrders();
@@ -506,3 +507,5 @@ private bool procesandoSeleccion;
             : $"Dentro del plazo: {dias} día(s) para la entrega tentativa.";
     }
 }
+
+
