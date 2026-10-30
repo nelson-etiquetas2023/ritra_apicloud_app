@@ -65,7 +65,7 @@ else
     }
 
     <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
-        <TemplateColumn Title="Seleccionar" Sortable="false" Style="width:60px; text-align:center;">
+        <TemplateColumn Title="Seleccionar" Sortable="false">
             <input type="checkbox"
                    disabled="@(context.Status == 3 || context.Status == 4 || context.Status == 5 || context.Status == 6)"
                    @onchange="() => ToggleSeleccion(context.Numero)"
