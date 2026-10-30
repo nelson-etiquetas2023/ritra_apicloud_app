@@ -13,6 +13,10 @@
 
 <div class="d-flex justify-content-between align-items-center mt-0">
     <h2 class="mb-0"><Icon Name="IconName.Cart4" Size="IconSize.x2" /> Pedido de Venta</h2>
+        <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="RecargarPedidos" title="Recargar listado">
+            <Icon Name="IconName.ArrowClockwise" Size="IconSize.x4" /> Recargar
+        </button>
+
     <div class="d-flex gap-2 align-items-center">
         <button class="btn btn-outline-success" type="button"
                 data-testid="btn-enviar-picking"
@@ -146,6 +150,10 @@ else
             else if (context.Status == PedidoVentaStatus.Picking)
             {
                 <Badge Color="BadgeColor.Primary">Picking</Badge>
+            }
+            else if (context.Status == PedidoVentaStatus.EndPicked)
+            {
+                <Badge Color="BadgeColor.Secondary">End Picked</Badge>
             }
             else
             {
@@ -287,11 +295,13 @@ else
 
     /// <summary>
     /// Solo los pedidos planificados o modificados pueden enviarse a picking.
+    /// End Picked tambien se excluye: ya fue pickeado en el dispositivo.
     /// </summary>
     private static bool PuedeTransferirA(PedidoVenta pedido) =>
         pedido.Status != PedidoVentaStatus.Procesado &&
         pedido.Status != PedidoVentaStatus.Anulado &&
-        pedido.Status != PedidoVentaStatus.Picking;
+        pedido.Status != PedidoVentaStatus.Picking &&
+        pedido.Status != PedidoVentaStatus.EndPicked;
 
     /// <summary>
     /// Un pedido que ya esta en picking no se puede volver a marcar: de su
@@ -306,6 +316,7 @@ else
         PedidoVentaStatus.Procesado => $"El pedido {pedido.Numero} ya fue procesado y no se puede enviar a picking.",
         PedidoVentaStatus.Anulado => $"El pedido {pedido.Numero} está anulado y no se puede enviar a picking.",
         PedidoVentaStatus.Picking => $"El pedido {pedido.Numero} ya está en picking.",
+        PedidoVentaStatus.EndPicked => $"El pedido {pedido.Numero} ya fue pickeado en el dispositivo.",
         _ => $"El pedido {pedido.Numero} no se puede enviar a picking en su estado actual."
     };
 

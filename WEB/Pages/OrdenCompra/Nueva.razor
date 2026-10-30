@@ -355,6 +355,15 @@
             return;
         }
 
+        var codigoProducto = !string.IsNullOrEmpty(producto.Codebar) ? producto.Codebar : producto.Product_Code ?? "";
+
+        // Evitar líneas duplicadas del mismo producto
+        if (oc.Items.Any(i => i.Product_id.Equals(codigoProducto, StringComparison.OrdinalIgnoreCase)))
+        {
+            ToastService.Notify(new(ToastType.Warning, $"El producto '{producto.Product_Name}' ya está agregado a la orden."));
+            return;
+        }
+
         if (lineaCantidad <= 0)
         {
             ToastService.Notify(new(ToastType.Danger, "La cantidad debe ser mayor a cero."));
@@ -495,6 +504,13 @@
 
         var sup = proveedores.FirstOrDefault(p => p.SupplierId == oc.Supply_Id);
         oc.Supply_Name = sup?.SupplierName ?? "";
+
+        // Validar que la fecha de entrega no sea anterior a la fecha de creación
+        if (oc.Fecha.Date < oc.FechaCreacion.Date)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La fecha de entrega no puede ser anterior a la fecha de creación."));
+            return;
+        }
 
         RecalcularTotales();
 

@@ -193,5 +193,42 @@ namespace ScanProMovil.Services.Compras
             throw new ApplicationException(
                 $"El servidor respondió un error HTTP {(int)responseServer.StatusCode}: {error}");
         }
+
+        public async Task<Shared.Dtos.Compras.ProcesarOrdenResult> ReceiveOrderAsync(string numero)
+        {
+            var result = new Shared.Dtos.Compras.ProcesarOrdenResult { Success = false, Message = "" };
+            try
+            {
+                if (string.IsNullOrWhiteSpace(numero))
+                {
+                    result.Message = "Numero de orden vacio.";
+                    return result;
+                }
+
+                var clienteHttp = httpFactory.CreateClient("scanpro");
+                var response = await clienteHttp.PostAsync($"api/inventario/process-compra/{numero}", null);
+
+                var json = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    result = JsonSerializer.Deserialize<Shared.Dtos.Compras.ProcesarOrdenResult>(json, jsonOptions)
+                             ?? new Shared.Dtos.Compras.ProcesarOrdenResult { Success = true, Message = "Procesado." };
+                }
+                else
+                {
+                    result.Success = false;
+                    result.Message = $"HTTP {(int)response.StatusCode}: {json}";
+                    Debug.WriteLine($"ReceiveOrder {numero} error: {result.Message}");
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = ex.Message;
+                Debug.WriteLine($"ReceiveOrder {numero} exception: {ex.Message}");
+                return result;
+            }
+        }
     }
 }

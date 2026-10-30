@@ -192,4 +192,38 @@ public partial class ComprasIndexPage : ContentPage
             await DisplayAlertAsync("Error", "No se pudo cerrar el documento.", "Ok.");
         }
     });
+
+    private void btnReceiveOrders_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
+    {
+        if (_vm.SelectedCount == 0)
+        {
+            await DisplayAlertAsync("Warning", "Seleccione al menos una orden de compra para recibir.", "Ok.");
+            return;
+        }
+
+        var confirm = await DisplayAlertAsync("Recibir compras",
+            $"¿Recibir {_vm.SelectedCount} orden(es) seleccionada(s)? Esto afectara el inventario.",
+            "Recibir", "Cancelar");
+        if (!confirm) return;
+
+        await _vm.ReceiveSelectedCommand.ExecuteAsync(null);
+
+        //Resumen de resultados.
+        if (_vm.ReceiveResults.Count > 0)
+        {
+            var exitos = _vm.ReceiveResults.Count(r => r.Success);
+            var fallos = _vm.ReceiveResults.Count(r => !r.Success);
+            var msg = $"Procesadas: {_vm.ReceiveResults.Count}\nExitosas: {exitos}\nFallidas: {fallos}";
+
+            if (fallos > 0)
+            {
+                var errores = string.Join("\n", _vm.ReceiveResults
+                    .Where(r => !r.Success)
+                    .Select(r => $"{r.Message}"));
+                msg += $"\n\nErrores:\n{errores}";
+            }
+
+            await DisplayAlertAsync("Resultado de Recepcion", msg, "Ok.");
+        }
+    });
 }

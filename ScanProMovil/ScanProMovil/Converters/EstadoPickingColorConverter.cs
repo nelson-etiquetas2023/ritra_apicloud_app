@@ -12,6 +12,7 @@ namespace ScanProMovil.Converters
                 int estado when estado == 0 => Colors.Orange,
                 int estado when estado == 1 => Colors.Blue,
                 int estado when estado == 2 => Colors.Green,
+                int estado when estado == 3 => Colors.Purple, // End Picked
                 _ => Colors.Gray
             };
         }

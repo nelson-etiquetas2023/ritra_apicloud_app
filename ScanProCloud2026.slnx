@@ -7,6 +7,9 @@
   <!-- WEB primero: queda como proyecto de inicio por defecto (F5 abre solo
        el cliente web en http://localhost:9000). -->
   <Project Path="WEB/WEB.csproj" Id="65f858a9-89da-4aae-af19-5a8297f29105" />
+  <Folder Name="/ScanProMovil/">
+    <Project Path="ScanProMovil/ScanProMovil.Data/ScanProMovil.Data.csproj" />
+  </Folder>
   <Project Path="API/API.csproj" />
   <Project Path="Shared/Shared.csproj" />
 </Solution>

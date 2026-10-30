@@ -74,7 +74,12 @@ try
 }
 catch (Exception ex)
 {
-   Console.WriteLine($"Error al configurar la base de datos: {ex.Message}");
+    Console.WriteLine($"Error al configurar la base de datos: {ex.Message}");
+    // Sin la cadena la API arranca cojo: el DbContext no queda registrado,
+    // el DataSeeder y los workers fallan en bucle y los endpoints devuelven
+    // 405/incidentes raros en caliente. Es mejor fallar el arranque aqui
+    // mismo (IIS lo marca como crash y el libro de logs lo muestra).
+    throw;
 }
 
 //Inyeccion de mis servicios.

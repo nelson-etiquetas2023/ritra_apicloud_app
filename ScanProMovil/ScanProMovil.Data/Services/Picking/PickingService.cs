@@ -42,6 +42,8 @@ namespace ScanProMovil.Services.Picking
                 var remotos = await JsonSerializer.DeserializeAsync<List<PickingPendienteDto>>(
                     new MemoryStream(Encoding.UTF8.GetBytes(json)), jsonOptions) ?? new List<PickingPendienteDto>();
 
+                Console.WriteLine($"[PickingService] API devolvió {remotos.Count} pedidos pendientes de picking.");
+
                 return PickingSincronizador.Mapear(remotos);
             }
             catch (Exception ex)
@@ -54,11 +56,15 @@ namespace ScanProMovil.Services.Picking
         public async Task<List<PickingOrder>> GetPickingOrdersLocalAsync()
         {
             await using var _context = await _contextFactory.CreateDbContextAsync();
-            return await _context.PickingOrders
+            var pedidos = await _context.PickingOrders
                 .Include(p => p.Items)
                 .Where(p => p.Estado != 2)
                 .OrderByDescending(p => p.PickingId)
                 .ToListAsync();
+
+            Console.WriteLine($"[PickingService] Pedidos locales pendientes (Estado != 2): {pedidos.Count}");
+
+            return pedidos;
         }
 
         public async Task<bool> SincronizarPickingDesdeApiAsync()
@@ -73,6 +79,8 @@ namespace ScanProMovil.Services.Picking
                 var idsRemotos = remotos.Select(p => p.PickingId).ToList();
 
                 var resultado = await PickingSincronizador.AplicarAsync(_context, remotos, idsRemotos);
+
+                Console.WriteLine($"[PickingService] Sincronizador: insertadas={resultado.Insertadas}, actualizadas={resultado.Actualizadas}, pendientesCerrarRemoto={resultado.PendientesDeCerrarRemoto.Count}, cerradasLocalmente={resultado.CerradasLocalmente}");
 
                 // Propaga al servidor las ordenes que aqui ya estaban completas.
                 foreach (var local in resultado.PendientesDeCerrarRemoto)
@@ -101,11 +109,12 @@ namespace ScanProMovil.Services.Picking
                 await using var _context = await _contextFactory.CreateDbContextAsync();
                 var picking = await _context.PickingOrders
                     .FirstOrDefaultAsync(p => p.PickingId == pickingId);
-                if (picking == null || picking.Estado == 2) return false;
+                if (picking == null || picking.Estado == 2 || picking.Estado == 3) return false;
 
                 picking.Estado = 2;
                 picking.FechaCompletado = DateTime.Now;
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"[PickingService] Orden de picking {pickingId} guardada cerrada en SQLite (Estado=2).");
                 return true;
             }
             catch (Exception ex)
@@ -120,12 +129,23 @@ namespace ScanProMovil.Services.Picking
             try
             {
                 await using var _context = await _contextFactory.CreateDbContextAsync();
+                await using var tx = await _context.Database.BeginTransactionAsync();
                 var item = await _context.PickingOrderItems
                     .FirstOrDefaultAsync(i => i.DetailId == detailId && i.PickingId == pickingId);
                 if (item == null) return false;
 
-                item.Completado = true;
+                // Un escaneo = una unidad. Nunca se pasa de la cantidad de la linea.
+                if (item.Pickeado < item.Cantidad)
+                    item.Pickeado++;
+
                 await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                // Evidencia en log de que la linea quedo a disco (persistencia).
+                var completados = await _context.PickingOrderItems
+                    .FirstOrDefaultAsync(i => i.DetailId == detailId && i.PickingId == pickingId);
+                Console.WriteLine($"[PickingService] Item {detailId} guardado en SQLite (orden {pickingId}): {completados?.CantidadPickeada}/{completados?.Cantidad} pickeado.");
+
                 return true;
             }
             catch (Exception ex)

@@ -58,18 +58,29 @@ namespace API.Services.Picking
                 return result;
             }
 
-            // Verificar que ninguno esté procesado (4), anulado (6) o ya en picking (7)
+            // Verificar que ninguno esté procesado (4), anulado (6), ya en picking (7)
+            // o ya pickeado por el dispositivo (8)
             var noTransferibles = pedidosExistentes
                 .Where(p => p.Status == PedidoVentaStatus.Procesado ||
                             p.Status == PedidoVentaStatus.Anulado ||
-                            p.Status == PedidoVentaStatus.Picking)
-                .Select(p => p.Numero)
+                            p.Status == PedidoVentaStatus.Picking ||
+                            p.Status == PedidoVentaStatus.EndPicked)
                 .ToList();
 
             if (noTransferibles.Count > 0)
             {
+                var motivos = noTransferibles
+                    .Select(p => p.Status switch
+                    {
+                        PedidoVentaStatus.Procesado => $"{p.Numero} (procesado)",
+                        PedidoVentaStatus.Anulado => $"{p.Numero} (anulado)",
+                        PedidoVentaStatus.Picking => $"{p.Numero} (en picking)",
+                        PedidoVentaStatus.EndPicked => $"{p.Numero} (ya pickeado)",
+                        _ => p.Numero
+                    })
+                    .ToList();
                 result.Success = false;
-                result.Message = $"Los siguientes pedidos no se pueden transferir (procesados, anulados o ya en picking): {string.Join(", ", noTransferibles)}";
+                result.Message = $"Los siguientes pedidos no se pueden transferir: {string.Join(", ", motivos)}";
                 return result;
             }
 
@@ -152,13 +163,18 @@ namespace API.Services.Picking
             picking.Estado = 2;
             picking.FechaCompletado = DateTime.Now;
 
-            // El pedido vuelve a quedar disponible para procesar en la web.
+            // El pedido queda como End Picked en la web: el dispositivo cerro
+            // el picking y el flujo del pedido lo refleja.
             var pedido = await context.PedidoVenta
                 .FirstOrDefaultAsync(p => p.Numero == picking.NumeroPedidoVenta);
 
             if (pedido != null && pedido.Status == PedidoVentaStatus.Picking)
             {
-                pedido.Status = PedidoVentaStatus.Planificado;
+                pedido.Status = PedidoVentaStatus.EndPicked;
+            }
+            else if (pedido != null)
+            {
+                Console.WriteLine($"[Picking] CompletarPicking {pickingOrderId}: pedido {pedido.Numero} no estaba en Picking (Status={pedido.Status}), no se actualizó.");
             }
 
             await context.SaveChangesAsync();

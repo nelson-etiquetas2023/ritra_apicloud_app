@@ -14,5 +14,7 @@ namespace ScanProMovil.Services.Compras
         Task<OrdenCompra> UpdateOrder(OrdenCompra order);
         Task<bool> DeleteOrder(string OrderId);
         Task<bool> DeactivateOrder(string Orderid);
+        /// <summary>Recibe (procesa) una orden de compra en el servidor, afectando inventario.</summary>
+        Task<Shared.Dtos.Compras.ProcesarOrdenResult> ReceiveOrderAsync(string numero);
     }
 }

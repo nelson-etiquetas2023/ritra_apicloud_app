@@ -73,8 +73,7 @@ namespace ScanProMovil
             // con resoluciones puntuales (una sola instancia, no usar en servicios).
             var dbPath = Path.Combine(FileSystem.AppDataDirectory, "scanpro.db");
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True;Cache=Shared")
-                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking),
+                options.UseSqlite($"Data Source={dbPath};Foreign Keys=True;Cache=Shared"),
                 ServiceLifetime.Scoped);
 
             //Injeccion de los VIEWMODELS.

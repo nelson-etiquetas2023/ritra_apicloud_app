@@ -291,7 +291,7 @@ namespace ScanProMovil.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("Completado")
+                    b.Property<int>("Pickeado")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("PickingId")

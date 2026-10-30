@@ -163,7 +163,7 @@ else
                     <input type="text" class="form-control" placeholder="Comentario..." @bind="lineaComentario" />
                 </div>
                 <div class="col-md-2 d-grid">
-                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="AgregarLinea"><Icon Name="IconName.Plus" /> Add</Button>
+                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="AgregarLinea" disabled="@esSoloLectura"><Icon Name="IconName.Plus" /> Add</Button>
                 </div>
             </div>
 
@@ -251,8 +251,15 @@ else
         </div>
     </div>
 
+    @if (esSoloLectura)
+    {
+        <div class="alert alert-warning mt-3">
+            <p><strong>Esta orden de compra está en estado <span class="text-danger">@oc.StatusTexto</span> y no puede ser modificada.</strong></p>
+            <p class="mb-0">Solo se puede consultar. Los documentos cerrados, procesados, anulados o con falla están bloqueados para edición.</p>
+        </div>
+    }
     <div class="d-flex gap-2">
-        <Button Color="ButtonColor.Success" @onclick="Guardar"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
+        <Button Color="ButtonColor.Success" @onclick="Guardar" disabled="@esSoloLectura"><Icon Name="IconName.Floppy2Fill" /> Guardar</Button>
         <Button Color="ButtonColor.Secondary" @onclick="Cancelar"><Icon Name="IconName.XCircle" /> Cancelar</Button>
     </div>
 }
@@ -281,6 +288,8 @@ else
     private string editComentario = "";
     private bool cargando = true;
     private bool guardando;
+
+    private bool esSoloLectura => oc.Status == 3 || oc.Status == 4 || oc.Status == 5 || oc.Status == 6;
 
     protected override async Task OnInitializedAsync()
     {
@@ -371,11 +380,26 @@ else
     private async Task AgregarLinea()
     {
         var codigo = lineaCodigo?.Trim();
+        if (esSoloLectura)
+        {
+            ToastService.Notify(new(ToastType.Warning, "No se pueden agregar líneas a una orden en estado bloqueado."));
+            return;
+        }
+
         var producto = productoSeleccionado ?? (string.IsNullOrWhiteSpace(codigo) ? null : BuscarProducto(codigo));
 
         if (producto is null)
         {
             ToastService.Notify(new(ToastType.Warning, "Seleccione un producto válido por nombre o código."));
+            return;
+        }
+
+        var codigoProducto = !string.IsNullOrEmpty(producto.Codebar) ? producto.Codebar : producto.Product_Code ?? "";
+
+        // Evitar líneas duplicadas del mismo producto
+        if (oc.Items.Any(i => i.Product_id.Equals(codigoProducto, StringComparison.OrdinalIgnoreCase)))
+        {
+            ToastService.Notify(new(ToastType.Warning, $"El producto '{producto.Product_Name}' ya está agregado a la orden."));
             return;
         }
 
@@ -493,6 +517,18 @@ else
     private async Task Guardar()
     {
         if (guardando) return;
+
+        if (esSoloLectura)
+        {
+            ToastService.Notify(new(ToastType.Warning, "No se puede modificar una orden en estado bloqueado."));
+            return;
+        }
+
+        if (oc.Fecha.Date < oc.FechaCreacion.Date)
+        {
+            ToastService.Notify(new(ToastType.Danger, "La fecha de entrega no puede ser anterior a la fecha de creación."));
+            return;
+        }
 
         if (oc.Supply_Id <= 0)
         {

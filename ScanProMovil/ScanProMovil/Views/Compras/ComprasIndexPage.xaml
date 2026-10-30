@@ -49,6 +49,19 @@
                     WidthRequest="80"
                     Clicked="btn_sincrOrdenes_Clicked" />
                 <Button 
+                    x:Name="btnReceiveOrders"
+                    Text="RECEIVE"
+                    ImageSource="receive.png"
+                    BackgroundColor="Green" 
+                    ContentLayout="Top, 2"
+                    TextColor="White" 
+                    WidthRequest="80"
+                    IsEnabled="{Binding CanReceive}"
+                    Clicked="btnReceiveOrders_Clicked" />
+                <Label Text="{Binding SelectedCount, StringFormat='Sel: {0}'}" 
+                       FontSize="10" TextColor="White" FontAttributes="Bold" 
+                       VerticalOptions="Center" Margin="10,0,0,0"/>
+                <Button 
                     Text="DELETE"
                     x:Name="btnDeleteOrder"
                     ImageSource="delete.png"
@@ -112,16 +125,23 @@
                         <!--layuot de la tarjeta-->
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width=".08*" />
                                 <ColumnDefinition Width=".2*" />
-                                <ColumnDefinition Width=".5*" />
-                                <ColumnDefinition Width=".3*" />
+                                <ColumnDefinition Width=".44*" />
+                                <ColumnDefinition Width=".28*" />
                             </Grid.ColumnDefinitions>
+                            <!--Columna de seleccion (Receive)-->
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      IsEnabled="{Binding PuedeRecibir}"
+                                      VerticalOptions="Center"
+                                      HorizontalOptions="Center"/>
                             <!--Seccion de la Foto -->
-                            <HorizontalStackLayout Grid.Column="0">
+                            <HorizontalStackLayout Grid.Column="1">
                                 <Image Source="downloads.png"  />
                             </HorizontalStackLayout>
                             <!--Seccion del medio Numero-fecha-tatus -->
-                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <VerticalStackLayout Grid.Column="2" Spacing="2">
                                 <Label Text="{Binding Numero}" 
                                FontAttributes="Bold" 
                                FontSize="25"/>
@@ -145,7 +165,7 @@
                                        FontSize="10" TextColor="Gray" LineBreakMode="TailTruncation"/>
                             </VerticalStackLayout>
                             <!-- Ultima seccion de total productos scaneados-->
-                            <VerticalStackLayout Grid.Column="2" Padding="10,20,0,0" Spacing="8">
+                            <VerticalStackLayout Grid.Column="3" Padding="10,20,0,0" Spacing="8">
                                 <Label Text="{Binding ItemsNumber, StringFormat='{0} Items.'}" FontSize="12" FontAttributes="Bold"/>
                                 <VerticalStackLayout>
                                     <Label Text="Total Costo: " FontSize="10"/>

@@ -1,9 +1,11 @@
 @page "/ordencompra"
 @inject IOrdenCompraService servicio
+@inject IInventarioService inventarioService
 @inject ToastService ToastService
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @using WEB.Services.OrdenCompra
+@using WEB.Services.Inventario
 @using WEB.Pages.Mobile
 @using Shared.Dtos.Compras
 @using Microsoft.AspNetCore.Components.QuickGrid
@@ -49,7 +51,26 @@ else if (!ordenesFiltered!.Any())
 }
 else
 {
+    @if (ordenesSeleccionadas.Count > 0)
+    {
+        <div class="alert alert-info mb-3">
+            <strong>@ordenesSeleccionadas.Count orden(es) seleccionada(s)</strong>
+            <button class="btn btn-success btn-sm ms-3" @onclick="AutorizarOleada" disabled="@autorizandoOleada">
+                <Icon Name="IconName.Send" Size="IconSize.x4" style="margin-right:4px;" />@(autorizandoOleada ? "Enviando..." : "Autorizar oleada a móvil")
+            </button>
+            <button class="btn btn-outline-secondary btn-sm ms-2" @onclick="LimpiarSeleccion">
+                <Icon Name="IconName.XCircle" Size="IconSize.x4" style="margin-right:4px;" />Limpiar
+            </button>
+        </div>
+    }
+
     <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
+        <TemplateColumn Title="Seleccionar" Sortable="false" Style="width:60px; text-align:center;">
+            <input type="checkbox"
+                   disabled="@(context.Status == 3 || context.Status == 4 || context.Status == 5 || context.Status == 6)"
+                   @onchange="() => ToggleSeleccion(context.Numero)"
+                   checked="@ordenesSeleccionadas.Contains(context.Numero)" />
+        </TemplateColumn>
         <TemplateColumn Title="Numero" Sortable="true">
             <strong>@context.Numero</strong>
         </TemplateColumn>
@@ -140,22 +161,49 @@ else
         </TemplateColumn>
         <TemplateColumn Title="Acciones">
             <div style="white-space:nowrap;">
-                @if (context.Status != 4 && context.Status != 5 && context.Status != 6)
+                <Tooltip Title="Ver detalles" Placement="TooltipPlacement.Top">
+                    <a href="javascript:void(0)" @onclick="() => ShowDetails(context)" style="cursor: pointer; margin-right:6px;">
+                        <Icon Name="IconName.EyeFill" Size="IconSize.x5" Color="IconColor.Dark" />
+                    </a>
+                </Tooltip>
+                @if (context.Status != 4 && context.Status != 5 && context.Status != 6 && context.Status != 3)
                 {
                     <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
-                        <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer">
+                        <a href="javascript:void(0)" @onclick="() => Editar(context)" style="cursor: pointer; margin-right:6px;">
                             <Icon Name="IconName.PencilFill" Size="IconSize.x5" Color="IconColor.Dark" />
                         </a>
                     </Tooltip>
                     <Tooltip Title="Anular" Placement="TooltipPlacement.Top">
-                        <a href="javascript:void(0)" @onclick="() => Anular(context)" style="cursor: pointer; margin-left:10px;">
+                        <a href="javascript:void(0)" @onclick="() => Anular(context)" style="cursor: pointer; margin-right:6px;">
                             <Icon Name="IconName.XCircle" Size="IconSize.x5" Color="IconColor.Danger" />
                         </a>
                     </Tooltip>
+                    <Tooltip Title="Procesar orden" Placement="TooltipPlacement.Top">
+                        <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ProcesarOrden(context)" disabled="@procesando">
+                            <Icon Name="IconName.CheckCircle" Size="IconSize.x4" />
+                        </Button>
+                    </Tooltip>
+                }
+                else
+                {
+                    <span class="badge bg-secondary" style="font-size:0.75rem;">Bloqueado</span>
                 }
             </div>
         </TemplateColumn>
     </QuickGrid>
+
+    @if (ordenesFiltered!.Any())
+    {
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <button class="btn btn-outline-primary btn-sm" @onclick="ToggleSeleccionarTodo">
+                    <Icon Name="@(ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) ? IconName.CheckCircleFill : IconName.CheckCircle)" Size="IconSize.x4" style="margin-right:4px;" />
+                    @(ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) ? "Seleccionar ninguno" : "Seleccionar todo")
+                </button>
+            </div>
+        </div>
+    }
+
     <div class="mt-2">
         <GridPaginator State="@paginationIndex" />
     </div>
@@ -169,6 +217,10 @@ else
     private PaginationState paginationIndex = new PaginationState { ItemsPerPage = 15 };
     private int pageSize = 15;
     private ModalDetailsOrdenCompra modalDetails = default!;
+    private bool procesando;
+    private string procesandoNumero = "";
+    private HashSet<string> ordenesSeleccionadas = new();
+    private bool autorizandoOleada;
 
     protected override async Task OnInitializedAsync()
     {
@@ -220,6 +272,148 @@ else
     private async Task ShowDetails(OrdenCompra oc)
     {
         await modalDetails.ShowAsync(oc);
+    }
+
+    private async Task ProcesarOrden(OrdenCompra oc)
+    {
+        if (procesando) return;
+
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de que desea procesar la orden {oc.Numero}? Esto incrementará el inventario y no se podrá deshacer.");
+        if (!confirm) return;
+
+        procesando = true;
+        procesandoNumero = oc.Numero;
+        StateHasChanged();
+
+        try
+        {
+            var resultado = await inventarioService.ProcesarOrdenAsync(oc.Numero);
+            if (resultado is not null && resultado.Success)
+            {
+                ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} procesada correctamente."));
+                await LoadOrders();
+            }
+            else
+            {
+                string msg = resultado?.Message ?? "No se pudo procesar la orden.";
+                ToastService.Notify(new(ToastType.Danger, msg));
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error al procesar la orden: {ex.Message}"));
+        }
+        finally
+        {
+            procesando = false;
+            procesandoNumero = "";
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSeleccion(string numero)
+    {
+        if (string.IsNullOrWhiteSpace(numero)) return;
+        var oc = Ordenes?.FirstOrDefault(o => o.Numero == numero);
+        if (oc == null) return;
+        // No se seleccionan documentos terminales o ya procesados.
+        if (oc.Status == 3 || oc.Status == 4 || oc.Status == 5 || oc.Status == 6) return;
+        if (ordenesSeleccionadas.Contains(numero))
+            ordenesSeleccionadas.Remove(numero);
+        else
+            ordenesSeleccionadas.Add(numero);
+    }
+
+    private void ToggleSeleccionarTodo()
+    {
+        if (ordenesFiltered == null) return;
+        var todos = ordenesFiltered.Where(o => !string.IsNullOrEmpty(o.Numero) && o.Status != 3 && o.Status != 4 && o.Status != 5 && o.Status != 6).Select(o => o.Numero!).ToList();
+        if (ordenesSeleccionadas.Count == todos.Count && todos.Count > 0)
+            ordenesSeleccionadas.Clear();
+        else
+            ordenesSeleccionadas = new HashSet<string>(todos);
+    }
+
+    private void LimpiarSeleccion()
+    {
+        ordenesSeleccionadas.Clear();
+    }
+
+    private async Task AutorizarOleada()
+    {
+        if (ordenesSeleccionadas.Count == 0 || autorizandoOleada) return;
+
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            $"¿Está seguro de autorizar {ordenesSeleccionadas.Count} orden(es) para enviarlas como oleada a la aplicación móvil?");
+        if (!confirm) return;
+
+        autorizandoOleada = true;
+        StateHasChanged();
+
+        try
+        {
+            int exitosos = 0;
+            foreach (var numero in ordenesSeleccionadas.ToList())
+            {
+                var oc = Ordenes?.FirstOrDefault(o => o.Numero == numero);
+                if (oc == null) continue;
+
+                var ocParaEnviar = new OrdenCompra
+                {
+                    Numero = oc.Numero,
+                    Fecha = oc.Fecha,
+                    FechaCreacion = oc.FechaCreacion,
+                    Description = oc.Description,
+                    Comentario = oc.Comentario,
+                    Status = 2, // Sincronizado -> disponible para el móvil
+                    Sincro = true,
+                    Tipo_Documento = oc.Tipo_Documento,
+                    Subtotal = oc.Subtotal,
+                    Impuesto = oc.Impuesto,
+                    Total = oc.Total,
+                    Supply_Id = oc.Supply_Id,
+                    Supply_Name = oc.Supply_Name,
+                    Reference = oc.Reference,
+                    Prioridad = oc.Prioridad,
+                    UserName = oc.UserName,
+                    UserEmail = oc.UserEmail,
+                    UserRole = oc.UserRole,
+                    DeviceCode = oc.DeviceCode,
+                    DeviceName = oc.DeviceName,
+                    WarehouseName = oc.WarehouseName,
+                    Items = oc.Items?.Select(i => new DetalleCompras
+                    {
+                        Id = i.Id,
+                        Numero = i.Numero,
+                        Product_id = i.Product_id,
+                        Product_name = i.Product_name,
+                        Cantidad = i.Cantidad,
+                        Costo = i.Costo,
+                        Subtotal = i.Subtotal,
+                        Comentario = i.Comentario,
+                        Procesado = i.Procesado,
+                        FechaProcesado = i.FechaProcesado
+                    }).ToList() ?? []
+                };
+
+                var ok = await servicio.UpdateOrderAsync(numero, ocParaEnviar);
+                if (ok) exitosos++;
+            }
+
+            ToastService.Notify(new(ToastType.Success, $"Oleada autorizada: {exitosos}/{ordenesSeleccionadas.Count} orden(es) enviadas al móvil."));
+            ordenesSeleccionadas.Clear();
+            await LoadOrders();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error autorizando oleada: {ex.Message}"));
+        }
+        finally
+        {
+            autorizandoOleada = false;
+            StateHasChanged();
+        }
     }
 
     private async Task Eliminar(OrdenCompra oc)

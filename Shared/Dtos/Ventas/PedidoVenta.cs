@@ -17,6 +17,7 @@ namespace Shared.Dtos.Ventas
         public const int TransaccionFallida = 5;
         public const int Anulado = 6;
         public const int Picking = 7;
+        public const int EndPicked = 8;
 
         public static string Texto(int status) => status switch
         {
@@ -28,6 +29,7 @@ namespace Shared.Dtos.Ventas
             TransaccionFallida => "Transacción Fallida",
             Anulado => "Anulado",
             Picking => "Picking",
+            EndPicked => "End Picked",
             _ => status.ToString()
         };
     }

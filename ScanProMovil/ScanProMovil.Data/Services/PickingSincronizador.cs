@@ -48,7 +48,7 @@ namespace ScanProMovil.Data.Services
                         ProductCode = item.Product_id,
                         ProductName = item.Product_name,
                         Cantidad = item.Cantidad,
-                        Completado = false
+                        Pickeado = 0
                     });
                 }
 
@@ -75,14 +75,22 @@ namespace ScanProMovil.Data.Services
                 .Where(p => idsRemotos.Contains(p.PickingId))
                 .ToListAsync();
 
+            Console.WriteLine($"[PickingSincronizador] Recibidos {remotos.Count} remotos; locales existentes con esos IDs: {locales.Count}");
+
             var localesPorId = locales.ToDictionary(p => p.PickingId);
+
+            int insertadas = 0;
+            int actualizadas = 0;
 
             foreach (var remoto in remotos)
             {
                 if (localesPorId.TryGetValue(remoto.PickingId, out var local))
                 {
                     // Ya existe: se actualiza el estado sin perder el avance.
-                    if (local.Estado != 2)
+                    // Las ordenes ya completadas localmente (2) o End Picked (3) NO
+                    // se sobrescriben con el estado del servidor: si el servidor aun
+                    // la lista como pendiente, se cierra alla (PendientesDeCerrarRemoto).
+                    if (local.Estado < 2)
                     {
                         local.Estado = remoto.Estado;
                         local.UsuarioAsignado = remoto.UsuarioAsignado ?? local.UsuarioAsignado;
@@ -95,7 +103,24 @@ namespace ScanProMovil.Data.Services
                         resultado.PendientesDeCerrarRemoto.Add(local);
                     }
 
-                    var codigosLocales = local.Items.Select(i => i.ProductCode).ToHashSet();
+                    // Sincronizar items: actualizar los existentes (cantidad/nombre sin
+                    // tocar el avance pickeado), agregar los nuevos y quitar los que
+                    // el servidor ya no envia.
+                    var remotoPorCodigo = remoto.Items
+                        .ToDictionary(i => i.ProductCode, StringComparer.OrdinalIgnoreCase);
+                    foreach (var localItem in local.Items.ToList())
+                    {
+                        if (remotoPorCodigo.TryGetValue(localItem.ProductCode, out var remotoItem))
+                        {
+                            localItem.ProductName = remotoItem.ProductName;
+                            localItem.Cantidad = remotoItem.Cantidad;
+                        }
+                        else
+                        {
+                            local.Items.Remove(localItem);
+                        }
+                    }
+                    var codigosLocales = local.Items.Select(i => i.ProductCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     foreach (var item in remoto.Items)
                     {
                         if (codigosLocales.Contains(item.ProductCode)) continue;
@@ -106,40 +131,52 @@ namespace ScanProMovil.Data.Services
                             ProductCode = item.ProductCode,
                             ProductName = item.ProductName,
                             Cantidad = item.Cantidad,
-                            Completado = false
+                            Pickeado = 0
                         });
                     }
+
+                    actualizadas++;
                 }
                 else
                 {
                     context.PickingOrders.Add(remoto);
+                    insertadas++;
                 }
             }
 
             await context.SaveChangesAsync();
 
+            Console.WriteLine($"[PickingSincronizador] Aplicadas: insertadas={insertadas}, actualizadas={actualizadas}");
+
             // Las ordenes que el servidor ya no lista (las completo o cancelo
             // alla) se cierran tambien aqui: si no, se quedarian pendientes
             // para siempre en el dispositivo.
             var idsObsoletos = await context.PickingOrders
-                .Where(p => p.Estado != 2 && !idsRemotos.Contains(p.PickingId))
+                .Where(p => !idsRemotos.Contains(p.PickingId))
                 .Select(p => p.PickingId)
                 .ToListAsync();
 
             if (idsObsoletos.Count > 0)
             {
+                Console.WriteLine($"[PickingSincronizador] IDs obsoletos (servidor ya no los lista): {idsObsoletos.Count}");
+
                 var obsoletas = await context.PickingOrders
                     .Where(p => idsObsoletos.Contains(p.PickingId))
                     .ToListAsync();
 
                 foreach (var picking in obsoletas)
                 {
-                    picking.Estado = 2;
-                    picking.FechaCompletado = DateTime.Now;
+                    // El servidor ya no lista la orden (completada o cancelada alla):
+                    // se elimina localmente para no dejarla pendiente para siempre.
+                    context.PickingOrders.Remove(picking);
                 }
 
                 await context.SaveChangesAsync();
                 resultado.CerradasLocalmente = obsoletas.Count;
+            }
+            else
+            {
+                Console.WriteLine("[PickingSincronizador] No hay IDs obsoletos.");
             }
 
             resultado.Insertadas = remotos.Count(r => !localesPorId.ContainsKey(r.PickingId));

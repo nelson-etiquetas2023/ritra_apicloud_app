@@ -90,7 +90,14 @@ namespace API.Services.OcMovil
             existingOrder.Reference = oc.Reference;
             existingOrder.WarehouseName = oc.WarehouseName;
             existingOrder.Prioridad = ValidarPrioridad(oc.Prioridad);
-            existingOrder.Status = 1;
+            // El estado se gestiona segun el flujo:
+            //  - Autorizar oleada (web -> movil) lo marca como Sincronizado (2).
+            //  - Una orden Planificada (0) que se edita pasa a Actualizada (1).
+            //  - Una orden ya sincronizada mantiene su estado (no se degrada).
+            if (oc.Status == 2)
+                existingOrder.Status = 2;
+            else if (existingOrder.Status == 0)
+                existingOrder.Status = 1;
             existingOrder.Subtotal = oc.Subtotal;
             existingOrder.Impuesto = oc.Impuesto;
             existingOrder.Total = oc.Total;
