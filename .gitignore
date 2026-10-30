@@ -43,6 +43,7 @@ artifacts/
 
 # Publish output
 **/publish/
+_publish/
 
 # Build logs
 api_output.txt
