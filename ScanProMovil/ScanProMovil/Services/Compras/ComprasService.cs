@@ -51,7 +51,7 @@ namespace ScanProMovil.Services.Compras
             var numeroLimpio = order.Numero?.StartsWith("PO-", StringComparison.OrdinalIgnoreCase) == true
     ? order.Numero.Substring(3)
     : order.Numero;
-var numeroUsado = int.TryParse(numeroLimpio, out var value) ? value : 0;
+            var numeroUsado = int.TryParse(numeroLimpio, out var value) ? value : 0;
 
             await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
