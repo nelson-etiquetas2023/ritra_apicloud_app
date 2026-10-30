@@ -195,17 +195,6 @@ else
         </TemplateColumn>
     </QuickGrid>
 
-    @if (ordenesFiltered!.Any())
-    {
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-                <button class="btn btn-outline-primary btn-sm" @onclick="ToggleSeleccionarTodo">
-                    <Icon Name="@(ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) ? IconName.CheckCircleFill : IconName.CheckCircle)" Size="IconSize.x4" style="margin-right:4px;" />
-                    @(ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) ? "Seleccionar ninguno" : "Seleccionar todo")
-                </button>
-            </div>
-        </div>
-    }
 
     <div class="mt-2">
         <GridPaginator State="@paginationIndex" />
@@ -507,5 +496,6 @@ private bool procesandoSeleccion;
             : $"Dentro del plazo: {dias} día(s) para la entrega tentativa.";
     }
 }
+
 
 
