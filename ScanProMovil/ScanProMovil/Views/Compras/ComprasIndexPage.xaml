@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="ScanProMovil.Views.Compras.ComprasIndexPage"
-             Title="Compras"
+             Title="Recepción"
              xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data"
              xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
              x:DataType="vm:ComprasViewModel">
@@ -81,6 +81,13 @@
                                            TextColor="#9CA3AF"/>
                                     <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy}'}"
                                            FontSize="12"
+                                <!-- Línea 3: contador de productos a recibir -->
+                                <Label Text="{Binding Items.Count, StringFormat='0/{0}'}"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       TextColor="#2563EB"/>
+
+
                                            TextColor="#6B7280"/>
                                 </HorizontalStackLayout>
 
