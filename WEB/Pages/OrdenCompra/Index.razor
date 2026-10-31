@@ -108,7 +108,7 @@ else
             }
             else if (context.Status == 2)
             {
-                <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+                <Badge Color="BadgeColor.Success">Por recibir</Badge>
             }
             else if (context.Status == 3)
             {
@@ -360,7 +360,7 @@ private bool procesandoSeleccion;
                     FechaCreacion = oc.FechaCreacion,
                     Description = oc.Description,
                     Comentario = oc.Comentario,
-                    Status = 2, // Sincronizado -> disponible para el móvil
+                    Status = 2, // Por recibir -> disponible para el móvil
                     Sincro = true,
                     Tipo_Documento = oc.Tipo_Documento,
                     Subtotal = oc.Subtotal,
