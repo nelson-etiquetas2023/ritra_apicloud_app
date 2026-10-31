@@ -153,7 +153,6 @@
                                        FontAttributes="Bold"
                                        TextColor="#2563EB"/>
                             </VerticalStackLayout>
-                            </VerticalStackLayout>
                         </Grid>
                     </Border>
                 </DataTemplate>
