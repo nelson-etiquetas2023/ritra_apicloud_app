@@ -4,6 +4,13 @@
              x:Class="ScanProMovil.Views.Compras.ComprasIndexPage"
              Title="Compras"
              xmlns:models="clr-namespace:ScanProMovil.Data.Entities;assembly=ScanProMovil.Data" 
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Sincronizar"
+                     Clicked="OnSincronizarClicked"
+                     Order="Primary"
+                     Priority="0"/>
+    </ContentPage.ToolbarItems>
+
              xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
              x:DataType="vm:ComprasViewModel">
     <Grid Padding="1"

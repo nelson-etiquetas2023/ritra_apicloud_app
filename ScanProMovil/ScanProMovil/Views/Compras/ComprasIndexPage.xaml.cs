@@ -35,6 +35,11 @@ public partial class ComprasIndexPage : ContentPage
         });
     }
 
+    private void OnSincronizarClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
+    {
+        await _vm.GetOrdersLocalSqliteCommand.ExecuteAsync(null);
+    });
+
     private void btnAddOrders_Clicked(object? sender, EventArgs? e) => UiGuard.Run(this, async () =>
     {
         //Validar la orden de Compra Seleccionada.
