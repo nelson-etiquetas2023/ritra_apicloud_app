@@ -72,7 +72,7 @@ else
             <input type="checkbox"
                    disabled="@(context.Status != 0)"
                    @onchange="() => ToggleSeleccion(context.Numero)"
-                   checked="@ordenesSeleccionadas.Contains(context.Numero)" />
+                   checked="@(context.Status == 2 || ordenesSeleccionadas.Contains(context.Numero))" />
         </TemplateColumn>
         <TemplateColumn Title="Numero" Sortable="true">
             <strong>@context.Numero</strong>
