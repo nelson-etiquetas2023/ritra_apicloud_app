@@ -53,31 +53,27 @@
                             <RoundRectangle CornerRadius="10"></RoundRectangle>
                         </Border.StrokeShape>
                         <!--layuot de la tarjeta-->
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width=".08*" />
-                                <ColumnDefinition Width=".2*" />
-                                <ColumnDefinition Width=".44*" />
-                            </Grid.ColumnDefinitions>
-                            <!--Seccion de la Foto -->
-                            <HorizontalStackLayout Grid.Column="0">
-                                <Image Source="downloads.png"  />
-                            </HorizontalStackLayout>
-                            <!--Seccion del medio Numero-fecha-tatus -->
-                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                        <!-- Tarjeta estilo picking -->
+                        <HorizontalStackLayout Spacing="14" VerticalOptions="Center">
+                            <Image Source="downloads.png"
+                                   WidthRequest="60"
+                                   HeightRequest="60"
+                                   VerticalOptions="Center"/>
+                            <VerticalStackLayout Spacing="4">
                                 <Label Text="{Binding Numero}"
+                                       FontSize="17"
                                        FontAttributes="Bold"
-                                       FontSize="20"/>
+                                       TextColor="#1F2937"/>
                                 <Label Text="{Binding Supply_Name}"
-                                       FontSize="12"
-                                       TextColor="Gray"
+                                       FontSize="14"
+                                       TextColor="#6B7280"
                                        LineBreakMode="TailTruncation"/>
                                 <Label Text="{Binding Items.Count, StringFormat='0/{0}'}"
-                                       FontSize="14"
+                                       FontSize="13"
                                        FontAttributes="Bold"
                                        TextColor="#2563EB"/>
                             </VerticalStackLayout>
-                        </Grid>
+                        </HorizontalStackLayout>
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
