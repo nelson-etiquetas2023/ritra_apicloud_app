@@ -14,9 +14,14 @@
 
 <div class="d-flex justify-content-between align-items-center mt-0">
     <h2 class="mb-0"><Icon Name="IconName.Cart" Size="IconSize.x2" /> Orden de Compra</h2>
-    <button class="btn btn-primary" type="button" @onclick="NuevaOC">
-        <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Orden
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-success" type="button" disabled="@(ordenesSeleccionadas.Count == 0)" @onclick="AutorizarOleada">
+            <Icon Name="IconName.Send" Size="IconSize.x4" /> Enviar a recepción
+        </button>
+        <button class="btn btn-primary" type="button" @onclick="NuevaOC">
+            <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Orden
+        </button>
+    </div>
 </div>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light px-2 py-1 mt-2">
