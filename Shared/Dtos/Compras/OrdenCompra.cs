@@ -34,7 +34,7 @@ namespace Shared.Dtos.Compras
             {
                 return Status switch
                 {
-                    0 => "Publicado-Iniciado",
+                    0 => "Inicializado",
                     1 => "Actualizado",
                     2 => "Por recibir",
                     3 => "Cerrado",
