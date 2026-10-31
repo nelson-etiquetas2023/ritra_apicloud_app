@@ -67,7 +67,7 @@ else
         </div>
     }
 
-    <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="width:100%; table-layout:fixed; font-size:0.8rem; word-break:break-word; overflow-wrap:anywhere;">
+    <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
 <TemplateColumn Title="Seleccionar" Sortable="false" HeaderTemplate="@HeaderCheckbox">
             <input type="checkbox"
                    disabled="@(context.Status != 0)"
