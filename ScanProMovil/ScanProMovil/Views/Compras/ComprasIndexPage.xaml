@@ -28,7 +28,6 @@
                           VerticalOptions="Center"/>
             </HorizontalStackLayout>
         </Border>
-        </Grid>
         <!--Lista de Ordenes -->
         <CollectionView Grid.Row="1"
             x:Name="CvOrdenes"
@@ -59,7 +58,7 @@
                                        TextColor="#1F2937"/>
                                 <Label Text="{Binding Supply_Name}"
                                        FontSize="14"
-                                       TextColor="#6B7280"
+                                       TextColor="#6B7280" />
                             </VerticalStackLayout>
                         </HorizontalStackLayout>
                     </Border>
