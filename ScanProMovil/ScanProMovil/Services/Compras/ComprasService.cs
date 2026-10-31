@@ -74,6 +74,96 @@ namespace ScanProMovil.Services.Compras
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<Shared.Dtos.Compras.OrdenCompra>> GetOrdenesParaReceiveRemotoAsync()
+        {
+            try
+            {
+                var client = httpFactory.CreateClient("scanpro");
+                var response = await client.GetAsync("api/ordencompra/getorders");
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(json)) return new();
+                var remotos = JsonSerializer.Deserialize<List<Shared.Dtos.Compras.OrdenCompra>>(json, jsonOptions) ?? new();
+                return remotos.Where(o => o.Status == 2).ToList();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error obteniendo compras remotas: {ex.Message}");
+                return new();
+            }
+        }
+
+        public async Task<bool> SincronizarComprasDesdeApiAsync()
+        {
+            try
+            {
+                var remotos = await GetOrdenesParaReceiveRemotoAsync();
+                if (remotos.Count == 0) return true;
+
+                await using var ctx = await _contextFactory.CreateDbContextAsync();
+                foreach (var remoto in remotos)
+                {
+                    var local = await ctx.PurchaseOrders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Numero == remoto.Numero);
+                    if (local == null)
+                    {
+                        var nuevo = new OrdenCompra
+                        {
+                            Numero = remoto.Numero,
+                            Fecha = remoto.Fecha,
+                            FechaCreacion = remoto.FechaCreacion == default ? DateTime.Now : remoto.FechaCreacion,
+                            Description = remoto.Description,
+                            Comentario = remoto.Comentario,
+                            Status = remoto.Status,
+                            Sincro = remoto.Sincro,
+                            Tipo_Documento = remoto.Tipo_Documento,
+                            Subtotal = remoto.Subtotal,
+                            Impuesto = remoto.Impuesto,
+                            Total = remoto.Total,
+                            Supply_Id = remoto.Supply_Id,
+                            Supply_Name = remoto.Supply_Name,
+                            Reference = remoto.Reference,
+                            Prioridad = remoto.Prioridad,
+                            UserName = remoto.UserName,
+                            UserEmail = remoto.UserEmail,
+                            UserRole = remoto.UserRole,
+                            DeviceCode = remoto.DeviceCode,
+                            DeviceName = remoto.DeviceName,
+                            WarehouseName = remoto.WarehouseName,
+                            Items = remoto.Items?.Select(i => new DetalleCompra
+                            {
+                                Id = 0,
+                                Numero = i.Numero,
+                                Product_id = i.Product_id,
+                                Product_name = i.Product_name,
+                                Cantidad = i.Cantidad,
+                                Costo = i.Costo,
+                                Subtotal = i.Subtotal,
+                                Comentario = i.Comentario,
+                                Procesado = i.Procesado,
+                                FechaProcesado = i.FechaProcesado
+                            }).ToList() ?? new()
+                        };
+                        ctx.PurchaseOrders.Add(nuevo);
+                    }
+                    else
+                    {
+                        local.Status = remoto.Status;
+                        local.Sincro = remoto.Sincro;
+                        local.Supply_Name = remoto.Supply_Name;
+                        local.Total = remoto.Total;
+                    }
+                }
+                await ctx.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error sincronizando compras: {ex.Message}");
+                return false;
+            }
+        }
+
+
         public async Task<List<OrdenCompra>> GetOrdersLocalSqliteAsync()
         {
             await using var _context = await _contextFactory.CreateDbContextAsync();

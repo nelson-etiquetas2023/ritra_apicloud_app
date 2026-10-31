@@ -6,6 +6,7 @@ namespace ScanProMovil.Services.Compras
     {
         Task<bool> SaveOrdersLocalSqliteAsync(OrdenCompra order);
         Task<List<OrdenCompra>> GetOrdersLocalSqliteAsync();
+Task<bool> SincronizarComprasDesdeApiAsync();
         Task<string> GetNextOrderNumberAsync();
         Task<bool> MarkOrderSynchronizedAsync(string numero);
         Task<List<OrdenCompra>> getOrders();

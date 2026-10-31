@@ -65,6 +65,10 @@ namespace ScanProMovil.ViewModels
             try
             {
                 IsLoading = true;
+                loadingMessage = "Sincronizando compras...";
+
+                await Service.SincronizarComprasDesdeApiAsync();
+
                 loadingMessage = "Cargando ordenes...";
                 Debug.WriteLine("Loading ON");
 
