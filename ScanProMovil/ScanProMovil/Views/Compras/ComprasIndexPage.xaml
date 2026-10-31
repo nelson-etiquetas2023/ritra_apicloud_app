@@ -7,76 +7,7 @@
              xmlns:vm="clr-namespace:ScanProMovil.ViewModels"
              x:DataType="vm:ComprasViewModel">
 
-    <Grid Padding="1" 
-          RowDefinitions="Auto, Auto, *">
-        <!--Barra de Acciones-->
-        <ScrollView Grid.Row="0" 
-                    Orientation="Horizontal">
-            <HorizontalStackLayout 
-                Spacing="3">
-                <Button 
-                     x:Name="btnAddOrders"
-                     Text="ADD"       
-                     ImageSource="add.png"
-                     BackgroundColor="DodgerBlue" 
-                     ContentLayout="Top, 2"
-                     TextColor="White" WidthRequest="80"
-                     Clicked="btnAddOrders_Clicked"/>
-                <Button 
-                     x:Name="btnDetailsOrders"
-                     Text="INFO"       
-                     ImageSource="document_info.png"
-                     BackgroundColor="DodgerBlue" 
-                     ContentLayout="Top, 2"
-                     TextColor="White" WidthRequest="80"
-                     Clicked="btnDetailsOrders_Clicked" />
-
-                <Button 
-                     x:Name="btnConfig"
-                     Text="CONF"       
-                     ImageSource="gear_24px.png"
-                     BackgroundColor="DodgerBlue" 
-                     ContentLayout="Top, 2"
-                     TextColor="White" WidthRequest="80"
-                     Clicked="btnConfig_Clicked" />
-                <Button 
-                    x:Name="btn_sincrOrdenes"
-                    Text="SINC"
-                    ImageSource="uploadcloud.png"
-                    BackgroundColor="DodgerBlue" 
-                    ContentLayout="Top, 2"
-                    TextColor="White" 
-                    WidthRequest="80"
-                    Clicked="btn_sincrOrdenes_Clicked" />
-                <Button 
-                    x:Name="btnReceiveOrders"
-                    Text="RECEIVE"
-                    ImageSource="receive.png"
-                    BackgroundColor="Green" 
-                    ContentLayout="Top, 2"
-                    TextColor="White" 
-                    WidthRequest="80"
-                    IsEnabled="{Binding CanReceive}"
-                    Clicked="btnReceiveOrders_Clicked" />
-                <Label Text="{Binding SelectedCount, StringFormat='Sel: {0}'}" 
-                       FontSize="10" TextColor="White" FontAttributes="Bold" 
-                       VerticalOptions="Center" Margin="10,0,0,0"/>
-                <Button 
-                    Text="DELETE"
-                    x:Name="btnDeleteOrder"
-                    ImageSource="delete.png"
-                    BackgroundColor="DodgerBlue" 
-                    ContentLayout="Top, 2"
-                    TextColor="White"  WidthRequest="80"
-                    Clicked="btnDeleteOrder_Clicked" />
-                <Button Text="CANCEL"
-                  x:Name="btnCancelOrder"
-                  ImageSource="cancel.png"
-                  BackgroundColor="DodgerBlue" 
-                  ContentLayout="Top, 2"
-                  TextColor="White" WidthRequest="80"
-                  Clicked="btnCancelOrder_Clicked"/>
-            </HorizontalStackLayout>
+          RowDefinitions="Auto, *">
         </ScrollView>
         <!--Barra de Busqueda -->
         <Grid Grid.Row="1">
@@ -99,7 +30,7 @@
             </Border>
             <!--Total de Ordenes-->
             <Label Text="{Binding TotalOrders, StringFormat='{0} Items'}" 
-                 Grid.Column="1" 
+                 Grid.Column="1"
                  FontSize="10"
                  TextColor="White"
                  FontAttributes="Bold" VerticalTextAlignment="Center" 
@@ -107,7 +38,7 @@
                  Margin="0,5,0,5" Padding="20,0,20,0"/>
         </Grid>
         <!--Lista de Ordenes -->
-        <CollectionView Grid.Row="2"
+        <CollectionView Grid.Row="1"
             x:Name="CvOrdenes"
             EmptyView="No Data..."
             ItemsLayout="VerticalList"
@@ -129,18 +60,12 @@
                                 <ColumnDefinition Width=".2*" />
                                 <ColumnDefinition Width=".44*" />
                             </Grid.ColumnDefinitions>
-                            <!--Columna de seleccion (Receive)-->
-                            <CheckBox Grid.Column="0"
-                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                      IsEnabled="{Binding PuedeRecibir}"
-                                      VerticalOptions="Center"
-                                      HorizontalOptions="Center"/>
                             <!--Seccion de la Foto -->
-                            <HorizontalStackLayout Grid.Column="1">
+                            <HorizontalStackLayout Grid.Column="0">
                                 <Image Source="downloads.png"  />
                             </HorizontalStackLayout>
                             <!--Seccion del medio Numero-fecha-tatus -->
-                            <VerticalStackLayout Grid.Column="2" Spacing="2">
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
                                 <Label Text="{Binding Numero}"
                                        FontAttributes="Bold"
                                        FontSize="20"/>
@@ -164,3 +89,5 @@
     
     
 </ContentPage>
+
+
