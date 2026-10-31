@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ScanProMovil.Data;
 using ScanProMovil.Data.Entities;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -122,26 +123,21 @@ namespace ScanProMovil.Services.Compras
                             Supply_Id = remoto.Supply_Id,
                             Supply_Name = remoto.Supply_Name,
                             Reference = remoto.Reference,
-                            Prioridad = remoto.Prioridad,
                             UserName = remoto.UserName,
                             UserEmail = remoto.UserEmail,
                             UserRole = remoto.UserRole,
                             DeviceCode = remoto.DeviceCode,
                             DeviceName = remoto.DeviceName,
                             WarehouseName = remoto.WarehouseName,
-                            Items = remoto.Items?.Select(i => new DetalleCompra
+                            Items = new ObservableCollection<DetalleCompra>(remoto.Items?.Select(i => new DetalleCompra
                             {
-                                Id = 0,
                                 Numero = i.Numero,
                                 Product_id = i.Product_id,
-                                Product_name = i.Product_name,
+                                Product_Name = i.Product_name,
                                 Cantidad = i.Cantidad,
-                                Costo = i.Costo,
-                                Subtotal = i.Subtotal,
-                                Comentario = i.Comentario,
-                                Procesado = i.Procesado,
-                                FechaProcesado = i.FechaProcesado
-                            }).ToList() ?? new()
+                                Costo = (double)i.Costo,
+                                Subtotal = (double)i.Subtotal
+                            }) ?? Enumerable.Empty<DetalleCompra>())
                         };
                         ctx.PurchaseOrders.Add(nuevo);
                     }
