@@ -60,11 +60,6 @@
                                 <Label Text="{Binding Supply_Name}"
                                        FontSize="14"
                                        TextColor="#6B7280"
-                                       LineBreakMode="TailTruncation"/>
-                                <Label Text="{Binding Items.Count, StringFormat='0/{0}'}"
-                                       FontSize="13"
-                                       FontAttributes="Bold"
-                                       TextColor="#2563EB"/>
                             </VerticalStackLayout>
                         </HorizontalStackLayout>
                     </Border>
