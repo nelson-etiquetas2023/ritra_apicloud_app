@@ -129,6 +129,7 @@ namespace ScanProMovil.Services.Compras
                             DeviceCode = remoto.DeviceCode,
                             DeviceName = remoto.DeviceName,
                             WarehouseName = remoto.WarehouseName,
+                            ItemsNumber = remoto.Items?.Count ?? 0,
                             Items = new ObservableCollection<DetalleCompra>(remoto.Items?.Select(i => new DetalleCompra
                             {
                                 Numero = i.Numero,
@@ -147,6 +148,7 @@ namespace ScanProMovil.Services.Compras
                         local.Sincro = remoto.Sincro;
                         local.Supply_Name = remoto.Supply_Name;
                         local.Total = remoto.Total;
+                        local.ItemsNumber = remoto.Items?.Count ?? local.ItemsNumber;
                     }
                 }
                 await ctx.SaveChangesAsync();
