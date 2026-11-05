@@ -98,6 +98,7 @@ namespace ScanProMovil
             builder.Services.AddTransient<DetailsComprasPage>();
             builder.Services.AddTransient<ConfigComprasPage>();
             builder.Services.AddTransient<SincroComprasPage>();
+            builder.Services.AddTransient<ComprasDetalleProductosViewModel>();
             builder.Services.AddTransient<LocalDataProductsPage>();
             builder.Services.AddTransient<MainStockInitPage>();
             builder.Services.AddTransient<StockInitDetailPage>();

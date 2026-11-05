@@ -1,3 +1,4 @@
+using ScanProMovil.Data.Entities;
 using ScanProMovil.Services.Compras;
 using ScanProMovil.ViewModels;
 using ScanProMovil.ViewModels.Compras;
@@ -231,4 +232,31 @@ public partial class ComprasIndexPage : ContentPage
             await DisplayAlertAsync("Resultado de Recepcion", msg, "Ok.");
         }
     });
+
+/// <summary>Abre el detalle de productos de la orden al hacer tap en el card.</summary>
+    private void OnOrdenCardTapped(object? sender, TappedEventArgs e)
+    {
+        UiGuard.Run(this, async () =>
+        {
+            if (sender is not Border border || border.BindingContext is not OrdenCompra orden) return;
+
+            // Cargar la orden (con todos sus productos) desde la base local para
+            // asegurar que se muestren todos los productos de la orden de compra.
+            var service = MauiProgram.Services!.GetService<IComprasService>();
+            var ordenCompleta = orden;
+            if (service is not null)
+            {
+                try
+                {
+                    var cargada = await service.getOrderById(orden.Numero);
+                    if (cargada is not null && cargada.Items is not null && cargada.Items.Count > 0)
+                        ordenCompleta = cargada;
+                }
+                catch { }
+            }
+
+            var page = new ComprasDetalleProductosPage(ordenCompleta);
+            await Navigation.PushAsync(page);
+        });
+    }
 }

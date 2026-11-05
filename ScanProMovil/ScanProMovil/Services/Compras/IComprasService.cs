@@ -6,7 +6,7 @@ namespace ScanProMovil.Services.Compras
     {
         Task<bool> SaveOrdersLocalSqliteAsync(OrdenCompra order);
         Task<List<OrdenCompra>> GetOrdersLocalSqliteAsync();
-Task<bool> SincronizarComprasDesdeApiAsync();
+        Task<bool> SincronizarComprasDesdeApiAsync();
         Task<string> GetNextOrderNumberAsync();
         Task<bool> MarkOrderSynchronizedAsync(string numero);
         Task<List<OrdenCompra>> getOrders();
@@ -15,7 +15,12 @@ Task<bool> SincronizarComprasDesdeApiAsync();
         Task<OrdenCompra> UpdateOrder(OrdenCompra order);
         Task<bool> DeleteOrder(string OrderId);
         Task<bool> DeactivateOrder(string Orderid);
-        /// <summary>Recibe (procesa) una orden de compra en el servidor, afectando inventario.</summary>
+
+        /// <summary>Declara al servidor la recepcion de la orden (cantidades recibidas
+        /// por linea desde la base local; el server calcula el delta sobre el inventario).</summary>
         Task<Shared.Dtos.Compras.ProcesarOrdenResult> ReceiveOrderAsync(string numero);
+
+        /// <summary>Un escaneo/suma = una unidad recibida del item en SQLite (con tope).</summary>
+        Task<bool> MarcarItemRecibidoAsync(string numeroOrden, int detailId);
     }
 }

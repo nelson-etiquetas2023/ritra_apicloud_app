@@ -17,6 +17,8 @@ namespace ScanProMovil.Converters
                 "Actualizado" => Application.Current?.Resources["BadgeActualizado"] as Style,
                 "Sincronizado" => Application.Current?.Resources["BadgeSincro"] as Style,
                 "Cerrado" => Application.Current?.Resources["BadgeCerrado"] as Style,
+                "Procesado" => Application.Current?.Resources["BadgeSincro"] as Style,
+                "Transacción Fallida" => Application.Current?.Resources["BadgeModificado"] as Style,
                 "Anulado" => Application.Current?.Resources["AnuladoBadgeStyle"] as Style,
                 "En Proceso" => Application.Current?.Resources["EnProcesoBadgeStyle"] as Style,
                 _ => Application.Current?.Resources["BadgeDefault"] as Style,

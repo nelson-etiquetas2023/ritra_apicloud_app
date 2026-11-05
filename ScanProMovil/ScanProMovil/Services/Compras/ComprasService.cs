@@ -1,10 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using ScanProMovil.Data;
 using ScanProMovil.Data.Entities;
+using ScanProMovil.Data.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
+
+// Alias: las clases del DTO compartido comparten nombre con las entidades locales.
+using RecepcionCompraRequest = Shared.Dtos.Compras.RecepcionCompraRequest;
+using LineaRecepcionCompra = Shared.Dtos.Compras.LineaRecepcionCompra;
 
 namespace ScanProMovil.Services.Compras
 {
@@ -75,7 +80,11 @@ namespace ScanProMovil.Services.Compras
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<Shared.Dtos.Compras.OrdenCompra>> GetOrdenesParaReceiveRemotoAsync()
+        /// <summary>
+        /// Baja TODAS las ordenes de compra del servidor (sin filtrar por estado:
+        /// el sincronizador decide como mezclar 4/5/6 y propagar recepciones).
+        /// </summary>
+        public async Task<List<Shared.Dtos.Compras.OrdenCompra>> GetOrdenesRemotoAsync()
         {
             try
             {
@@ -85,7 +94,7 @@ namespace ScanProMovil.Services.Compras
                 var json = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(json)) return new();
                 var remotos = JsonSerializer.Deserialize<List<Shared.Dtos.Compras.OrdenCompra>>(json, jsonOptions) ?? new();
-                return remotos.Where(o => o.Status == 2).ToList();
+                return remotos;
             }
             catch (Exception ex)
             {
@@ -98,60 +107,26 @@ namespace ScanProMovil.Services.Compras
         {
             try
             {
-                var remotos = await GetOrdenesParaReceiveRemotoAsync();
-                if (remotos.Count == 0) return true;
+                var remotos = await GetOrdenesRemotoAsync();
+                var datosRemotos = ComprasSincronizador.Mapear(remotos);
+                if (datosRemotos.Count == 0) return true;
 
                 await using var ctx = await _contextFactory.CreateDbContextAsync();
-                foreach (var remoto in remotos)
+                var numerosRemotos = datosRemotos.Select(o => o.Numero).Distinct().ToList();
+
+                var resultado = await ComprasSincronizador.AplicarAsync(ctx, datosRemotos, numerosRemotos);
+
+                Debug.WriteLine($"[ComprasService] Sincronizador: insertadas={resultado.Insertadas}, actualizadas={resultado.Actualizadas}, pendientesDeRecepcion={resultado.PendientesDeRecepcionRemoto.Count}, cerradasLocalmente={resultado.CerradasLocalmente}");
+
+                // Propagar al servidor lo ya recibido aqui (misma idea del picking:
+                // lo que el dispositivo recepciono fuera de linea se envia apenas
+                // hay datos, y reenviar lo mismo es un no-op en el servidor).
+                foreach (var pendiente in resultado.PendientesDeRecepcionRemoto)
                 {
-                    var local = await ctx.PurchaseOrders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Numero == remoto.Numero);
-                    if (local == null)
-                    {
-                        var nuevo = new OrdenCompra
-                        {
-                            Numero = remoto.Numero,
-                            Fecha = remoto.Fecha,
-                            FechaCreacion = remoto.FechaCreacion == default ? DateTime.Now : remoto.FechaCreacion,
-                            Description = remoto.Description,
-                            Comentario = remoto.Comentario,
-                            Status = remoto.Status,
-                            Sincro = remoto.Sincro,
-                            Tipo_Documento = remoto.Tipo_Documento,
-                            Subtotal = remoto.Subtotal,
-                            Impuesto = remoto.Impuesto,
-                            Total = remoto.Total,
-                            Supply_Id = remoto.Supply_Id,
-                            Supply_Name = remoto.Supply_Name,
-                            Reference = remoto.Reference,
-                            UserName = remoto.UserName,
-                            UserEmail = remoto.UserEmail,
-                            UserRole = remoto.UserRole,
-                            DeviceCode = remoto.DeviceCode,
-                            DeviceName = remoto.DeviceName,
-                            WarehouseName = remoto.WarehouseName,
-                            ItemsNumber = remoto.Items?.Count ?? 0,
-                            Items = new ObservableCollection<DetalleCompra>(remoto.Items?.Select(i => new DetalleCompra
-                            {
-                                Numero = i.Numero,
-                                Product_id = i.Product_id,
-                                Product_Name = i.Product_name,
-                                Cantidad = i.Cantidad,
-                                Costo = (double)i.Costo,
-                                Subtotal = (double)i.Subtotal
-                            }) ?? Enumerable.Empty<DetalleCompra>())
-                        };
-                        ctx.PurchaseOrders.Add(nuevo);
-                    }
-                    else
-                    {
-                        local.Status = remoto.Status;
-                        local.Sincro = remoto.Sincro;
-                        local.Supply_Name = remoto.Supply_Name;
-                        local.Total = remoto.Total;
-                        local.ItemsNumber = remoto.Items?.Count ?? local.ItemsNumber;
-                    }
+                    var res = await ReceiveOrderAsync(pendiente.Numero);
+                    Debug.WriteLine($"[ComprasService] Push recepcion {pendiente.Numero}: success={res.Success}, statusFinal={res.StatusFinal}, msg={res.Message}");
                 }
-                await ctx.SaveChangesAsync();
+
                 return true;
             }
             catch (Exception ex)
@@ -244,6 +219,40 @@ namespace ScanProMovil.Services.Compras
             }
         }
 
+        /// <summary>Un escaneo = una unidad recibida. Guarda en SQLite con
+        /// tope en la cantidad de la linea (replica MarcarItemCompletadoAsync del picking).</summary>
+        public async Task<bool> MarcarItemRecibidoAsync(string numeroOrden, int detailId)
+        {
+            try
+            {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
+                await using var tx = await _context.Database.BeginTransactionAsync();
+                var item = await _context.PurchaseOrderItems
+                    .FirstOrDefaultAsync(i => i.DetailId == detailId && i.Numero == numeroOrden);
+                if (item == null) return false;
+
+                // Nunca se pasa de la cantidad de la linea.
+                if (item.CantidadRecibida < item.Cantidad)
+                    item.CantidadRecibida++;
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                // Evidencia en log de que la linea quedo a disco (persistencia).
+                var guardado = await _context.PurchaseOrderItems
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.DetailId == detailId && i.Numero == numeroOrden);
+                Debug.WriteLine($"[ComprasService] Item {detailId} guardado en SQLite (orden {numeroOrden}): {guardado?.CantidadRecibida}/{guardado?.Cantidad} recibido.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ComprasService] Error marcando item {detailId}: {ex.Message}");
+                return false;
+            }
+        }
+
         public async Task<bool> DeactivateOrder(string Orderid)
         {
             try
@@ -296,21 +305,64 @@ namespace ScanProMovil.Services.Compras
                     return result;
                 }
 
+                // El cuerpo se construye desde la base local: declara la cantidad
+                // TOTAL recibida hasta ahora por linea; el servidor calcula el
+                // delta contra lo ya almacenado (reenviar lo mismo no vuelve a
+                // afectar el inventario, como reenviar un picking completo).
+                await using var ctx = await _contextFactory.CreateDbContextAsync();
+                var ordenLocal = await ctx.PurchaseOrders
+                    .AsNoTracking()
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Numero == numero);
+
+                if (ordenLocal is null)
+                {
+                    result.Message = $"La orden {numero} no existe en este dispositivo.";
+                    return result;
+                }
+
+                var request = new RecepcionCompraRequest
+                {
+                    Usuario = ordenLocal.UserName,
+                    Items = ordenLocal.Items.Select(i => new LineaRecepcionCompra
+                    {
+                        Product_id = i.Product_id,
+                        CantidadRecibida = i.CantidadRecibida
+                    }).ToList()
+                };
+
                 var clienteHttp = httpFactory.CreateClient("scanpro");
-                var response = await clienteHttp.PostAsync($"api/inventario/process-compra/{numero}", null);
+                var response = await clienteHttp.PostAsJsonAsync(
+                    $"api/inventario/process-compra/{numero}", request, jsonOptions);
 
                 var json = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    result = JsonSerializer.Deserialize<Shared.Dtos.Compras.ProcesarOrdenResult>(json, jsonOptions)
-                             ?? new Shared.Dtos.Compras.ProcesarOrdenResult { Success = true, Message = "Procesado." };
-                }
-                else
-                {
-                    result.Success = false;
                     result.Message = $"HTTP {(int)response.StatusCode}: {json}";
                     Debug.WriteLine($"ReceiveOrder {numero} error: {result.Message}");
+                    return result;
                 }
+
+                result = JsonSerializer.Deserialize<Shared.Dtos.Compras.ProcesarOrdenResult>(json, jsonOptions)
+                         ?? new Shared.Dtos.Compras.ProcesarOrdenResult { Success = true, Message = "Procesado." };
+
+                // Reflejar en la base local el cierre que el servidor ya aplico:
+                // 4 Procesado (cerrada, nunca se sobrescribe) o 5 Transaccion
+                // Fallida (sigue recepcionandose).
+                if (result.StatusFinal is 4 or 5)
+                {
+                    await using var ctxUpdate = await _contextFactory.CreateDbContextAsync();
+                    var orden = await ctxUpdate.PurchaseOrders
+                        .FirstOrDefaultAsync(o => o.Numero == numero);
+
+                    if (orden is not null && orden.Status != 4)
+                    {
+                        orden.Status = result.StatusFinal;
+                        await ctxUpdate.SaveChangesAsync();
+                    }
+                }
+
+                Debug.WriteLine($"ReceiveOrder {numero}: success={result.Success}, statusFinal={result.StatusFinal}, msg={result.Message}");
                 return result;
             }
             catch (Exception ex)

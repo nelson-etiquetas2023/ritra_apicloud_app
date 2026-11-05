@@ -52,6 +52,11 @@
                             Margin="10,0,10,6"
                             BackgroundColor="White">
 
+                        <!-- Todo el card es clickeable para abrir el detalle de productos -->
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnOrdenCardTapped"/>
+                        </Border.GestureRecognizers>
+
                         <HorizontalStackLayout Spacing="14" VerticalOptions="Center">
 
                             <!-- Icono del documento de compra -->
@@ -83,8 +88,8 @@
                                            TextColor="#6B7280"/>
                                 </HorizontalStackLayout>
 
-                                <!-- Línea 3: contador de productos a recibir -->
-                                <Label Text="{Binding Items.Count, StringFormat='0/{0}'}"
+                                <!-- Línea 3: contador de unidades recibidas/por recibir -->
+                                <Label Text="{Binding ProgresoTexto}"
                                        FontSize="13"
                                        FontAttributes="Bold"
                                        TextColor="#2563EB"/>

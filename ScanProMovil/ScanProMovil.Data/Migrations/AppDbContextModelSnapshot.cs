@@ -52,6 +52,9 @@ namespace ScanProMovil.Migrations
                     b.Property<double>("Cantidad")
                         .HasColumnType("REAL");
 
+                    b.Property<double>("CantidadRecibida")
+                        .HasColumnType("REAL");
+
                     b.Property<double>("Costo")
                         .HasColumnType("REAL");
 
