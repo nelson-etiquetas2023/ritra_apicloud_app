@@ -26,6 +26,11 @@ namespace API.Services.OcMovil
             return oc is null ? throw new KeyNotFoundException($"Orden {numero} no encontrada") : oc;
         }
 
+        /// <summary>
+        /// Genera el siguiente número de orden de compra con formato PO-9999.
+        /// PO = Purchase Order, 9999 = consecutivo con 4 dígitos (relleno con ceros a la izquierda).
+        /// Ejemplo: PO-0001, PO-0002, ..., PO-9999, PO-10000
+        /// </summary>
         public async Task<string> GetNextNumAsync()
         {
             var max = await context.Database.SqlQuery<int?>($"""
@@ -50,6 +55,7 @@ namespace API.Services.OcMovil
                 while (await context.Compra.AnyAsync(o => o.Numero == $"PO-{siguiente:0000}"))
                     siguiente++;
                 oc.Numero = $"PO-{siguiente:0000}";
+                oc.Tipo_Documento = "PO"; // Purchase Order
             }
             else if (await context.Compra.AnyAsync(o => o.Numero == oc.Numero))
             {

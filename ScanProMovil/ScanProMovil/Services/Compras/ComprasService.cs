@@ -191,9 +191,14 @@ namespace ScanProMovil.Services.Compras
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Genera el siguiente número de orden de compra con formato PO-9999.
+        /// PO = Purchase Order, 9999 = consecutivo con 4 dígitos (relleno con ceros a la izquierda).
+        /// Ejemplo: PO-0001, PO-0002, ..., PO-9999, PO-10000
+        /// </summary>
         public async Task<string> GetNextOrderNumberAsync()
         {
-            const string tipo = "PO";
+            const string tipo = "PO"; // Purchase Order
             await using var _context = await _contextFactory.CreateDbContextAsync();
             var consecutivo = await _context.Consecutivos
                 .AsNoTracking()

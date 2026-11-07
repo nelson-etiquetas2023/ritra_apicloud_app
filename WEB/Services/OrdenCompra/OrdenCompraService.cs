@@ -167,6 +167,11 @@ namespace WEB.Services.OrdenCompra
             }
         }
 
+        /// <summary>
+        /// Calcula el siguiente número de orden de compra localmente con formato PO-9999.
+        /// PO = Purchase Order, 9999 = consecutivo con 4 dígitos (relleno con ceros a la izquierda).
+        /// Ejemplo: PO-0001, PO-0002, ..., PO-9999, PO-10000
+        /// </summary>
         private async Task<string> CalcularSiguienteNumeroLocalAsync()
         {
             try
