@@ -459,30 +459,31 @@ else
                                             <div class="adv-movimientos-seccion mb-3">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                     <span class="badge bg-success"><Icon Name="IconName.BoxArrowInDown" Size="IconSize.x2" style="margin-right:4px;" /> Entradas (<strong>@totalEntradas</strong>)</span>
+                                                    <span class="text-muted small fw-semibold">Total: +@totalEntradasCantidad.ToString("N2")</span>
                                                 </div>
-                                                <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th class="text-center">Número Documento</th>
-                                                            <th class="text-center">Fecha</th>
-                                                            <th>Descripción</th>
-                                                            <th class="text-center">Tipo Documento</th>
-                                                            <th class="text-end">Cantidad</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var m in movimientosEntradas)
-                                                        {
-                                                            <tr>
-                                                                <td class="text-center small">@m.Numero</td>
-                                                                <td class="text-center small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                                                <td class="small">@(!string.IsNullOrWhiteSpace(m.ProductName) ? m.ProductName : m.TipoDocumento)</td>
-                                                                <td class="text-center small"><span class="badge bg-success">@m.TipoMovimiento</span></td>
-                                                                <td class="text-end small fw-semibold">+@m.Cantidad.ToString("N2")</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
+                                                <QuickGrid Items="movimientosEntradas.AsQueryable()" Pagination="paginationEntradas" class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
+                                                    <TemplateColumn Title="Número Documento" Sortable="true">
+                                                        <td class="text-center small">@context.Numero</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Fecha" Sortable="true">
+                                                        <td class="text-center small">@context.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Descripción">
+                                                        <td class="small">@(!string.IsNullOrWhiteSpace(context.ProductName) ? context.ProductName : context.TipoDocumento)</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Tipo Documento" Sortable="true">
+                                                        <td class="text-center small"><span class="badge bg-success">@context.TipoMovimiento</span></td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Cantidad" Sortable="true">
+                                                        <td class="text-end small fw-semibold">+@context.Cantidad.ToString("N2")</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Usuario" Sortable="true">
+                                                        <td class="small">@context.Usuario</td>
+                                                    </TemplateColumn>
+                                                </QuickGrid>
+                                                <div class="mt-2">
+                                                    <GridPaginator State="@paginationEntradas" />
+                                                </div>
                                             </div>
                                         }
 
@@ -492,30 +493,31 @@ else
                                             <div class="adv-movimientos-seccion mb-3">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                     <span class="badge bg-danger"><Icon Name="IconName.BoxArrowInUp" Size="IconSize.x2" style="margin-right:4px;" /> Salidas (<strong>@totalSalidas</strong>)</span>
+                                                    <span class="text-muted small fw-semibold">Total: -@totalSalidasCantidad.ToString("N2")</span>
                                                 </div>
-                                                <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th class="text-center">Número Documento</th>
-                                                            <th class="text-center">Fecha</th>
-                                                            <th>Descripción</th>
-                                                            <th class="text-center">Tipo Documento</th>
-                                                            <th class="text-end">Cantidad</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var m in movimientosSalidas)
-                                                        {
-                                                            <tr>
-                                                                <td class="text-center small">@m.Numero</td>
-                                                                <td class="text-center small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                                                <td class="small">@(!string.IsNullOrWhiteSpace(m.ProductName) ? m.ProductName : m.TipoDocumento)</td>
-                                                                <td class="text-center small"><span class="badge bg-danger">@m.TipoMovimiento</span></td>
-                                                                <td class="text-end small fw-semibold">-@m.Cantidad.ToString("N2")</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
+                                                <QuickGrid Items="movimientosSalidas.AsQueryable()" Pagination="paginationSalidas" class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
+                                                    <TemplateColumn Title="Número Documento" Sortable="true">
+                                                        <td class="text-center small">@context.Numero</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Fecha" Sortable="true">
+                                                        <td class="text-center small">@context.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Descripción">
+                                                        <td class="small">@(!string.IsNullOrWhiteSpace(context.ProductName) ? context.ProductName : context.TipoDocumento)</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Tipo Documento" Sortable="true">
+                                                        <td class="text-center small"><span class="badge bg-danger">@context.TipoMovimiento</span></td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Cantidad" Sortable="true">
+                                                        <td class="text-end small fw-semibold">-@context.Cantidad.ToString("N2")</td>
+                                                    </TemplateColumn>
+                                                    <TemplateColumn Title="Usuario" Sortable="true">
+                                                        <td class="small">@context.Usuario</td>
+                                                    </TemplateColumn>
+                                                </QuickGrid>
+                                                <div class="mt-2">
+                                                    <GridPaginator State="@paginationSalidas" />
+                                                </div>
                                             </div>
                                         }
                                     }
@@ -722,6 +724,10 @@ else
     private bool acordeonMovimientoAbierto = true;
     private List<MovimientoInventario> movimientosEntradas = [];
     private List<MovimientoInventario> movimientosSalidas = [];
+    private double totalEntradasCantidad;
+    private double totalSalidasCantidad;
+    private PaginationState paginationEntradas = new PaginationState { ItemsPerPage = 10 };
+    private PaginationState paginationSalidas = new PaginationState { ItemsPerPage = 10 };
     private string mensajeMovimiento = "";
     private string tipoAlertaMovimiento = "alert-info";
 
@@ -1267,6 +1273,10 @@ else
                         movimientosEntradas.Add(m);
                     }
                 }
+
+                // Calcular totales por sección
+                totalEntradasCantidad = movimientosEntradas.Sum(m => m.Cantidad);
+                totalSalidasCantidad = movimientosSalidas.Sum(m => m.Cantidad);
             }
         }
         catch (Exception ex)
