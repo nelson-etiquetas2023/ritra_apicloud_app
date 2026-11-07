@@ -431,7 +431,7 @@ else
                                     </div>
                                 </div>
 
-                                <!-- Historial de movimientos -->
+                                <!-- Historial de movimientos: Entradas y Salidas -->
                                 <h6 class="mb-2"><Icon Name="IconName.ListUl" Size="IconSize.x2" style="margin-right:6px;" /> Historial de movimientos</h6>
                                 @if (cargandoMovimientos)
                                 {
@@ -439,42 +439,86 @@ else
                                         <Spinner Size="SpinnerSize.Small" /> <strong style="margin-left:6px;">Cargando...</strong>
                                     </div>
                                 }
-                                else if (historialMovimientos == null || historialMovimientos.Count == 0)
-                                {
-                                    <div class="text-center py-3 text-muted small">
-                                        <Icon Name="IconName.Inbox" Size="IconSize.x2" style="margin-right:6px;" />
-                                        Sin movimientos registrados para este producto.
-                                    </div>
-                                }
                                 else
                                 {
-                                    <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Tipo</th>
-                                                <th class="text-end">Stock Anterior</th>
-                                                <th class="text-end">Cantidad</th>
-                                                <th class="text-end">Existencia Nueva</th>
-                                                <th>Documento</th>
-                                                <th>Usuario</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var m in historialMovimientos)
-                                            {
-                                                <tr>
-                                                    <td class="small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                                    <td><span class="badge @(m.TipoMovimiento == "Entrada" ? "bg-success" : m.TipoMovimiento == "Salida" ? "bg-danger" : "bg-info")">@m.TipoMovimiento</span></td>
-                                                    <td class="text-end small">@m.StockAnterior.ToString("N2")</td>
-                                                    <td class="text-end small">@m.Cantidad.ToString("N2")</td>
-                                                    <td class="text-end small fw-semibold">@m.StockNuevo.ToString("N2")</td>
-                                                    <td class="small">@m.TipoDocumento</td>
-                                                    <td class="small">@m.Usuario</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
+                                    var totalEntradas = movimientosEntradas.Count;
+                                    var totalSalidas = movimientosSalidas.Count;
+
+                                    if (totalEntradas == 0 && totalSalidas == 0)
+                                    {
+                                        <div class="text-center py-3 text-muted small">
+                                            <Icon Name="IconName.Inbox" Size="IconSize.x2" style="margin-right:6px;" />
+                                            Sin movimientos registrados para este producto.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <!-- Entradas -->
+                                        @if (totalEntradas > 0)
+                                        {
+                                            <div class="adv-movimientos-seccion mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge bg-success"><Icon Name="IconName.BoxArrowInDown" Size="IconSize.x2" style="margin-right:4px;" /> Entradas (<strong>@totalEntradas</strong>)</span>
+                                                </div>
+                                                <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="text-center">Número Documento</th>
+                                                            <th class="text-center">Fecha</th>
+                                                            <th>Descripción</th>
+                                                            <th class="text-center">Tipo Documento</th>
+                                                            <th class="text-end">Cantidad</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var m in movimientosEntradas)
+                                                        {
+                                                            <tr>
+                                                                <td class="text-center small">@m.Numero</td>
+                                                                <td class="text-center small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                                <td class="small">@(!string.IsNullOrWhiteSpace(m.ProductName) ? m.ProductName : m.TipoDocumento)</td>
+                                                                <td class="text-center small"><span class="badge bg-success">@m.TipoMovimiento</span></td>
+                                                                <td class="text-end small fw-semibold">+@m.Cantidad.ToString("N2")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+
+                                        <!-- Salidas -->
+                                        @if (totalSalidas > 0)
+                                        {
+                                            <div class="adv-movimientos-seccion mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge bg-danger"><Icon Name="IconName.BoxArrowInUp" Size="IconSize.x2" style="margin-right:4px;" /> Salidas (<strong>@totalSalidas</strong>)</span>
+                                                </div>
+                                                <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="text-center">Número Documento</th>
+                                                            <th class="text-center">Fecha</th>
+                                                            <th>Descripción</th>
+                                                            <th class="text-center">Tipo Documento</th>
+                                                            <th class="text-end">Cantidad</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var m in movimientosSalidas)
+                                                        {
+                                                            <tr>
+                                                                <td class="text-center small">@m.Numero</td>
+                                                                <td class="text-center small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                                <td class="small">@(!string.IsNullOrWhiteSpace(m.ProductName) ? m.ProductName : m.TipoDocumento)</td>
+                                                                <td class="text-center small"><span class="badge bg-danger">@m.TipoMovimiento</span></td>
+                                                                <td class="text-end small fw-semibold">-@m.Cantidad.ToString("N2")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    }
                                 }
                             </div>
                         }
@@ -676,7 +720,8 @@ else
     private bool registrandoMovimiento;
     private bool cargandoMovimientos;
     private bool acordeonMovimientoAbierto = true;
-    private List<MovimientoInventario> historialMovimientos = [];
+    private List<MovimientoInventario> movimientosEntradas = [];
+    private List<MovimientoInventario> movimientosSalidas = [];
     private string mensajeMovimiento = "";
     private string tipoAlertaMovimiento = "alert-info";
 
@@ -1194,7 +1239,8 @@ else
     {
         if (seleccionado == null) return;
         cargandoMovimientos = true;
-        historialMovimientos = [];
+        movimientosEntradas = [];
+        movimientosSalidas = [];
         StateHasChanged();
 
         try
@@ -1202,7 +1248,25 @@ else
             var resultado = await inventarioService.GetMovimientosProductoAsync(seleccionado.Product_Code);
             if (resultado != null)
             {
-                historialMovimientos = resultado.Movimientos;
+                foreach (var m in resultado.Movimientos)
+                {
+                    var tipo = (m.TipoMovimiento ?? "").Trim();
+                    if (tipo.Equals("Entrada", StringComparison.OrdinalIgnoreCase) ||
+                        tipo.Equals("Ajuste", StringComparison.OrdinalIgnoreCase) ||
+                        tipo.Equals("Transferencia", StringComparison.OrdinalIgnoreCase))
+                    {
+                        movimientosEntradas.Add(m);
+                    }
+                    else if (tipo.Equals("Salida", StringComparison.OrdinalIgnoreCase))
+                    {
+                        movimientosSalidas.Add(m);
+                    }
+                    else
+                    {
+                        // Por defecto, movimientos desconocidos van a entradas
+                        movimientosEntradas.Add(m);
+                    }
+                }
             }
         }
         catch (Exception ex)
