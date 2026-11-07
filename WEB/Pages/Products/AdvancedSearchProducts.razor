@@ -384,52 +384,6 @@ else
                         @if (acordeonMovimientoAbierto)
                         {
                             <div class="adv-accordion-body">
-                                <div class="card border-0 shadow-sm mb-3">
-                                    <div class="card-body">
-                                        <div class="row g-3 align-items-end">
-                                            <div class="col-md-3">
-                                                <label class="form-label small fw-semibold">Inicial</label>
-                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
-                                                     @bind="stockInicial" @bind:after="CalcularExistencia" />
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label small fw-semibold">Entradas</label>
-                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
-                                                     @bind="stockEntradas" @bind:after="CalcularExistencia" />
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label small fw-semibold">Salidas</label>
-                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
-                                                     @bind="stockSalidas" @bind:after="CalcularExistencia" />
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label small fw-semibold">Existencia</label>
-                                                <input type="number" class="form-control form-control-sm fw-bold" step="0.01" readonly
-                                                     value="@stockExistencia.ToString("N2")" style="background:#f8f9fa;" />
-                                            </div>
-                                        </div>
-                                        <div class="row g-3 mt-3 align-items-end">
-                                            <div class="col-md-4">
-                                                <label class="form-label small fw-semibold">Motivo</label>
-                                                <input type="text" class="form-control form-control-sm" @bind="motivoMovimiento" placeholder="Ajuste manual..." />
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small fw-semibold">Usuario</label>
-                                                <input type="text" class="form-control form-control-sm" @bind="usuarioMovimiento" placeholder="Usuario..." />
-                                            </div>
-                                            <div class="col-md-4 d-grid">
-                                                <Button Color="ButtonColor.Success" @onclick="RegistrarMovimientoAsync" disabled="@registrandoMovimiento">
-                                                    <Icon Name="IconName.Floppy2Fill" />
-                                                    <span>@(registrandoMovimiento ? "Registrando..." : "Registrar movimiento")</span>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        @if (!string.IsNullOrWhiteSpace(mensajeMovimiento))
-                                        {
-                                            <div class="alert @(tipoAlertaMovimiento) mt-2 small">@mensajeMovimiento</div>
-                                        }
-                                    </div>
-                                </div>
 
                                 <!-- Historial de movimientos: Entradas y Salidas -->
                                 <h6 class="mb-2"><Icon Name="IconName.ListUl" Size="IconSize.x2" style="margin-right:6px;" /> Historial de movimientos</h6>
@@ -1252,7 +1206,7 @@ else
         try
         {
             var resultado = await inventarioService.GetMovimientosProductoAsync(seleccionado.Product_Code);
-            if (resultado != null)
+            if (resultado != null && resultado.Movimientos.Count > 0)
             {
                 foreach (var m in resultado.Movimientos)
                 {
@@ -1273,11 +1227,67 @@ else
                         movimientosEntradas.Add(m);
                     }
                 }
-
-                // Calcular totales por sección
-                totalEntradasCantidad = movimientosEntradas.Sum(m => m.Cantidad);
-                totalSalidasCantidad = movimientosSalidas.Sum(m => m.Cantidad);
             }
+            else
+            {
+                // --- Datos FAKE para visualización de los grids ---
+                var seed = Math.Abs(seleccionado.Product_id);
+                var rnd = new Random(seed);
+
+                // Entradas fake
+                var entradasFake = new[]
+                {
+                    new { Numero = "OC-0001", Fecha = DateTime.Today.AddDays(-5), TipoDocumento = "Orden de Compra", TipoMovimiento = "Entrada", Cantidad = 50.0, ProductName = "Producto A", Usuario = "sistema" },
+                    new { Numero = "AJ-0102", Fecha = DateTime.Today.AddDays(-3), TipoDocumento = "Ajuste de Inventario", TipoMovimiento = "Ajuste", Cantidad = 20.0, ProductName = "Producto A", Usuario = "admin" },
+                    new { Numero = "TR-0055", Fecha = DateTime.Today.AddDays(-1), TipoDocumento = "Transferencia", TipoMovimiento = "Transferencia", Cantidad = 10.0, ProductName = "Producto A", Usuario = "almacen" },
+                };
+
+                // Salidas fake
+                var salidasFake = new[]
+                {
+                    new { Numero = "VE-0150", Fecha = DateTime.Today.AddDays(-4), TipoDocumento = "Venta", TipoMovimiento = "Salida", Cantidad = 15.0, ProductName = "Producto A", Usuario = "vendedor1" },
+                    new { Numero = "DE-0030", Fecha = DateTime.Today.AddDays(-2), TipoDocumento = "Devolución a Proveedor", TipoMovimiento = "Salida", Cantidad = 5.0, ProductName = "Producto A", Usuario = "admin" },
+                    new { Numero = "AJ-0105", Fecha = DateTime.Today.AddHours(-6), TipoDocumento = "Ajuste de Inventario", TipoMovimiento = "Salida", Cantidad = 2.0, ProductName = "Producto A", Usuario = "supervisor" },
+                };
+
+                foreach (var e in entradasFake)
+                {
+                    movimientosEntradas.Add(new MovimientoInventario
+                    {
+                        Numero = e.Numero,
+                        Fecha = e.Fecha,
+                        TipoDocumento = e.TipoDocumento,
+                        TipoMovimiento = e.TipoMovimiento,
+                        Cantidad = (int)e.Cantidad,
+                        StockAnterior = seleccionado.Stock - (double)e.Cantidad,
+                        StockNuevo = seleccionado.Stock,
+                        ProductCode = seleccionado.Product_Code,
+                        ProductName = e.ProductName,
+                        Usuario = e.Usuario
+                    });
+                }
+
+                foreach (var s in salidasFake)
+                {
+                    movimientosSalidas.Add(new MovimientoInventario
+                    {
+                        Numero = s.Numero,
+                        Fecha = s.Fecha,
+                        TipoDocumento = s.TipoDocumento,
+                        TipoMovimiento = s.TipoMovimiento,
+                        Cantidad = (int)s.Cantidad,
+                        StockAnterior = seleccionado.Stock + (double)s.Cantidad,
+                        StockNuevo = seleccionado.Stock,
+                        ProductCode = seleccionado.Product_Code,
+                        ProductName = s.ProductName,
+                        Usuario = s.Usuario
+                    });
+                }
+            }
+
+            // Calcular totales por sección
+            totalEntradasCantidad = movimientosEntradas.Sum(m => m.Cantidad);
+            totalSalidasCantidad = movimientosSalidas.Sum(m => m.Cantidad);
         }
         catch (Exception ex)
         {
