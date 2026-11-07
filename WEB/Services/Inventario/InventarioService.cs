@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Shared.Dtos.Inventario;
 
 namespace WEB.Services.Inventario
 {
@@ -53,6 +54,31 @@ namespace WEB.Services.Inventario
             {
                 Console.WriteLine($"Error al obtener movimientos de {codigo}: {ex.Message}");
                 return null;
+            }
+        }
+
+        public async Task<bool> RegistrarMovimientoInventarioAsync(RegistroMovimientoRequest request)
+        {
+            var url = $"api/inventario/registrar-movimiento";
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
+
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(request, jsonOptions);
+                var jsonContent = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var response = await clienteHttp.PostAsync(url, jsonContent);
+
+                if (response.IsSuccessStatusCode)
+                    return true;
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error registrando movimiento de inventario: HTTP {(int)response.StatusCode} - {errorContent}");
+                return false;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error registrando movimiento de inventario: {ex.Message}");
+                return false;
             }
         }
     }

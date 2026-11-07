@@ -1,9 +1,12 @@
 @page "/products/advanced-search-products"
 @implements IDisposable
+@using WEB.Services.Inventario
+@using Shared.Dtos.Inventario
 @inject IProductsService productsService
 @inject IEtiquetasService etiquetasService
 @inject IEnterprisesService enterprisesService
 @inject IConfigService configService
+@inject IInventarioService inventarioService
 @inject ToastService ToastSvc
 @inject IJSRuntime JS
 
@@ -370,6 +373,113 @@ else
                             <div class="alert alert-danger">@errorEdit</div>
                         }
                     </div>
+
+                    <!-- Acordeón: Registro de Movimiento de Inventario -->
+                    <div class="adv-accordion" style="margin-top:1.5rem;">
+                        <div class="adv-accordion-header" @onclick="ToggleAcordionMovimiento" style="cursor:pointer;">
+                            <Icon Name="@(acordeonMovimientoAbierto ? IconName.ChevronDown : IconName.ChevronRight)" Size="IconSize.x2" style="margin-right:6px;" />
+                            <strong><Icon Name="IconName.ArrowLeftRight" Size="IconSize.x2" style="margin-right:6px;" />Registro de Movimiento de Inventario</strong>
+                            <span class="ms-auto text-muted small">@(acordeonMovimientoAbierto ? "Ocultar" : "Mostrar")</span>
+                        </div>
+                        @if (acordeonMovimientoAbierto)
+                        {
+                            <div class="adv-accordion-body">
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-body">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold">Inicial</label>
+                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
+                                                     @bind="stockInicial" @bind:after="CalcularExistencia" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold">Entradas</label>
+                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
+                                                     @bind="stockEntradas" @bind:after="CalcularExistencia" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold">Salidas</label>
+                                                <input type="number" class="form-control form-control-sm" step="0.01" min="0"
+                                                     @bind="stockSalidas" @bind:after="CalcularExistencia" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold">Existencia</label>
+                                                <input type="number" class="form-control form-control-sm fw-bold" step="0.01" readonly
+                                                     value="@stockExistencia.ToString("N2")" style="background:#f8f9fa;" />
+                                            </div>
+                                        </div>
+                                        <div class="row g-3 mt-3 align-items-end">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold">Motivo</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="motivoMovimiento" placeholder="Ajuste manual..." />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold">Usuario</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="usuarioMovimiento" placeholder="Usuario..." />
+                                            </div>
+                                            <div class="col-md-4 d-grid">
+                                                <Button Color="ButtonColor.Success" @onclick="RegistrarMovimientoAsync" disabled="@registrandoMovimiento">
+                                                    <Icon Name="IconName.Floppy2Fill" />
+                                                    <span>@(registrandoMovimiento ? "Registrando..." : "Registrar movimiento")</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(mensajeMovimiento))
+                                        {
+                                            <div class="alert @(tipoAlertaMovimiento) mt-2 small">@mensajeMovimiento</div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Historial de movimientos -->
+                                <h6 class="mb-2"><Icon Name="IconName.ListUl" Size="IconSize.x2" style="margin-right:6px;" /> Historial de movimientos</h6>
+                                @if (cargandoMovimientos)
+                                {
+                                    <div class="d-flex justify-content-center align-items-center p-3">
+                                        <Spinner Size="SpinnerSize.Small" /> <strong style="margin-left:6px;">Cargando...</strong>
+                                    </div>
+                                }
+                                else if (historialMovimientos == null || historialMovimientos.Count == 0)
+                                {
+                                    <div class="text-center py-3 text-muted small">
+                                        <Icon Name="IconName.Inbox" Size="IconSize.x2" style="margin-right:6px;" />
+                                        Sin movimientos registrados para este producto.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <table class="table table-bordered table-striped table-sm" Style="font-size:0.85rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Tipo</th>
+                                                <th class="text-end">Stock Anterior</th>
+                                                <th class="text-end">Cantidad</th>
+                                                <th class="text-end">Existencia Nueva</th>
+                                                <th>Documento</th>
+                                                <th>Usuario</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var m in historialMovimientos)
+                                            {
+                                                <tr>
+                                                    <td class="small">@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                    <td><span class="badge @(m.TipoMovimiento == "Entrada" ? "bg-success" : m.TipoMovimiento == "Salida" ? "bg-danger" : "bg-info")">@m.TipoMovimiento</span></td>
+                                                    <td class="text-end small">@m.StockAnterior.ToString("N2")</td>
+                                                    <td class="text-end small">@m.Cantidad.ToString("N2")</td>
+                                                    <td class="text-end small fw-semibold">@m.StockNuevo.ToString("N2")</td>
+                                                    <td class="small">@m.TipoDocumento</td>
+                                                    <td class="small">@m.Usuario</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                            </div>
+                        }
+                    </div>
+
                     var ubis = GetInventarioFake(seleccionado);
                     <p class="adv-demo-note">Datos de ejemplo — pendiente integración con inventario real.</p>
                     <div class="adv-ubis">
@@ -508,6 +618,10 @@ else
     private void CambiarTab(string tab)
     {
         activeTab = tab;
+        if (tab == "inventario" && seleccionado != null)
+        {
+            _ = CargarMovimientosAsync();
+        }
     }
 
     private void AlternarGrid() => gridExpandido = !gridExpandido;
@@ -551,6 +665,20 @@ else
         public DateTime? FechaVencimiento { get; set; }
         public bool Activo { get; set; } = true;
     }
+
+    // --- Registro de movimiento de inventario (acordeón en pestaña Inventario) ---
+    private double stockInicial;
+    private double stockEntradas;
+    private double stockSalidas;
+    private double stockExistencia;
+    private string motivoMovimiento = "Ajuste manual";
+    private string usuarioMovimiento = "";
+    private bool registrandoMovimiento;
+    private bool cargandoMovimientos;
+    private bool acordeonMovimientoAbierto = true;
+    private List<MovimientoInventario> historialMovimientos = [];
+    private string mensajeMovimiento = "";
+    private string tipoAlertaMovimiento = "alert-info";
 
     protected override async Task OnInitializedAsync()
     {
@@ -636,13 +764,18 @@ else
             seleccionado = null;
     }
 
-    private void Seleccionar(Product p)
+    private async Task Seleccionar(Product p)
     {
         seleccionado = p;
         editando = false;
         errorEdit = "";
         mostrandoAddCat = false;
         mostrandoAddUni = false;
+
+        if (activeTab == "inventario")
+        {
+            await CargarMovimientosAsync();
+        }
     }
 
     private void OnSwitchLectura(bool v) { }
@@ -1046,6 +1179,114 @@ else
         if (e.Key == "Escape") CerrarLightbox();
         else if (e.Key == "ArrowRight") SiguienteFoto();
         else if (e.Key == "ArrowLeft") AnteriorFoto();
+    }
+
+    // --- Métodos de movimiento de inventario ---
+
+    private void ToggleAcordionMovimiento() => acordeonMovimientoAbierto = !acordeonMovimientoAbierto;
+
+    private void CalcularExistencia()
+    {
+        stockExistencia = stockInicial + stockEntradas - stockSalidas;
+    }
+
+    private async Task CargarMovimientosAsync()
+    {
+        if (seleccionado == null) return;
+        cargandoMovimientos = true;
+        historialMovimientos = [];
+        StateHasChanged();
+
+        try
+        {
+            var resultado = await inventarioService.GetMovimientosProductoAsync(seleccionado.Product_Code);
+            if (resultado != null)
+            {
+                historialMovimientos = resultado.Movimientos;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeMovimiento = $"Error cargando movimientos: {ex.Message}";
+            tipoAlertaMovimiento = "alert-danger";
+        }
+        finally
+        {
+            cargandoMovimientos = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RegistrarMovimientoAsync()
+    {
+        if (seleccionado == null) return;
+
+        // Validaciones básicas
+        if (string.IsNullOrWhiteSpace(usuarioMovimiento))
+        {
+            mensajeMovimiento = "El usuario es obligatorio.";
+            tipoAlertaMovimiento = "alert-warning";
+            return;
+        }
+
+        registrandoMovimiento = true;
+        mensajeMovimiento = "";
+        StateHasChanged();
+
+        try
+        {
+            var request = new Shared.Dtos.Inventario.RegistroMovimientoRequest
+            {
+                CodigoProducto = seleccionado.Product_Code,
+                NombreProducto = seleccionado.Product_Name,
+                Inicial = stockInicial,
+                Entradas = stockEntradas,
+                Salidas = stockSalidas,
+                Motivo = string.IsNullOrWhiteSpace(motivoMovimiento) ? "Ajuste manual" : motivoMovimiento,
+                Usuario = usuarioMovimiento,
+                Comentario = $"Registro desde Búsqueda Avanzada de Productos - {seleccionado.Product_Code}"
+            };
+
+            var ok = await inventarioService.RegistrarMovimientoInventarioAsync(request);
+
+            if (ok)
+            {
+                mensajeMovimiento = $"Movimiento registrado correctamente. Existencia: {stockExistencia:N2}";
+                tipoAlertaMovimiento = "alert-success";
+                // Limpiar formulario
+                stockInicial = 0;
+                stockEntradas = 0;
+                stockSalidas = 0;
+                stockExistencia = 0;
+                usuarioMovimiento = "";
+                motivoMovimiento = "Ajuste manual";
+                // Refrescar historial y existencia del producto
+                await CargarMovimientosAsync();
+                var fresh = await productsService.GetProductByIdAsync(seleccionado.Product_id);
+                if (fresh != null)
+                {
+                    seleccionado = fresh;
+                    var idx = products?.FindIndex(x => x.Product_id == fresh.Product_id) ?? -1;
+                    if (idx >= 0 && products != null) products[idx] = fresh;
+                }
+                ToastSvc.Notify(new(ToastType.Success, "Movimiento de inventario registrado."));
+            }
+            else
+            {
+                mensajeMovimiento = "No se pudo registrar el movimiento. Verifique que el endpoint de la API esté disponible.";
+                tipoAlertaMovimiento = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeMovimiento = $"Error: {ex.Message}";
+            tipoAlertaMovimiento = "alert-danger";
+        }
+        finally
+        {
+            registrandoMovimiento = false;
+            StateHasChanged();
+        }
     }
 
     private sealed class FotoVisible
