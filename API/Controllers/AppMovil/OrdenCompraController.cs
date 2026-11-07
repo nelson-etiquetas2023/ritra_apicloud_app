@@ -55,6 +55,27 @@ namespace API.Controllers.AppMovil
             return Ok(OrderDeleted);
         }
 
+        [HttpDelete]
+        [Route("deleteall")]
+        public async Task<IActionResult> DeleteAllOrdersAsync()
+        {
+            var count = await Service.DeleteAllOrdersAsync();
+            return Ok(new { message = $"Se eliminaron {count} orden(es) de compra.", eliminadas = count });
+        }
+
+        /// <summary>
+        /// Autoriza una orden para recepción en el móvil (cambia estado a 2 = Por recibir).
+        /// Solo se puede autorizar órdenes con estado 0 (Inicializado) o 1 (Actualizado).
+        /// </summary>
+        [HttpPost]
+        [Route("autorizar-recepcion/{numero}")]
+        public async Task<IActionResult> AutorizarParaRecepcion(string numero)
+        {
+            var ok = await Service.AutorizarParaRecepcionAsync(numero);
+            if (!ok) return Conflict($"La orden {numero} no existe o ya tiene un estado que no permite autorizar recepción.");
+            return Ok(new { message = $"La orden {numero} fue autorizada para recepción en el móvil.", numero, estado = 2 });
+        }
+
         [HttpGet]
         [Route("getnextnum")]
         public async Task<IActionResult> GetNextNum()

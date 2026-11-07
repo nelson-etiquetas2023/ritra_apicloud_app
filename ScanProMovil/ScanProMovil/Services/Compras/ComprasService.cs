@@ -103,11 +103,54 @@ namespace ScanProMovil.Services.Compras
             }
         }
 
+        /// <summary>Lee los numeros de orden que el usuario borro localmente
+        /// para no volver a bajarlos al sincronizar con el servidor.</summary>
+        private List<string> GetNumerosOrdenesBorradas()
+        {
+            try
+            {
+                var json = Preferences.Get("OrdenesBorradasLocalmente", string.Empty);
+                if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+                return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ComprasService] Error leyendo ordenes borradas: {ex.Message}");
+                return new List<string>();
+            }
+        }
+
+        /// <summary>Guarda los numeros de orden que el usuario borro localmente
+        /// para no volver a bajarlos al sincronizar con el servidor.</summary>
+        public void GuardarNumerosOrdenesBorradas(List<string> numeros)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(numeros.Distinct().Where(n => !string.IsNullOrWhiteSpace(n)).ToList());
+                Preferences.Set("OrdenesBorradasLocalmente", json);
+                Debug.WriteLine($"[ComprasService] Guardadas {numeros.Count} orden(es) en lista negra de borrados.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ComprasService] Error guardando ordenes borradas: {ex.Message}");
+            }
+        }
+
         public async Task<bool> SincronizarComprasDesdeApiAsync()
         {
             try
             {
                 var remotos = await GetOrdenesRemotoAsync();
+
+                // FILTRAR: excluir las ordenes que el usuario borro localmente
+                // para que no vuelvan a aparecer al sincronizar.
+                var borradas = GetNumerosOrdenesBorradas();
+                if (borradas.Count > 0)
+                {
+                    remotos = remotos.Where(r => !borradas.Contains(r.Numero)).ToList();
+                    Debug.WriteLine($"[ComprasService] Filtradas {borradas.Count} ordenes borradas localmente al sincronizar.");
+                }
+
                 var datosRemotos = ComprasSincronizador.Mapear(remotos);
                 if (datosRemotos.Count == 0) return true;
 
@@ -371,6 +414,48 @@ namespace ScanProMovil.Services.Compras
                 result.Message = ex.Message;
                 Debug.WriteLine($"ReceiveOrder {numero} exception: {ex.Message}");
                 return result;
+            }
+        }
+
+        /// <summary>Borra TODAS las órdenes de compra locales de SQLite (irreversible).</summary>
+        public async Task<bool> DeleteAllOrdersLocalAsync()
+        {
+            try
+            {
+                await using var _context = await _contextFactory.CreateDbContextAsync();
+
+                // Borrar detalles de compra primero (por clave foránea cascade)
+                var detallesBorrados = await _context.PurchaseOrderItems
+                    .ExecuteDeleteAsync();
+
+                // Borrar todas las órdenes de compra locales
+                var ordenesBorradas = await _context.PurchaseOrders
+                    .ExecuteDeleteAsync();
+
+                Debug.WriteLine($"[ComprasService] Borradas {ordenesBorradas} orden(es) y {detallesBorrados} detalle(s) de SQLite.");
+
+                return ordenesBorradas >= 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ComprasService] Error borrando órdenes locales: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>Borra TODAS las órdenes de compra del servidor (irreversible).</summary>
+        public async Task<bool> DeleteAllOrdersRemotoAsync()
+        {
+            try
+            {
+                var clienteHttp = httpFactory.CreateClient("scanpro");
+                var response = await clienteHttp.DeleteAsync("api/ordencompra/deleteall");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error borrando todas las órdenes del servidor: {ex.Message}");
+                return false;
             }
         }
     }

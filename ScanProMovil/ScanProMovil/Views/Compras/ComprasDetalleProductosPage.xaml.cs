@@ -20,8 +20,30 @@ public partial class ComprasDetalleProductosPage : ContentPage
             await Navigation.PopAsync();
         };
 
+        // Al cerrar el dialogo de confirmacion, devolver el foco al escaner
+        // para modo continuo (scan-and-go).
+        _vm.OnDialogoCerrado = () =>
+        {
+            EntryCodigoBarra.Focus();
+        };
+
+        // Al abrir el dialogo de confirmacion, dar el foco al entry de escaneo del dialogo.
+        _vm.OnDialogoAbierto = () =>
+        {
+            _ = FocusearEntryDialogoAsync();
+        };
+
         _vm.Inicializar(orden);
         BindingContext = _vm;
+    }
+
+    private async Task FocusearEntryDialogoAsync()
+    {
+        for (var intento = 0; intento < 4 && !EntryCodigoBarraDialogo.IsFocused; intento++)
+        {
+            EntryCodigoBarraDialogo.Focus();
+            await Task.Delay(150);
+        }
     }
 
     protected override void OnAppearing()
@@ -119,6 +141,64 @@ public partial class ComprasDetalleProductosPage : ContentPage
         if (!string.IsNullOrWhiteSpace(texto))
         {
             _ = ProcesarCodigo(texto);
+        }
+    }
+
+    private void OnCodigoBarraDialogoCompleted(object? sender, EventArgs e)
+    {
+        var entry = (Entry)sender;
+        var texto = entry.Text ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            _ = _vm.ProcesarEscaneoDialogoCommand.ExecuteAsync(texto);
+        }
+        // Borrar el entry para escanear el siguiente código
+        entry.Text = string.Empty;
+    }
+
+    private void OnCodigoBarraDialogoTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        var texto = e.NewTextValue ?? string.Empty;
+        var limpio = LimpiarCodigo(texto);
+
+        // Si el texto tiene al menos 3 caracteres y no contiene asteriscos,
+        // asumimos que es un código de barras completo y lo procesamos
+        if (limpio.Length >= 3 && !texto.Contains('*'))
+        {
+            _ = ProcesarConDebounceDialogo(texto);
+        }
+    }
+
+    private async Task ProcesarConDebounceDialogo(string texto)
+    {
+        await Task.Delay(400);
+
+        // Solo procesar si el texto no cambió durante el delay
+        var textoActual = EntryCodigoBarraDialogo.Text ?? string.Empty;
+        if (textoActual == texto)
+        {
+            await ProcesarCodigoDialogo(texto);
+        }
+    }
+
+    private async Task ProcesarCodigoDialogo(string codigoRaw)
+    {
+        if (_procesando) return;
+
+        var codigo = LimpiarCodigo(codigoRaw);
+        if (string.IsNullOrWhiteSpace(codigo)) return;
+
+        _procesando = true;
+
+        try
+        {
+            await _vm.ProcesarEscaneoDialogoCommand.ExecuteAsync(codigo);
+        }
+        finally
+        {
+            // Borrar el entry para escanear el siguiente código
+            EntryCodigoBarraDialogo.Text = string.Empty;
+            _procesando = false;
         }
     }
 }

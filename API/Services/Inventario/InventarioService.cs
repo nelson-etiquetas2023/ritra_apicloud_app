@@ -13,7 +13,17 @@ namespace API.Services.Inventario
 
         #region RECEIVE-COMPRAS
 
-        public async Task<ProcesarOrdenResult> ProcesarCompraAsync(string numero)
+        /// <summary>
+        /// Declaracion de recepcion de una orden de compra (vias de escaneo del
+        /// movil, replicando el cierre del picking). El cuerpo trae la cantidad
+        /// TOTAL recibida hasta ahora por linea; el servidor calcula el delta
+        /// contra lo ya almacenado, de modo que reenviar lo mismo nunca vuelve a
+        /// afectar el inventario. Solo las lineas completas (recibida >= ordenada)
+        /// se marcan Procesado; el documento queda Procesado (4) cuando todas las
+        /// lineas estan completas, en Transaccion Fallida (5) si alguna linea
+        /// fallo, y sigue Por Recibir (2) en recepciones parciales exitosas.
+        /// </summary>
+        public async Task<ProcesarOrdenResult> ProcesarCompraAsync(string numero, RecepcionCompraRequest? recepcion)
         {
             var stopwatch = Stopwatch.StartNew();
             var result = new ProcesarOrdenResult();
@@ -51,29 +61,66 @@ namespace API.Services.Inventario
                 return result;
             }
 
+            var lineas = (recepcion?.Items ?? [])
+                .Where(l => l is not null && !string.IsNullOrWhiteSpace(l.Product_id))
+                .GroupBy(l => l.Product_id.Trim())
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(l => l.CantidadRecibida).First(),
+                    StringComparer.OrdinalIgnoreCase);
+
+            if (lineas.Count == 0)
+            {
+                stopwatch.Stop();
+                result.Success = false;
+                result.Message = "La recepción no trae líneas: envíe la cantidad recibida de cada producto.";
+                result.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+                return result;
+            }
+
             bool hayFallo = false;
 
             foreach (var item in oc.Items)
             {
-                var itemResult = await ProcesarItemCompraAsync(item);
-                result.Items.Add(itemResult);
-                if (!itemResult.Ok) hayFallo = true;
+                var llave = item.Product_id?.Trim() ?? string.Empty;
+                if (!lineas.TryGetValue(llave, out var linea))
+                    continue; // lineas sin datos del dispositivo no se tocan.
+
+                result.Items.Add(await ProcesarItemCompraAsync(item, linea));
+                if (!result.Items[^1].Ok) hayFallo = true;
             }
 
-            oc.Status = hayFallo ? 5 : 4;
+            // Lineas de la recepcion que no existen en la orden: reportadas como fallo.
+            var conocidos = oc.Items.Select(i => i.Product_id?.Trim() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var linea in lineas.Values)
+            {
+                if (conocidos.Contains(linea.Product_id.Trim())) continue;
+                result.Items.Add(new ProcesarItemResult
+                {
+                    ProductCode = linea.Product_id.Trim(),
+                    Ok = false,
+                    Error = $"El producto '{linea.Product_id}' no pertenece a la orden {numero}."
+                });
+                hayFallo = true;
+            }
+
+            var ordenCompleta = oc.Items.All(i => i.Cantidad <= 0 || i.CantidadRecibida >= i.Cantidad);
+            oc.Status = ordenCompleta ? 4 : hayFallo ? 5 : 2;
             await context.SaveChangesAsync();
 
             result.Success = !hayFallo;
-            result.Message = hayFallo
-                ? $"El documento {numero} quedó en estado Transacción Fallida. Los productos con error no afectaron el inventario y el documento puede volver a procesarse."
-                : $"El documento {numero} fue procesado exitosamente. Todos los productos afectaron el inventario.";
+            result.Message = ordenCompleta
+                ? $"El documento {numero} fue recibido y procesado exitosamente. Todos los productos afectaron el inventario."
+                : hayFallo
+                    ? $"El documento {numero} quedó en estado Transacción Fallida. Las líneas con error no afectaron el inventario y el documento puede seguir recibiéndose."
+                    : $"Recepción parcial ({oc.Items.Sum(i => i.CantidadRecibida)}/{oc.Items.Sum(i => i.Cantidad)}) registrada para el documento {numero}. El documento sigue Por Recibir.";
             result.StatusFinal = oc.Status;
             stopwatch.Stop();
             result.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
             return result;
         }
 
-        private async Task<ProcesarItemResult> ProcesarItemCompraAsync(DetalleCompras item)
+        private async Task<ProcesarItemResult> ProcesarItemCompraAsync(DetalleCompras item, LineaRecepcionCompra linea)
         {
             var itemResult = new ProcesarItemResult
             {
@@ -82,28 +129,62 @@ namespace API.Services.Inventario
                 Cantidad = item.Cantidad
             };
 
-            if (item.Procesado)
+            // Compatibilidad con lineas procesadas por el flujo antiguo (sin
+            // tracking de recepcion): quedaron Procesado=true con CantidadRecibida
+            // en 0, pero el flujo viejo sumo a inventario la cantidad ordenada
+            // completa. Se asimilan como recibidas completas para no duplicar
+            // stock al recibirlas otra vez.
+            if (item.Procesado && item.CantidadRecibida == 0 && item.Cantidad > 0)
+                item.CantidadRecibida = item.Cantidad;
+
+            // La cantidad recibida nunca baja ni excede lo ordenado: el estado
+            // de otros dispositivos no se retrocede por uno viejo del actual.
+            var recibeAhora = (int)Math.Clamp(Math.Floor(linea.CantidadRecibida), item.CantidadRecibida, item.Cantidad);
+            var delta = recibeAhora - item.CantidadRecibida;
+            var completa = item.Cantidad <= 0 || recibeAhora >= item.Cantidad;
+
+            itemResult.CantidadAnteriorRecibida = item.CantidadRecibida;
+            itemResult.CantidadRecibida = recibeAhora;
+            itemResult.Delta = delta;
+
+            if (item.Procesado && completa && delta <= 0)
             {
                 itemResult.Ok = true;
                 itemResult.YaProcesado = true;
-                itemResult.Error = "La línea ya afectó el inventario en un procesamiento anterior.";
+                itemResult.Error = "La línea ya está recibida completa y afectó el inventario.";
                 return itemResult;
             }
 
-            var producto = await ResolverProductoAsync(item.Product_id);
-            if (producto is null)
+            if (delta > 0)
             {
-                itemResult.Ok = false;
-                itemResult.Error = $"Producto '{item.Product_id}' no encontrado por código de barra.";
-                return itemResult;
+                var producto = await ResolverProductoAsync(item.Product_id);
+                if (producto is null)
+                {
+                    itemResult.Ok = false;
+                    itemResult.Error = $"Producto '{item.Product_id}' no encontrado por código de barra.";
+                    return itemResult;
+                }
+
+                itemResult.StockAnterior = producto.Stock;
+                producto.Stock += delta;
+                itemResult.StockNuevo = producto.Stock;
             }
 
-            itemResult.StockAnterior = producto.Stock;
-            producto.Stock += item.Cantidad;
-            item.Procesado = true;
-            item.FechaProcesado = DateTime.UtcNow;
-            itemResult.StockNuevo = producto.Stock;
             itemResult.Ok = true;
+            item.CantidadRecibida = recibeAhora;
+            item.FechaRecepcion = DateTime.UtcNow;
+
+            if (completa)
+            {
+                // Linea cerrada: se marca como procesada la primera vez que
+                // llega completa.
+                if (!item.Procesado)
+                {
+                    item.Procesado = true;
+                    item.FechaProcesado = DateTime.UtcNow;
+                }
+            }
+
             return itemResult;
         }
 

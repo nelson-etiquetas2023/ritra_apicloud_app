@@ -1,5 +1,6 @@
 using API.Services.Inventario;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Dtos.Compras;
 
 namespace API.Controllers
 {
@@ -12,9 +13,9 @@ namespace API.Controllers
         #region RECEIVE-COMPRAS
 
         [HttpPost("process-compra/{numero}")]
-        public async Task<IActionResult> ProcessCompra(string numero)
+        public async Task<IActionResult> ProcessCompra(string numero, [FromBody] RecepcionCompraRequest? recepcion)
         {
-            var result = await inventario.ProcesarCompraAsync(numero);
+            var result = await inventario.ProcesarCompraAsync(numero, recepcion);
             return Ok(result);
         }
 

@@ -21,6 +21,9 @@
         <button class="btn btn-primary" type="button" @onclick="NuevaOC">
             <Icon Name="IconName.Plus" Size="IconSize.x4" /> Nueva Orden
         </button>
+        <button class="btn btn-danger" type="button" @onclick="BorrarTodas">
+            <Icon Name="IconName.TrashFill" Size="IconSize.x4" Color="IconColor.Danger" /> Borrar todas
+        </button>
     </div>
 </div>
 
@@ -234,7 +237,8 @@ private bool procesandoSeleccion;
 
     private static int NumeroOrdenKey(OrdenCompra o)
     {
-        return int.TryParse(o.Numero?.Replace("OC-", ""), out var n) ? n : 0;
+        var numeroLimpio = o.Numero?.Replace("PO-", string.Empty).Replace("OC-", string.Empty) ?? "";
+        return int.TryParse(numeroLimpio, out var n) ? n : 0;
     }
 
     private void buscar()
@@ -466,6 +470,31 @@ private bool procesandoSeleccion;
         else
         {
             ToastService.Notify(new(ToastType.Danger, "No se pudo eliminar la orden. Los documentos procesados no pueden eliminarse."));
+        }
+    }
+
+    private async Task BorrarTodas()
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm",
+            "¿Está seguro de borrar TODAS las órdenes de compra? Esta acción no se puede deshacer.");
+        if (!confirm) return;
+
+        try
+        {
+            var eliminadas = await servicio.DeleteAllOrdersAsync();
+            if (eliminadas > 0)
+            {
+                ToastService.Notify(new(ToastType.Success, $"Se eliminaron {eliminadas} orden(es) de compra."));
+            }
+            else
+            {
+                ToastService.Notify(new(ToastType.Danger, "No se pudieron eliminar las órdenes de compra."));
+            }
+            await LoadOrders();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error al borrar las órdenes de compra: {ex.Message}"));
         }
     }
 

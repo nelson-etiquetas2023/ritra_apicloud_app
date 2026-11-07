@@ -119,6 +119,32 @@ namespace WEB.Services.OrdenCompra
             }
         }
 
+        public async Task<int> DeleteAllOrdersAsync()
+        {
+            var url = "api/ordencompra/deleteall";
+            var clienteHttp = HttpFactory.CreateClient("scanpro");
+
+            try
+            {
+                var response = await clienteHttp.DeleteAsync(url);
+                if (!response.IsSuccessStatusCode) return 0;
+
+                var contentString = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(contentString)) return 0;
+
+                using var doc = JsonDocument.Parse(contentString);
+                if (doc.RootElement.TryGetProperty("eliminadas", out var el) && el.TryGetInt32(out var count))
+                    return count;
+
+                return 0;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error al eliminar todas las órdenes: {ex.Message}");
+                return 0;
+            }
+        }
+
         public async Task<string> GetNextNumAsync()
         {
             try

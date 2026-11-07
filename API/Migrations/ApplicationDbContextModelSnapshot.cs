@@ -17,7 +17,7 @@ namespace API.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -141,6 +141,9 @@ namespace API.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("int");
 
+                    b.Property<int>("CantidadRecibida")
+                        .HasColumnType("int");
+
                     b.Property<string>("Comentario")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -150,6 +153,9 @@ namespace API.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("FechaProcesado")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRecepcion")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Numero")

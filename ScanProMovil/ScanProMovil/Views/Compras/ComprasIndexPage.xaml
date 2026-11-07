@@ -11,6 +11,11 @@
                      Clicked="OnSincronizarClicked"
                      Order="Primary"
                      Priority="0"/>
+        <ToolbarItem Text="Eliminar Todo"
+                     Command="{Binding DeleteAllOrdersLocalCommand}"
+                     Order="Primary"
+                     Priority="1"
+                     IconImageSource="delete_50px.png"/>
     </ContentPage.ToolbarItems>
 
     <Grid Padding="1"

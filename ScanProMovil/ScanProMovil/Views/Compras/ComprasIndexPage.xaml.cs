@@ -38,6 +38,9 @@ public partial class ComprasIndexPage : ContentPage
 
     private void OnSincronizarClicked(object? sender, EventArgs e) => UiGuard.Run(this, async () =>
     {
+        // Al hacer clic en Sincronizar, re-habilitar la sincronización automática
+        // para que se bajen las órdenes nuevas del servidor.
+        Preferences.Set("SkipAutoSyncCompras", false);
         await _vm.GetOrdersLocalSqliteCommand.ExecuteAsync(null);
     });
 

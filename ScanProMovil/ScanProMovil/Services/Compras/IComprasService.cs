@@ -22,5 +22,14 @@ namespace ScanProMovil.Services.Compras
 
         /// <summary>Un escaneo/suma = una unidad recibida del item en SQLite (con tope).</summary>
         Task<bool> MarcarItemRecibidoAsync(string numeroOrden, int detailId);
+
+        /// <summary>Borra TODAS las órdenes de compra locales de SQLite (irreversible).</summary>
+        Task<bool> DeleteAllOrdersLocalAsync();
+
+        /// <summary>Guarda los numeros de orden borrados localmente para no volver a bajarlos al sincronizar.</summary>
+        void GuardarNumerosOrdenesBorradas(List<string> numeros);
+
+        /// <summary>Borra TODAS las órdenes de compra del servidor (irreversible).</summary>
+        Task<bool> DeleteAllOrdersRemotoAsync();
     }
 }

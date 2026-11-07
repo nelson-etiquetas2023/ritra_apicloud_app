@@ -14,8 +14,12 @@ namespace Shared.Dtos.Compras
         public decimal Costo { get; set; }
         public decimal Subtotal { get; set; }
         public string Comentario { get; set; } = "";
-        public bool Procesado { get; set; } //true si la linea ya incremento el inventario
+        public bool Procesado { get; set; } //true cuando la linea se recibio completa (Cargo el inventario)
         public DateTime? FechaProcesado { get; set; } //cuando se proceso la linea
+        // Recepcion parcial: unidades ya recibidas y cargadas a inventario en el servidor.
+        // El servidor es la fuente de verdad; el movil lo actualiza al enviar la recepcion.
+        public int CantidadRecibida { get; set; }
+        public DateTime? FechaRecepcion { get; set; } //ultima actualizacion de la recepcion
         [JsonIgnore]
         public OrdenCompra? Order { get; set; }
     }

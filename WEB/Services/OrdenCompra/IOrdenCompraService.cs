@@ -7,6 +7,7 @@ namespace WEB.Services.OrdenCompra
         Task<bool> AddOrderAsync(Shared.Dtos.Compras.OrdenCompra oc);
         Task<bool> UpdateOrderAsync(string numero, Shared.Dtos.Compras.OrdenCompra oc);
         Task<bool> DeleteOrderAsync(string numero);
+        Task<int> DeleteAllOrdersAsync(); // Borra TODAS las órdenes de compra (irreversible)
         Task<string> GetNextNumAsync();
         Task<bool> AnularOrderAsync(string numero);
     }

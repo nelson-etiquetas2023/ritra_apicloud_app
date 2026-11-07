@@ -268,7 +268,7 @@
         {
             oc.FechaCreacion = DateTime.Now;
             oc.Fecha = oc.FechaCreacion.AddDays(8);
-            oc.Tipo_Documento = "OC";
+            oc.Tipo_Documento = "PO";
 
             var tNumero = servicio.GetNextNumAsync();
             var tAlmacenes = AlmacenesService.GetAlmacenesAsync();

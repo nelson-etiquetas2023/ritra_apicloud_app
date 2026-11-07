@@ -19,5 +19,10 @@ namespace Shared.Dtos.Compras
         public bool Ok { get; set; }
         public string Error { get; set; } = "";
         public bool YaProcesado { get; set; }
+        // Recepcion parcial: lo que ya estaba recibido en el server, lo que llega
+        // ahora y el delta aplicado al inventario.
+        public int CantidadAnteriorRecibida { get; set; }
+        public int CantidadRecibida { get; set; }
+        public int Delta { get; set; }
     }
 }

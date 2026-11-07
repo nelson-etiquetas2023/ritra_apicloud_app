@@ -161,6 +161,37 @@ namespace API.Services.OcMovil
             return true;
         }
 
+        public async Task<int> DeleteAllOrdersAsync()
+        {
+            // Borrar detalles primero (por seguridad aunque haya cascade)
+            var detalles = await context.DetalleCompra.ToListAsync();
+            context.DetalleCompra.RemoveRange(detalles);
+
+            // Borrar todas las órdenes de compra
+            var ordenes = await context.Compra.ToListAsync();
+            context.Compra.RemoveRange(ordenes);
+
+            await context.SaveChangesAsync();
+            return ordenes.Count;
+        }
+
+        /// <summary>
+        /// Autoriza una orden para recepción en el móvil: cambia su estado a 2 (Por recibir).
+        /// Solo se puede autorizar órdenes con estado 0 (Inicializado) o 1 (Actualizado).
+        /// </summary>
+        public async Task<bool> AutorizarParaRecepcionAsync(string numero)
+        {
+            var oc = await context.Compra.FirstOrDefaultAsync(o => o.Numero == numero);
+            if (oc is null) return false;
+
+            // Solo se puede autorizar si está Inicializado (0) o Actualizado (1)
+            if (oc.Status is not 0 and not 1) return false;
+
+            oc.Status = 2; // Por recibir / Sincronizado
+            await context.SaveChangesAsync();
+            return true;
+        }
+
         private static string ValidarPrioridad(string? prioridad)
         {
             return prioridad?.Trim() switch

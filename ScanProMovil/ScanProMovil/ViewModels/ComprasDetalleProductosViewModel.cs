@@ -49,9 +49,92 @@ namespace ScanProMovil.ViewModels
 
         public double Progreso => Items.Count == 0 ? 0 : (double)Items.Count(i => i.RecibidoCompleto) / Items.Count;
 
+        /// <summary>Progreso de la orden para el header del diálogo: "recibidas / total" (ej. 1/50).</summary>
+        public string ProgresoOrdenTexto
+        {
+            get
+            {
+                if (Orden is null) return "0/0";
+                return $"{Orden.UnidadesRecibidas}/{Orden.TotalUnidades}";
+            }
+        }
+
+        /// <summary>Código escrito en el entry de escaneo dentro del diálogo.</summary>
+        private string _codigoEscaneoDialogo = string.Empty;
+        public string CodigoEscaneoDialogo
+        {
+            get => _codigoEscaneoDialogo;
+            set { SetProperty(ref _codigoEscaneoDialogo, value); }
+        }
+
         /// <summary>Accion opcional al completar la orden (ej. navegar atras).
         /// Se asigna desde la pagina para no acoplar el ViewModel a la navegacion.</summary>
         public Action? OnCompletado { get; set; }
+
+        /// <summary>Accion opcional al cerrar el dialogo de confirmacion (devuelve foco al escaner).</summary>
+        public Action? OnDialogoCerrado { get; set; }
+
+        /// <summary>Accion opcional al abrir el dialogo de confirmacion (da foco al entry de escaneo).</summary>
+        public Action? OnDialogoAbierto { get; set; }
+
+        // --- Diálogo de confirmación de recepción (patrón WMS: scan & confirm) ---
+        private DetalleCompra? _productoDialog;
+        public DetalleCompra? ProductoDialog
+        {
+            get => _productoDialog;
+            set { SetProperty(ref _productoDialog, value); }
+        }
+
+        private int _cantidadDialog = 1;
+        public int CantidadDialog
+        {
+            get => _cantidadDialog;
+            set
+            {
+                if (SetProperty(ref _cantidadDialog, value))
+                {
+                    // Al cambiar la cantidad (manual o +/-), actualizar el producto,
+                    // guardar en SQLite y refrescar el header (RecibidoTexto + progreso).
+                    _ = AplicarCantidadDialogoAsync();
+                }
+            }
+        }
+
+        private async Task AplicarCantidadDialogoAsync()
+        {
+            if (ProductoDialog is null || Orden is null) return;
+
+            // Nunca exceder lo ordenado
+            var cantidad = Math.Min(CantidadDialog, (int)ProductoDialog.Cantidad);
+            if (cantidad < 0) cantidad = 0;
+
+            if (Math.Abs(cantidad - ProductoDialog.CantidadRecibida) < 0.001) return;
+
+            ProductoDialog.CantidadRecibida = cantidad;
+
+            // Persistir en SQLite (offline-first)
+            var ok = await _comprasService.MarcarItemRecibidoAsync(Orden.Numero, ProductoDialog.DetailId);
+            if (!ok)
+            {
+                MensajeEscaneo = "No se pudo guardar la recepción.";
+                ColorMensajeEscaneo = Colors.Red;
+                return;
+            }
+
+            // Notificar progreso de la orden (actualiza el header RecibidoTexto)
+            Orden.NotificarProgresoRecepcion();
+            Recalcular();
+
+            MensajeEscaneo = $"{ProductoDialog.Product_id} recibido ({ProductoDialog.RecibidoTexto}).";
+            ColorMensajeEscaneo = Colors.Green;
+        }
+
+        private bool _dialogoAbierto;
+        public bool DialogoAbierto
+        {
+            get => _dialogoAbierto;
+            set { SetProperty(ref _dialogoAbierto, value); }
+        }
 
         public ComprasDetalleProductosViewModel(IComprasService comprasService)
         {
@@ -112,6 +195,7 @@ namespace ScanProMovil.ViewModels
             OnPropertyChanged(nameof(Progreso));
             OnPropertyChanged(nameof(ProgresoTexto));
             OnPropertyChanged(nameof(TodosRecibidos));
+            OnPropertyChanged(nameof(ProgresoOrdenTexto));
         }
 
         /// <summary>
@@ -180,42 +264,12 @@ namespace ScanProMovil.ViewModels
                     return;
                 }
 
-                // Avance optimista en pantalla: un escaneo suma una unidad. El
-                // servicio guarda en la BD; si falla, se revierte.
-                var recibidoPrevio = item.CantidadRecibida;
-                item.CantidadRecibida = Math.Min(item.CantidadRecibida + 1, item.Cantidad);
-
-                // Persistir en la base local (aunque no haya red)
-                var ok = await _comprasService.MarcarItemRecibidoAsync(Orden!.Numero, item.DetailId);
-                if (!ok)
-                {
-                    item.CantidadRecibida = recibidoPrevio; // revertir si fallo
-                    MensajeEscaneo = "No se pudo guardar la recepción.";
-                    ColorMensajeEscaneo = Colors.Red;
-                    var toast = Toast.Make("No se pudo guardar la recepción.", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                    await toast.Show();
-                    return;
-                }
-
-                // Exito: feedback visual. El INPC de la entidad refresca la fila;
-                // los contadores de la orden (tarjetas del listado, misma instancia
-                // en memoria) se refrescan via NotificarProgresoRecepcion.
-                MensajeEscaneo = $"{item.Product_id} recibido ({item.RecibidoTexto}).";
-                ColorMensajeEscaneo = Colors.Green;
-
-                Orden!.NotificarProgresoRecepcion();
-                Recalcular();
-
-                // Verificar si todas las lineas de la orden estan recibidas
-                if (_itemsOriginal.All(i => i.RecibidoCompleto))
-                {
-                    MensajeEscaneo = "Todos los productos recibidos. Enviando recepción...";
-                    ColorMensajeEscaneo = Colors.Green;
-
-                    // Nucleo directo (sin guardias): IsLoading ya esta activo aqui,
-                    // si llamara ValidarRecepcionCommand la guardia abortaria el cierre.
-                    await EjecutarCierreOrdenAsync();
-                }
+                // WMS: scan & confirm. Abre el diálogo para que el operador
+                // valide producto y ajuste la cantidad antes de persistir.
+                ProductoDialog = item;
+                CantidadDialog = 1;
+                DialogoAbierto = true;
+                return;
             }
             catch (Exception ex)
             {
@@ -229,6 +283,178 @@ namespace ScanProMovil.ViewModels
                 IsLoading = false;
                 LoadingMessage = string.Empty;
             }
+        }
+
+        [RelayCommand]
+        private void IncrementarDialogo()
+        {
+            if (ProductoDialog is null) return;
+            CantidadDialog = Math.Min(CantidadDialog + 1, (int)ProductoDialog.Cantidad);
+        }
+
+        [RelayCommand]
+        private void DecrementarDialogo()
+        {
+            if (CantidadDialog > 1) CantidadDialog--;
+        }
+
+        [RelayCommand]
+        private async Task GuardarDialogo()
+        {
+            if (ProductoDialog is null || Orden is null) return;
+
+            // Nunca exceder lo ordenado
+            if (CantidadDialog > ProductoDialog!.Cantidad)
+                CantidadDialog = (int)ProductoDialog.Cantidad;
+
+            // Aplicar al ítem local
+            ProductoDialog.CantidadRecibida = CantidadDialog;
+
+            // Persistir en SQLite (offline-first)
+            var ok = await _comprasService.MarcarItemRecibidoAsync(Orden.Numero, ProductoDialog.DetailId);
+            if (!ok)
+            {
+                MensajeEscaneo = "Error al guardar la recepción.";
+                ColorMensajeEscaneo = Colors.Red;
+                var toast = Toast.Make("No se pudo guardar la recepción.", CommunityToolkit.Maui.Core.ToastDuration.Short);
+                await toast.Show();
+                return;
+            }
+
+            Orden.NotificarProgresoRecepcion();
+            Recalcular();
+
+            MensajeEscaneo = $"{ProductoDialog.Product_id} recibido ({CantidadDialog}).";
+            ColorMensajeEscaneo = Colors.Green;
+
+            // Cerrar diálogo y devolver foco al escáner para el siguiente producto
+            ProductoDialog = null;
+            CantidadDialog = 1;
+            DialogoAbierto = false;
+            OnDialogoCerrado?.Invoke();
+
+            // Verificar si la orden terminó: cierre automático al completar
+            if (_itemsOriginal.All(i => i.RecibidoCompleto))
+            {
+                await EjecutarCierreOrdenAsync();
+            }
+        }
+
+        [RelayCommand]
+        private void CancelarDialogo()
+        {
+            ProductoDialog = null;
+            CantidadDialog = 1;
+            DialogoAbierto = false;
+        }
+
+        /// <summary>Abre el diálogo de confirmación al tocar un producto en la lista.</summary>
+        [RelayCommand]
+        private void AbrirDialogo(DetalleCompra item)
+        {
+            if (Orden is null || EstaBloqueado) return;
+            if (item is null || item.RecibidoCompleto) return;
+
+            ProductoDialog = item;
+            CantidadDialog = (int)item.CantidadRecibida;
+            CodigoEscaneoDialogo = string.Empty;
+            DialogoAbierto = true;
+
+            // Notificar a la página para que de el foco al entry de escaneo del diálogo
+            OnDialogoAbierto?.Invoke();
+        }
+
+        /// <summary>Escanea un código de barras desde dentro del diálogo:
+        /// verifica que pertenezca a un producto de la orden y, si es correcto,
+        /// selecciona ese producto e incrementa la cantidad. Si no, lanza error.</summary>
+        [RelayCommand]
+        private async Task ProcesarEscaneoDialogo(string codigo)
+        {
+            if (Orden is null || EstaBloqueado || string.IsNullOrWhiteSpace(codigo)) return;
+
+            var codigoLimpio = codigo.Trim();
+            if (codigoLimpio.Length >= 2 && codigoLimpio.StartsWith('*') && codigoLimpio.EndsWith('*'))
+            {
+                codigoLimpio = codigoLimpio.Trim('*', ' ', '\r', '\n', '\t').Trim();
+            }
+
+            // 1) Coincidencia exacta entre productos NO completados
+            var item = _itemsOriginal.FirstOrDefault(i =>
+                !i.RecibidoCompleto &&
+                !string.IsNullOrWhiteSpace(i.Product_id) &&
+                i.Product_id.Equals(codigoLimpio, System.StringComparison.OrdinalIgnoreCase));
+
+            // 2) Intento Contains (código contenido en el escaneo o viceversa)
+            if (item == null)
+            {
+                item = _itemsOriginal.FirstOrDefault(i =>
+                    !i.RecibidoCompleto &&
+                    !string.IsNullOrWhiteSpace(i.Product_id) &&
+                    (i.Product_id.Contains(codigoLimpio, System.StringComparison.OrdinalIgnoreCase) ||
+                     codigoLimpio.Contains(i.Product_id, System.StringComparison.OrdinalIgnoreCase)));
+            }
+
+            // 3) Fallback: buscar por nombre con Contains
+            if (item == null)
+            {
+                item = _itemsOriginal.FirstOrDefault(i =>
+                    !i.RecibidoCompleto &&
+                    !string.IsNullOrWhiteSpace(i.Product_Name) &&
+                    i.Product_Name.Contains(codigoLimpio, System.StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (item == null)
+            {
+                // Código no válido para esta orden
+                MensajeEscaneo = "Código incorrecto";
+                ColorMensajeEscaneo = Colors.Red;
+                var toast = Toast.Make("Código incorrecto", CommunityToolkit.Maui.Core.ToastDuration.Short);
+                await toast.Show();
+                CodigoEscaneoDialogo = string.Empty;
+                return;
+            }
+
+            // Código correcto: seleccionar el producto en el diálogo
+            ProductoDialog = item;
+            CodigoEscaneoDialogo = string.Empty;
+
+            if (ProductoDialog!.CantidadRecibida >= ProductoDialog.Cantidad)
+            {
+                // Ya está completo: no se puede incrementar más
+                MensajeEscaneo = $"{item.Product_id} ya está completo.";
+                ColorMensajeEscaneo = Colors.Orange;
+                var toast = Toast.Make($"{item.Product_id} ya está completo.", CommunityToolkit.Maui.Core.ToastDuration.Short);
+                await toast.Show();
+                return;
+            }
+
+            // Avance optimista: incrementar la cantidad recibida inmediatamente (como picking)
+            var recibidoPrevio = ProductoDialog.CantidadRecibida;
+            ProductoDialog.CantidadRecibida = Math.Min(ProductoDialog.CantidadRecibida + 1, ProductoDialog.Cantidad);
+
+            // Persistir en SQLite (offline-first)
+            var ok = await _comprasService.MarcarItemRecibidoAsync(Orden!.Numero, ProductoDialog.DetailId);
+            if (!ok)
+            {
+                ProductoDialog.CantidadRecibida = recibidoPrevio; // revertir si falló
+                MensajeEscaneo = "No se pudo guardar la recepción.";
+                ColorMensajeEscaneo = Colors.Red;
+                var toast = Toast.Make("No se pudo guardar la recepción.", CommunityToolkit.Maui.Core.ToastDuration.Short);
+                await toast.Show();
+                return;
+            }
+
+            // Sincronizar el entry de cantidad con el valor guardado
+            CantidadDialog = (int)ProductoDialog.CantidadRecibida;
+
+            // Notificar progreso de la orden (actualiza el header Total items a recibir: N/M)
+            Orden.NotificarProgresoRecepcion();
+            Recalcular();
+
+            MensajeEscaneo = $"{item.Product_id} recibido ({ProductoDialog.RecibidoTexto}).";
+            ColorMensajeEscaneo = Colors.Green;
+            var toastOk = Toast.Make($"{item.Product_id} recibido.", CommunityToolkit.Maui.Core.ToastDuration.Short);
+            await toastOk.Show();
         }
 
         /// <summary>Punto de entrada de UI (Validar Recepción): aplica guardias y control de carga.</summary>

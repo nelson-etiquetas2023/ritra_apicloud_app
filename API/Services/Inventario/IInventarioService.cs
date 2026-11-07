@@ -5,7 +5,7 @@ namespace API.Services.Inventario
 {
     public interface IInventarioService
     {
-        Task<ProcesarOrdenResult> ProcesarCompraAsync(string numero);
+        Task<ProcesarOrdenResult> ProcesarCompraAsync(string numero, RecepcionCompraRequest? recepcion);
         Task<MovimientosProductoResult> GetMovimientosProductoAsync(string codigo);
     }
 }

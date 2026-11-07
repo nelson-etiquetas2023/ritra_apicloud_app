@@ -5,7 +5,7 @@ namespace ScanProMovil.Data.Entities
     public class ConsecutivoCompra
     {
         [Key]
-        public string Tipo_Documento { get; set; } = "OC";
+        public string Tipo_Documento { get; set; } = "PO";
         public int UltimoNumero { get; set; }
     }
 }

@@ -7,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ScanProMovil.ViewModels
 {
@@ -60,17 +62,94 @@ namespace ScanProMovil.ViewModels
             await RecargarListaAsync();
         }
 
-        private async Task RecargarListaAsync()
+        /// <summary>Borra TODAS las órdenes de compra locales de SQLite (irreversible).</summary>
+        [RelayCommand]
+        public async Task DeleteAllOrdersLocal()
+        {
+            if (IsLoading)
+                return;
+
+            var confirm = false;
+            var page = Application.Current?.Windows[0]?.Page;
+            if (page is not null)
+                confirm = await page.DisplayAlertAsync(
+                    "Eliminar todas las órdenes",
+                    "¿Seguro que deseas borrar TODAS las órdenes de compra locales? Esta acción no se puede deshacer y no afecta al servidor.",
+                    "Sí, borrar todo",
+                    "Cancelar");
+
+            if (!confirm) return;
+
+            try
+            {
+                IsLoading = true;
+                loadingMessage = "Eliminando órdenes...";
+
+                // Guardar los números de orden en la lista negra ANTES de borrarlos,
+                // para que al sincronizar con el servidor no vuelvan a bajarse.
+                var numerosBorrar = _allOrders.Select(o => o.Numero).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                Service.GuardarNumerosOrdenesBorradas(numerosBorrar);
+
+                var ok = await Service.DeleteAllOrdersLocalAsync();
+                if (ok)
+                {
+                    ordenes = [];
+                    _allOrders = new();
+                    FilterOrders(SearchText);
+                    loadingMessage = string.Empty;
+                    // Persistir en Preferences para que al entrar de nuevo no se
+                    // sincronice con el servidor y traiga las órdenes de vuelta.
+                    Preferences.Set("SkipAutoSyncCompras", true);
+                    RefreshListOrders = false;
+
+                    if (page is not null)
+                        await page.DisplayAlertAsync(
+                            "Órdenes eliminadas",
+                            $"Se borraron {numerosBorrar.Count} orden(es) localmente.\nNo volverán a aparecer al sincronizar.\nUse 'Sincronizar' para traer solo órdenes nuevas del servidor.",
+                            "Ok");
+                }
+                else
+                {
+                    await Application.Current?.Windows[0]?.Page?.DisplayAlertAsync(
+                        "Error", "No se pudieron eliminar las órdenes locales.", "Ok");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error eliminando órdenes locales: {ex.Message}");
+                await Application.Current?.Windows[0]?.Page?.DisplayAlertAsync(
+                    "Error", ex.Message, "Ok");
+            }
+            finally
+            {
+                IsLoading = false;
+                loadingMessage = string.Empty;
+            }
+        }
+
+        private async Task RecargarListaAsync(bool forzarSincronizacionRemota = false)
         {
             try
             {
                 IsLoading = true;
-                loadingMessage = "Sincronizando compras...";
 
-                await Service.SincronizarComprasDesdeApiAsync();
+                // Si no se forza la sincronización remota y el usuario pidió borrar
+                // todo (SkipAutoSyncCompras = true), no se baja nada del servidor
+                // para que el borrado local se mantenga.
+                var skipAutoSync = Preferences.Get("SkipAutoSyncCompras", false);
 
-                loadingMessage = "Cargando ordenes...";
-                Debug.WriteLine("Loading ON");
+                if (!skipAutoSync || forzarSincronizacionRemota)
+                {
+                    loadingMessage = "Sincronizando compras...";
+                    await Service.SincronizarComprasDesdeApiAsync();
+                    loadingMessage = "Cargando ordenes...";
+                    Debug.WriteLine("Loading ON");
+                }
+                else
+                {
+                    loadingMessage = "Cargando ordenes locales...";
+                    Debug.WriteLine("SkipAutoSync: saltando sincronización remota");
+                }
 
                 var result = await Service.GetOrdersLocalSqliteAsync();
                 _allOrders = result;
