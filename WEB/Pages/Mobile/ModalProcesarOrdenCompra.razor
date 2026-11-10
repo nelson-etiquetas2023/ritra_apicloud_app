@@ -83,8 +83,8 @@
     </BodyTemplate>
 
     <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="Procesar" Disabled="@(Procesando || order.Status == 4)">
-            <Icon Name="IconName.BoxArrowDown" /> @(order.Status == 5 ? "Re-procesar" : "Procesar")
+        <Button Color="ButtonColor.Primary" @onclick="Procesar" Disabled="@(Procesando || order.Status == 3 || order.Status == 4)">
+            <Icon Name="IconName.BoxArrowDown" /> Procesar
         </Button>
         <Button Color="ButtonColor.Secondary" @onclick="HideAsync" Disabled="@Procesando">
             <Icon Name="IconName.XCircle" /> Cerrar
@@ -148,7 +148,7 @@
             if (resultado.Success)
                 ToastService.Notify(new(ToastType.Success, "Inventario procesado correctamente."));
             else
-                ToastService.Notify(new(ToastType.Danger, "El documento quedó en Transacción Fallida."));
+                ToastService.Notify(new(ToastType.Danger, "El documento permanece Por recibir."));
 
             await OnProcesado.InvokeAsync();
         }

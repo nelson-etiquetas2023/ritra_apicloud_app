@@ -9,6 +9,7 @@ namespace WEB.Services.OrdenCompra
         Task<bool> DeleteOrderAsync(string numero);
         Task<int> DeleteAllOrdersAsync(); // Borra TODAS las órdenes de compra (irreversible)
         Task<string> GetNextNumAsync();
+        Task<bool> AutorizarParaRecepcionAsync(string numero);
         Task<bool> AnularOrderAsync(string numero);
     }
 }

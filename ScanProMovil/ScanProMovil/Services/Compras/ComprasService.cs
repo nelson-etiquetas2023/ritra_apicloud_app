@@ -81,8 +81,9 @@ namespace ScanProMovil.Services.Compras
         }
 
         /// <summary>
-        /// Baja TODAS las ordenes de compra del servidor (sin filtrar por estado:
-        /// el sincronizador decide como mezclar 4/5/6 y propagar recepciones).
+        /// Obtiene únicamente las órdenes que el servidor ha habilitado para la
+        /// aplicación móvil. Solo se muestran órdenes enviadas y listas para
+        /// recepción; una orden en estado 1 (Iniciado) aún no debe aparecer.
         /// </summary>
         public async Task<List<Shared.Dtos.Compras.OrdenCompra>> GetOrdenesRemotoAsync()
         {
@@ -94,7 +95,15 @@ namespace ScanProMovil.Services.Compras
                 var json = await response.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(json)) return new();
                 var remotos = JsonSerializer.Deserialize<List<Shared.Dtos.Compras.OrdenCompra>>(json, jsonOptions) ?? new();
-                return remotos;
+
+                // Sincro es la marca explícita de que la orden fue enviada desde
+                // la aplicación web hacia los dispositivos móviles. Además, una
+                // orden en estado 1 (Iniciado) todavía no debe aparecer en móvil.
+                var disponibles = remotos
+                    .Where(orden => orden.Sincro && orden.Status != 1)
+                    .ToList();
+                Debug.WriteLine($"[ComprasService] Órdenes remotas recibidas: {remotos.Count}; disponibles para móvil: {disponibles.Count}");
+                return disponibles;
             }
             catch (Exception ex)
             {
@@ -142,12 +151,16 @@ namespace ScanProMovil.Services.Compras
             {
                 var remotos = await GetOrdenesRemotoAsync();
 
-                // FILTRAR: excluir las ordenes que el usuario borro localmente
-                // para que no vuelvan a aparecer al sincronizar.
+                // Excluir las órdenes que el usuario borró localmente mientras
+                // sigan sin estar habilitadas para móvil. Si la web las autoriza
+                // (Sincro=true), deben poder volver a descargarse aunque su
+                // número permanezca en la lista local de borrados.
                 var borradas = GetNumerosOrdenesBorradas();
                 if (borradas.Count > 0)
                 {
-                    remotos = remotos.Where(r => !borradas.Contains(r.Numero)).ToList();
+                    remotos = remotos
+                        .Where(r => r.Sincro || !borradas.Contains(r.Numero))
+                        .ToList();
                     Debug.WriteLine($"[ComprasService] Filtradas {borradas.Count} ordenes borradas localmente al sincronizar.");
                 }
 
@@ -310,7 +323,7 @@ namespace ScanProMovil.Services.Compras
                     .FirstOrDefaultAsync(o => o.Numero == Orderid);
                 if (order is null) return false;
 
-                order.Status = 3; // Cerrado
+                order.Status = 4; // Ubicado
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -394,16 +407,16 @@ namespace ScanProMovil.Services.Compras
                 result = JsonSerializer.Deserialize<Shared.Dtos.Compras.ProcesarOrdenResult>(json, jsonOptions)
                          ?? new Shared.Dtos.Compras.ProcesarOrdenResult { Success = true, Message = "Procesado." };
 
-                // Reflejar en la base local el cierre que el servidor ya aplico:
-                // 4 Procesado (cerrada, nunca se sobrescribe) o 5 Transaccion
-                // Fallida (sigue recepcionandose).
-                if (result.StatusFinal is 4 or 5)
+                // Reflejar en la base local el resultado del servidor:
+                // 3 Recibido (recepción completa) y 4 Ubicado son estados
+                // cerrados; una recepción incompleta permanece en 2 Por recibir.
+                if (result.StatusFinal is 3 or 4)
                 {
                     await using var ctxUpdate = await _contextFactory.CreateDbContextAsync();
                     var orden = await ctxUpdate.PurchaseOrders
                         .FirstOrDefaultAsync(o => o.Numero == numero);
 
-                    if (orden is not null && orden.Status != 4)
+                    if (orden is not null && orden.Status is not 3 and not 4)
                     {
                         orden.Status = result.StatusFinal;
                         await ctxUpdate.SaveChangesAsync();

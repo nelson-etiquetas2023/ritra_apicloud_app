@@ -75,7 +75,6 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.14" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.120" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.14" />
-		<PackageReference Include="Plugin.Maui.Popup" Version="2.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

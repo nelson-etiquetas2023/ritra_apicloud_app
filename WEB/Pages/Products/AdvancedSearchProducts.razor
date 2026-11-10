@@ -673,7 +673,6 @@ else
     private double stockExistencia;
     private string motivoMovimiento = "Ajuste manual";
     private string usuarioMovimiento = "";
-    private bool registrandoMovimiento;
     private bool cargandoMovimientos;
     private bool acordeonMovimientoAbierto = true;
     private List<MovimientoInventario> movimientosEntradas = [];
@@ -683,7 +682,6 @@ else
     private PaginationState paginationEntradas = new PaginationState { ItemsPerPage = 10 };
     private PaginationState paginationSalidas = new PaginationState { ItemsPerPage = 10 };
     private string mensajeMovimiento = "";
-    private string tipoAlertaMovimiento = "alert-info";
 
     protected override async Task OnInitializedAsync()
     {
@@ -1292,7 +1290,6 @@ else
         catch (Exception ex)
         {
             mensajeMovimiento = $"Error cargando movimientos: {ex.Message}";
-            tipoAlertaMovimiento = "alert-danger";
         }
         finally
         {
@@ -1309,11 +1306,9 @@ else
         if (string.IsNullOrWhiteSpace(usuarioMovimiento))
         {
             mensajeMovimiento = "El usuario es obligatorio.";
-            tipoAlertaMovimiento = "alert-warning";
             return;
         }
 
-        registrandoMovimiento = true;
         mensajeMovimiento = "";
         StateHasChanged();
 
@@ -1336,7 +1331,6 @@ else
             if (ok)
             {
                 mensajeMovimiento = $"Movimiento registrado correctamente. Existencia: {stockExistencia:N2}";
-                tipoAlertaMovimiento = "alert-success";
                 // Limpiar formulario
                 stockInicial = 0;
                 stockEntradas = 0;
@@ -1358,17 +1352,14 @@ else
             else
             {
                 mensajeMovimiento = "No se pudo registrar el movimiento. Verifique que el endpoint de la API esté disponible.";
-                tipoAlertaMovimiento = "alert-danger";
             }
         }
         catch (Exception ex)
         {
             mensajeMovimiento = $"Error: {ex.Message}";
-            tipoAlertaMovimiento = "alert-danger";
         }
         finally
         {
-            registrandoMovimiento = false;
             StateHasChanged();
         }
     }

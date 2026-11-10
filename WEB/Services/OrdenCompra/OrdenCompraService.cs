@@ -127,44 +127,75 @@ namespace WEB.Services.OrdenCompra
             try
             {
                 var response = await clienteHttp.DeleteAsync(url);
-                if (!response.IsSuccessStatusCode) return 0;
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error al eliminar todas las órdenes ({(int)response.StatusCode}): {error}");
+                    throw new InvalidOperationException(
+                        $"El API respondió {(int)response.StatusCode} ({response.ReasonPhrase}). " +
+                        (string.IsNullOrWhiteSpace(error) ? "Sin detalle." : error));
+                }
 
                 var contentString = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(contentString)) return 0;
+                if (string.IsNullOrWhiteSpace(contentString))
+                    throw new InvalidOperationException("El API respondió correctamente, pero no devolvió el resultado del borrado.");
 
                 using var doc = JsonDocument.Parse(contentString);
                 if (doc.RootElement.TryGetProperty("eliminadas", out var el) && el.TryGetInt32(out var count))
                     return count;
 
-                return 0;
+                throw new InvalidOperationException("El API no devolvió la propiedad 'eliminadas'.");
             }
             catch (HttpRequestException ex)
             {
                 Console.WriteLine($"Error al eliminar todas las órdenes: {ex.Message}");
-                return 0;
+                throw new InvalidOperationException("No se pudo conectar con el API para borrar las órdenes.", ex);
             }
         }
 
         public async Task<string> GetNextNumAsync()
         {
+            var numeroLocal = await CalcularSiguienteNumeroLocalAsync();
+
             try
             {
                 var clienteHttp = HttpFactory.CreateClient("scanpro");
                 var response = await clienteHttp.GetAsync("api/ordencompra/getnextnum");
                 response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
-                if (string.IsNullOrWhiteSpace(json)) return await CalcularSiguienteNumeroLocalAsync();
+                if (string.IsNullOrWhiteSpace(json)) return numeroLocal;
                 var obj = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
-                return obj != null && obj.TryGetValue("numero", out var numero) && !string.IsNullOrWhiteSpace(numero)
+                var numeroApi = obj != null && obj.TryGetValue("numero", out var numero)
                     ? numero
-                    : await CalcularSiguienteNumeroLocalAsync();
+                    : null;
+
+                return ElegirSiguienteNumero(numeroApi, numeroLocal);
             }
             catch
             {
                 // Si el endpoint no esta disponible, se calcula con las ordenes existentes.
                 // El API revalida/genera el numero definitivo al guardar.
-                return await CalcularSiguienteNumeroLocalAsync();
+                return numeroLocal;
             }
+        }
+
+        private static string ElegirSiguienteNumero(string? numeroApi, string? numeroLocal)
+        {
+            var siguienteApi = ExtraerConsecutivo(numeroApi);
+            var siguienteLocal = ExtraerConsecutivo(numeroLocal);
+            return $"PO-{Math.Max(siguienteApi, siguienteLocal):0000}";
+        }
+
+        private static int ExtraerConsecutivo(string? numero)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                numero?.Trim() ?? string.Empty,
+                @"^PO-(\d+)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            return match.Success && int.TryParse(match.Groups[1].Value, out var consecutivo)
+                ? consecutivo
+                : 1;
         }
 
         /// <summary>
@@ -180,7 +211,7 @@ namespace WEB.Services.OrdenCompra
                 var max = 0;
                 foreach (var o in ordenes)
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(o.Numero ?? "", @"^PO-(\d+)$");
+                    var match = System.Text.RegularExpressions.Regex.Match(o.Numero?.Trim() ?? "", @"^PO-(\d+)$");
                     if (match.Success && int.TryParse(match.Groups[1].Value, out var n) && n > max)
                         max = n;
                 }
@@ -189,6 +220,28 @@ namespace WEB.Services.OrdenCompra
             catch
             {
                 return string.Empty;
+            }
+        }
+
+        public async Task<bool> AutorizarParaRecepcionAsync(string numero)
+        {
+            try
+            {
+                var clienteHttp = HttpFactory.CreateClient("scanpro");
+                var response = await clienteHttp.PostAsync($"api/ordencompra/autorizar-recepcion/{numero}", null);
+                // Siempre confirmamos y persistimos el estado mediante PUT.
+                // Esto también es compatible con una API publicada sin el endpoint POST.
+                var orden = await GetOrderByIdAsync(numero);
+                if (orden is null) return false;
+
+                orden.Status = 2;
+                orden.Sincro = true;
+                return await UpdateOrderAsync(numero, orden);
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error al autorizar la orden {numero} para recepción: {ex.Message}");
+                return false;
             }
         }
 

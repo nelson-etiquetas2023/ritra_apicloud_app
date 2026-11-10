@@ -19,9 +19,9 @@ namespace API.Services.Inventario
         /// TOTAL recibida hasta ahora por linea; el servidor calcula el delta
         /// contra lo ya almacenado, de modo que reenviar lo mismo nunca vuelve a
         /// afectar el inventario. Solo las lineas completas (recibida >= ordenada)
-        /// se marcan Procesado; el documento queda Procesado (4) cuando todas las
-        /// lineas estan completas, en Transaccion Fallida (5) si alguna linea
-        /// fallo, y sigue Por Recibir (2) en recepciones parciales exitosas.
+        /// se marcan Procesado; el documento queda Recibido (3) cuando todas las
+        /// lineas estan completas y sigue Por Recibir (2) en recepciones parciales
+        /// exitosas. Ubicado (4) solo corresponde a una etapa posterior.
         /// </summary>
         public async Task<ProcesarOrdenResult> ProcesarCompraAsync(string numero, RecepcionCompraRequest? recepcion)
         {
@@ -43,6 +43,26 @@ namespace API.Services.Inventario
 
             if (oc.Status == 4)
             {
+                // Compatibilidad con órdenes procesadas por una versión anterior
+                // que utilizaba 4 para indicar recepción completa. La regla actual
+                // es inequívoca: si todas las cantidades llegaron, el estado es 3.
+                var recepcionCompletaAnterior = oc.Items.Count > 0 &&
+                    oc.Items.All(i => i.Cantidad <= 0 ||
+                        i.CantidadRecibida >= i.Cantidad ||
+                        (i.Procesado && i.CantidadRecibida == 0));
+
+                if (recepcionCompletaAnterior)
+                {
+                    oc.Status = 3;
+                    await context.SaveChangesAsync();
+                    result.Success = true;
+                    result.Message = $"El documento {numero} fue normalizado como Recibido completo.";
+                    result.StatusFinal = 3;
+                    stopwatch.Stop();
+                    result.ElapsedMilliseconds = stopwatch.ElapsedMilliseconds;
+                    return result;
+                }
+
                 stopwatch.Stop();
                 result.Success = false;
                 result.Message = $"El documento {numero} ya fue procesado y no puede volver a procesarse.";
@@ -105,14 +125,16 @@ namespace API.Services.Inventario
             }
 
             var ordenCompleta = oc.Items.All(i => i.Cantidad <= 0 || i.CantidadRecibida >= i.Cantidad);
-            oc.Status = ordenCompleta ? 4 : hayFallo ? 5 : 2;
+            // Escala oficial: 1 Iniciado, 2 Por recibir, 3 Recibido completo, 4 Ubicado.
+            // Un fallo parcial no crea un estado adicional; permanece Por recibir.
+            oc.Status = ordenCompleta ? 3 : 2;
             await context.SaveChangesAsync();
 
             result.Success = !hayFallo;
             result.Message = ordenCompleta
                 ? $"El documento {numero} fue recibido y procesado exitosamente. Todos los productos afectaron el inventario."
                 : hayFallo
-                    ? $"El documento {numero} quedó en estado Transacción Fallida. Las líneas con error no afectaron el inventario y el documento puede seguir recibiéndose."
+                    ? $"El documento {numero} quedó Por recibir. Las líneas con error no afectaron el inventario y el documento puede seguir recibiéndose."
                     : $"Recepción parcial ({oc.Items.Sum(i => i.CantidadRecibida)}/{oc.Items.Sum(i => i.Cantidad)}) registrada para el documento {numero}. El documento sigue Por Recibir.";
             result.StatusFinal = oc.Status;
             stopwatch.Stop();

@@ -277,7 +277,7 @@
 
             await Task.WhenAll(tNumero, tAlmacenes, tProveedores, tProductos);
 
-            oc.Numero = await tNumero;
+            oc.Numero = NormalizarNumeroCompra(await tNumero);
             almacenes = await tAlmacenes;
             proveedores = await tProveedores;
             productos = await tProductos;
@@ -290,6 +290,20 @@
         {
             StateHasChanged();
         }
+    }
+
+    private static string NormalizarNumeroCompra(string? numero)
+    {
+        if (string.IsNullOrWhiteSpace(numero))
+            return "PO-0001";
+
+        var valor = numero.Trim();
+        var separador = valor.IndexOf('-');
+        var consecutivo = separador >= 0 ? valor[(separador + 1)..] : valor;
+
+        return int.TryParse(consecutivo, out var numeroConsecutivo)
+            ? $"PO-{numeroConsecutivo:0000}"
+            : "PO-0001";
     }
 
     private Supplier? ProveedorSeleccionado
@@ -522,12 +536,11 @@
             var ok = await servicio.AddOrderAsync(oc);
             if (ok)
             {
-                ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} guardada correctamente."));
                 Navigation.NavigateTo("/ordencompra");
             }
             else
             {
-                ToastService.Notify(new(ToastType.Danger, "No se pudo guardar la orden de compra."));
+                guardando = false;
             }
         }
         finally

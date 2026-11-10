@@ -289,7 +289,7 @@ else
     private bool cargando = true;
     private bool guardando;
 
-    private bool esSoloLectura => oc.Status == 3 || oc.Status == 4 || oc.Status == 5 || oc.Status == 6;
+    private bool esSoloLectura => oc.Status == 3 || oc.Status == 4;
 
     protected override async Task OnInitializedAsync()
     {

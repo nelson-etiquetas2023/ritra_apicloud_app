@@ -59,26 +59,10 @@ else if (!ordenesFiltered!.Any())
 }
 else
 {
-    @if (ordenesSeleccionadas.Count > 0)
-    {
-        <div class="alert alert-info mb-3">
-            <strong>@ordenesSeleccionadas.Count orden(es) seleccionada(s)</strong>
-            <button class="btn btn-success btn-sm ms-3" @onclick="AutorizarOleada" disabled="@autorizandoOleada">
-                <Icon Name="IconName.Send" Size="IconSize.x4" style="margin-right:4px;" />@(autorizandoOleada ? "Enviando..." : "Autorizar oleada a móvil")
-            </button>
-            <button class="btn btn-primary btn-sm ms-2" @onclick="ProcesarSeleccionadas" disabled="@procesandoSeleccion">
-                <Icon Name="IconName.Check" Size="IconSize.x4" style="margin-right:4px;" />@(procesandoSeleccion ? "Procesando..." : "Procesar seleccionadas")
-            </button>
-            <button class="btn btn-outline-secondary btn-sm ms-2" @onclick="LimpiarSeleccion">
-                <Icon Name="IconName.XCircle" Size="IconSize.x4" style="margin-right:4px;" />Limpiar
-            </button>
-        </div>
-    }
-
     <QuickGrid Items="ordenesFiltered!.AsQueryable()" ItemsPerPage="@pageSize" class="table table-hover table-bordered table-striped" Pagination="@paginationIndex" Style="font-size:0.9rem;">
 <TemplateColumn Title="Seleccionar" Sortable="false" HeaderTemplate="@HeaderCheckbox">
             <input type="checkbox"
-                   disabled="@(context.Status != 0)"
+                   disabled="@(context.Status != 1)"
                    @onchange="() => ToggleSeleccion(context.Numero)"
                    checked="@(context.Status == 2 || ordenesSeleccionadas.Contains(context.Numero))" />
         </TemplateColumn>
@@ -106,13 +90,9 @@ else
             <span class="fw-semibold">@($"${context.Total:N2}")</span>
         </TemplateColumn>
         <TemplateColumn Title="Status">
-            @if (context.Status == 0)
+            @if (context.Status == 1)
             {
-                <Badge Color="BadgeColor.Info">Inicializado</Badge>
-            }
-            else if (context.Status == 1)
-            {
-                <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+                <Badge Color="BadgeColor.Info">Iniciado</Badge>
             }
             else if (context.Status == 2)
             {
@@ -120,19 +100,11 @@ else
             }
             else if (context.Status == 3)
             {
-                <Badge Color="BadgeColor.Secondary">Cerrado</Badge>
+                <Badge Color="BadgeColor.Success">Recibido completo</Badge>
             }
             else if (context.Status == 4)
             {
-                <Badge Color="BadgeColor.Success">Procesado</Badge>
-            }
-            else if (context.Status == 5)
-            {
-                <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
-            }
-            else if (context.Status == 6)
-            {
-                <Badge Color="BadgeColor.Danger">Anulado</Badge>
+                <Badge Color="BadgeColor.Secondary">Ubicado</Badge>
             }
             else
             {
@@ -221,12 +193,26 @@ else
     private string procesandoNumero = "";
     private HashSet<string> ordenesSeleccionadas = new();
     private bool autorizandoOleada;
-private bool procesandoSeleccion;
+    private bool procesandoSeleccion;
+    private System.Threading.Timer? refreshTimer;
 
     private RenderFragment<Microsoft.AspNetCore.Components.QuickGrid.ColumnBase<Shared.Dtos.Compras.OrdenCompra>> HeaderCheckbox => (column) => (builder) => { builder.OpenElement(0, "input"); builder.AddAttribute(1, "type", "checkbox"); builder.AddAttribute(2, "onchange", EventCallback.Factory.Create(this, ToggleSeleccionarTodo)); builder.AddAttribute(3, "checked", ordenesSeleccionadas.Count == (ordenesFiltered?.Count() ?? 0) && (ordenesFiltered?.Count() ?? 0) > 0); builder.CloseElement(); };
     protected override async Task OnInitializedAsync()
     {
         await LoadOrders();
+        refreshTimer = new System.Threading.Timer(_ => _ = RefreshOrdersAsync(), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private async Task RefreshOrdersAsync()
+    {
+        try
+        {
+            await InvokeAsync(async () => await LoadOrders());
+        }
+        catch (Exception)
+        {
+            // Ignoramos errores de actualización para no romper la interfaz.
+        }
     }
 
     private async Task LoadOrders()
@@ -321,7 +307,7 @@ private bool procesandoSeleccion;
         var oc = Ordenes?.FirstOrDefault(o => o.Numero == numero);
         if (oc == null) return;
         // No se seleccionan documentos terminales o ya procesados.
-        if (oc.Status != 0) return;
+        if (oc.Status != 1) return;
         if (ordenesSeleccionadas.Contains(numero))
             ordenesSeleccionadas.Remove(numero);
         else
@@ -331,7 +317,7 @@ private bool procesandoSeleccion;
     private void ToggleSeleccionarTodo()
     {
         if (ordenesFiltered == null) return;
-        var todos = ordenesFiltered.Where(o => !string.IsNullOrEmpty(o.Numero) && o.Status == 0).Select(o => o.Numero!).ToList();
+        var todos = ordenesFiltered.Where(o => !string.IsNullOrEmpty(o.Numero) && o.Status == 1).Select(o => o.Numero!).ToList();
         if (ordenesSeleccionadas.Count == todos.Count && todos.Count > 0)
             ordenesSeleccionadas.Clear();
         else
@@ -359,54 +345,21 @@ private bool procesandoSeleccion;
             int exitosos = 0;
             foreach (var numero in ordenesSeleccionadas.ToList())
             {
-                var oc = Ordenes?.FirstOrDefault(o => o.Numero == numero);
-                if (oc == null) continue;
+                var ok = await servicio.AutorizarParaRecepcionAsync(numero);
+                if (!ok) continue;
 
-                var ocParaEnviar = new OrdenCompra
+                exitosos++;
+                var ordenLocal = Ordenes?.FirstOrDefault(o => o.Numero == numero);
+                if (ordenLocal is not null)
                 {
-                    Numero = oc.Numero,
-                    Fecha = oc.Fecha,
-                    FechaCreacion = oc.FechaCreacion,
-                    Description = oc.Description,
-                    Comentario = oc.Comentario,
-                    Status = 2, // Por recibir -> disponible para el móvil
-                    Sincro = true,
-                    Tipo_Documento = oc.Tipo_Documento,
-                    Subtotal = oc.Subtotal,
-                    Impuesto = oc.Impuesto,
-                    Total = oc.Total,
-                    Supply_Id = oc.Supply_Id,
-                    Supply_Name = oc.Supply_Name,
-                    Reference = oc.Reference,
-                    Prioridad = oc.Prioridad,
-                    UserName = oc.UserName,
-                    UserEmail = oc.UserEmail,
-                    UserRole = oc.UserRole,
-                    DeviceCode = oc.DeviceCode,
-                    DeviceName = oc.DeviceName,
-                    WarehouseName = oc.WarehouseName,
-                    Items = oc.Items?.Select(i => new DetalleCompras
-                    {
-                        Id = i.Id,
-                        Numero = i.Numero,
-                        Product_id = i.Product_id,
-                        Product_name = i.Product_name,
-                        Cantidad = i.Cantidad,
-                        Costo = i.Costo,
-                        Subtotal = i.Subtotal,
-                        Comentario = i.Comentario,
-                        Procesado = i.Procesado,
-                        FechaProcesado = i.FechaProcesado
-                    }).ToList() ?? []
-                };
-
-                var ok = await servicio.UpdateOrderAsync(numero, ocParaEnviar);
-                if (ok) exitosos++;
+                    ordenLocal.Status = 2;
+                    ordenLocal.Sincro = true;
+                }
             }
 
             ToastService.Notify(new(ToastType.Success, $"Oleada autorizada: {exitosos}/{ordenesSeleccionadas.Count} orden(es) enviadas al móvil."));
             ordenesSeleccionadas.Clear();
-            await LoadOrders();
+            buscar();
         }
         catch (Exception ex)
         {
@@ -490,6 +443,7 @@ private bool procesandoSeleccion;
             {
                 ToastService.Notify(new(ToastType.Danger, "No se pudieron eliminar las órdenes de compra."));
             }
+            ordenesSeleccionadas.Clear();
             await LoadOrders();
         }
         catch (Exception ex)
@@ -507,7 +461,7 @@ private bool procesandoSeleccion;
         var ok = await servicio.AnularOrderAsync(oc.Numero);
         if (ok)
         {
-            oc.Status = 6;
+            oc.Status = 4;
             ToastService.Notify(new(ToastType.Success, $"Orden {oc.Numero} anulada."));
         }
         else

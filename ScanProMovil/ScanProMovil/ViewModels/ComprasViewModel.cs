@@ -24,6 +24,9 @@ namespace ScanProMovil.ViewModels
         public bool isLoading;
 
         [ObservableProperty]
+        private bool isRefreshing;
+
+        [ObservableProperty]
         private string loadingMessage = string.Empty;
 
         private List<OrdenCompra> _allOrders = new();
@@ -60,6 +63,25 @@ namespace ScanProMovil.ViewModels
                 return;
 
             await RecargarListaAsync();
+        }
+
+        /// <summary>Sincroniza las compras al pulsar el botón o usar Pull-to-Refresh.</summary>
+        [RelayCommand]
+        public async Task SincronizarCompras()
+        {
+            if (IsLoading) return;
+
+            IsRefreshing = true;
+            Preferences.Set("SkipAutoSyncCompras", false);
+
+            try
+            {
+                await RecargarListaAsync(forzarSincronizacionRemota: true);
+            }
+            finally
+            {
+                IsRefreshing = false;
+            }
         }
 
         /// <summary>Borra TODAS las órdenes de compra locales de SQLite (irreversible).</summary>
@@ -172,13 +194,16 @@ namespace ScanProMovil.ViewModels
         {
             IEnumerable<OrdenCompra> filtered;
 
+            var ordenesAbiertas = _allOrders
+                .Where(o => o.Status is not 3 and not 4);
+
             if (string.IsNullOrWhiteSpace(text))
             {
-                filtered = _allOrders;
+                filtered = ordenesAbiertas;
             }
             else
             {
-                filtered = _allOrders.Where(o =>
+                filtered = ordenesAbiertas.Where(o =>
                     (o.Numero?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (o.Description?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (o.Supply_Name?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||

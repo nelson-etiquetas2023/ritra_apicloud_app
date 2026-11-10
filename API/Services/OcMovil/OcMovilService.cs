@@ -15,6 +15,24 @@ namespace API.Services.OcMovil
                 .OrderByDescending(o => o.FechaCreacion)
                 .ThenByDescending(o => o.Numero)
                 .ToListAsync();
+
+            // Normalizar datos antiguos: una orden con todas sus cantidades
+            // recibidas debe mostrarse como Recibido (3), nunca como Ubicado (4).
+            var normalizadas = orders
+                .Where(o => o.Status == 4 && o.Items.Count > 0 &&
+                    o.Items.All(i => i.Cantidad <= 0 ||
+                        i.CantidadRecibida >= i.Cantidad ||
+                        (i.Procesado && i.CantidadRecibida == 0)))
+                .ToList();
+
+            if (normalizadas.Count > 0)
+            {
+                foreach (var order in normalizadas)
+                    order.Status = 3;
+
+                await context.SaveChangesAsync();
+            }
+
             return orders;
         }
 
@@ -33,11 +51,18 @@ namespace API.Services.OcMovil
         /// </summary>
         public async Task<string> GetNextNumAsync()
         {
-            var max = await context.Database.SqlQuery<int?>($"""
-                SELECT MAX(CAST(SUBSTRING(Numero, 4, 10) AS INT)) AS Value
-                FROM Compra
-                WHERE Numero LIKE 'PO-%' AND SUBSTRING(Numero, 4, 10) NOT LIKE '%[^0-9]%'
-                """).FirstOrDefaultAsync() ?? 0;
+            var numeros = await context.Compra
+                .AsNoTracking()
+                .Select(o => o.Numero)
+                .ToListAsync();
+
+            var max = 0;
+            foreach (var numero in numeros)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(numero ?? "", @"^PO-(\d+)$");
+                if (match.Success && int.TryParse(match.Groups[1].Value, out var consecutivo) && consecutivo > max)
+                    max = consecutivo;
+            }
 
             return $"PO-{max + 1:0000}";
         }
@@ -49,7 +74,15 @@ namespace API.Services.OcMovil
             if (oc.FechaCreacion == default)
                 oc.FechaCreacion = DateTime.UtcNow;
 
-            if (string.IsNullOrWhiteSpace(oc.Numero))
+            // El servidor debe imponer el formato PO-#### aunque el cliente
+            // envíe un número vacío o un formato antiguo como OC-####.
+            var numeroTieneFormatoValido = !string.IsNullOrWhiteSpace(oc.Numero)
+                && System.Text.RegularExpressions.Regex.IsMatch(
+                    oc.Numero.Trim(),
+                    @"^PO-\d+$",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (!numeroTieneFormatoValido)
             {
                 var siguiente = int.Parse((await GetNextNumAsync()).Substring(3));
                 while (await context.Compra.AnyAsync(o => o.Numero == $"PO-{siguiente:0000}"))
@@ -57,13 +90,24 @@ namespace API.Services.OcMovil
                 oc.Numero = $"PO-{siguiente:0000}";
                 oc.Tipo_Documento = "PO"; // Purchase Order
             }
-            else if (await context.Compra.AnyAsync(o => o.Numero == oc.Numero))
+            else
             {
-                return null;
+                var consecutivo = int.Parse(oc.Numero.Trim().Substring(3));
+                var numeroNormalizado = $"PO-{consecutivo:0000}";
+                if (await context.Compra.AnyAsync(o => o.Numero == numeroNormalizado))
+                {
+                    var siguiente = int.Parse((await GetNextNumAsync()).Substring(3));
+                    while (await context.Compra.AnyAsync(o => o.Numero == $"PO-{siguiente:0000}"))
+                        siguiente++;
+                    numeroNormalizado = $"PO-{siguiente:0000}";
+                }
+
+                oc.Numero = numeroNormalizado;
+                oc.Tipo_Documento = "PO";
             }
 
             oc.Prioridad = ValidarPrioridad(oc.Prioridad);
-            oc.Status = 0;
+            oc.Status = 1;
 
             foreach (var item in oc.Items)
             {
@@ -83,8 +127,8 @@ namespace API.Services.OcMovil
 
             if (existingOrder is null) return null;
 
-            //Documento procesado o anulado: no se permite modificar.
-            if (existingOrder.Status == 4 || existingOrder.Status == 6) return null;
+            //Documento recibido o ubicado: no se permite modificar.
+            if (existingOrder.Status == 3 || existingOrder.Status == 4) return null;
 
             existingOrder.Description = oc.Description;
             existingOrder.Comentario = oc.Comentario;
@@ -97,17 +141,19 @@ namespace API.Services.OcMovil
             existingOrder.WarehouseName = oc.WarehouseName;
             existingOrder.Prioridad = ValidarPrioridad(oc.Prioridad);
             // El estado se gestiona segun el flujo:
-            //  - Autorizar oleada (web -> movil) lo marca como Sincronizado (2).
-            //  - Una orden Planificada (0) que se edita pasa a Actualizada (1).
-            //  - Una orden ya sincronizada mantiene su estado (no se degrada).
+            //  - Autorizar oleada (web -> móvil) la marca como Por recibir (2).
+            //  - Una orden iniciada (1) que se edita permanece iniciada.
+            //  - Una orden ya recibida/ubicada no se degrada.
             if (oc.Status == 2)
+            {
                 existingOrder.Status = 2;
-            else if (existingOrder.Status == 0)
-                existingOrder.Status = 1;
+                existingOrder.Sincro = true;
+            }
             existingOrder.Subtotal = oc.Subtotal;
             existingOrder.Impuesto = oc.Impuesto;
             existingOrder.Total = oc.Total;
-            existingOrder.Sincro = oc.Sincro;
+            if (oc.Status != 2)
+                existingOrder.Sincro = oc.Sincro;
 
             await using var transaction = await context.Database.BeginTransactionAsync();
             try
@@ -146,11 +192,10 @@ namespace API.Services.OcMovil
         public async Task<bool> AnularOrderAsync(string numero)
         {
             var oc = await context.Compra.FirstOrDefaultAsync(o => o.Numero == numero);
-            if (oc == null || oc.Status == 4 || oc.Status == 6) return false;
+            if (oc == null || oc.Status == 3 || oc.Status == 4) return false;
 
-            oc.Status = 6;
-            await context.SaveChangesAsync();
-            return true;
+            // La orden no se anula con un estado fuera de la escala oficial.
+            return false;
         }
 
         public async Task<bool> DeleteOrderAsync(string numero)
@@ -159,8 +204,8 @@ namespace API.Services.OcMovil
 
             if (OrderDeleted is null) return false;
 
-            //Documento procesado o anulado: no se permite eliminar.
-            if (OrderDeleted.Status == 4 || OrderDeleted.Status == 6) return false;
+            //Documento recibido o ubicado: no se permite eliminar.
+            if (OrderDeleted.Status == 3 || OrderDeleted.Status == 4) return false;
 
             context.Compra.Remove(OrderDeleted);
             await context.SaveChangesAsync();
@@ -169,31 +214,41 @@ namespace API.Services.OcMovil
 
         public async Task<int> DeleteAllOrdersAsync()
         {
-            // Borrar detalles primero (por seguridad aunque haya cascade)
-            var detalles = await context.DetalleCompra.ToListAsync();
-            context.DetalleCompra.RemoveRange(detalles);
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            try
+            {
+                var eliminadas = await context.Compra.CountAsync();
 
-            // Borrar todas las órdenes de compra
-            var ordenes = await context.Compra.ToListAsync();
-            context.Compra.RemoveRange(ordenes);
+                // Borrado físico directo: primero los detalles por la FK Numero.
+                await context.DetalleCompra.ExecuteDeleteAsync();
+                await context.Compra.ExecuteDeleteAsync();
+                context.ChangeTracker.Clear();
 
-            await context.SaveChangesAsync();
-            return ordenes.Count;
+                await transaction.CommitAsync();
+                return eliminadas;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         /// <summary>
         /// Autoriza una orden para recepción en el móvil: cambia su estado a 2 (Por recibir).
-        /// Solo se puede autorizar órdenes con estado 0 (Inicializado) o 1 (Actualizado).
+        /// Solo se puede autorizar órdenes con estado 1 (Iniciado).
         /// </summary>
         public async Task<bool> AutorizarParaRecepcionAsync(string numero)
         {
             var oc = await context.Compra.FirstOrDefaultAsync(o => o.Numero == numero);
             if (oc is null) return false;
 
-            // Solo se puede autorizar si está Inicializado (0) o Actualizado (1)
-            if (oc.Status is not 0 and not 1) return false;
+            // Solo se puede autorizar si está Iniciado (1).
+            if (oc.Status == 2) return true;
+            if (oc.Status != 1) return false;
 
             oc.Status = 2; // Por recibir / Sincronizado
+            oc.Sincro = true;
             await context.SaveChangesAsync();
             return true;
         }

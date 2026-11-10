@@ -41,14 +41,16 @@
             </HorizontalStackLayout>
         </Border>
         <!--Lista de Ordenes -->
-        <CollectionView Grid.Row="1"
-            x:Name="CvOrdenes"
-            EmptyView="No Data..."
-            ItemsLayout="VerticalList"
-            SelectionMode="Single"
-            ItemsSource="{Binding Ordenes}"
-            SelectedItem="{Binding SelectedOrder, Mode=TwoWay}">
-            <CollectionView.ItemTemplate>
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}"
+                     Command="{Binding SincronizarComprasCommand}">
+            <CollectionView x:Name="CvOrdenes"
+                EmptyView="No Data..."
+                ItemsLayout="VerticalList"
+                SelectionMode="Single"
+                ItemsSource="{Binding Ordenes}"
+                SelectedItem="{Binding SelectedOrder, Mode=TwoWay}">
+                <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:OrdenCompra">
                     <Border Stroke="#D1D5DB"
                             StrokeThickness="1"
@@ -105,8 +107,9 @@
 
                     </Border>
                 </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
 
     </Grid>
 

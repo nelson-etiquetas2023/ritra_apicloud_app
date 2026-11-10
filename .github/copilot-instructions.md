@@ -1,0 +1,6 @@
+# Copilot Instructions
+
+## General Guidelines
+- Para las órdenes de compra, los estados válidos y su significado son siempre: 1 = Iniciado, 2 = Por recibir, 3 = Recibido completo, 3.2 = Recibido incompleto (significa que la recepción fue procesada pero no llegaron todas las mercancías/cantidades indicadas en la orden). Debe usarse esta numeración y nomenclatura en API, WEB y móvil cuando sea relevante. Mantener 3 = Recibido completo para recepción total. Debe confirmarse la representación técnica porque los estados actuales son enteros y 3.2 puede requerir un campo o enum adicional.
+- Para las pruebas durante esta etapa, siempre use la instancia local (localhost:5220) en lugar de la API remota 192.168.10.10:8080.
+- En la página de detalle de compras de la app móvil, después de recibir correctamente todas las cantidades de todas las líneas de una orden, debe cerrarse automáticamente y sincronizarse con la API para actualizar la orden web a recibido completo (estado 3 = Recibido completo). Si la recepción es incompleta, debe permanecer abierta en estado 2 = Por recibir.

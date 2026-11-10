@@ -20,9 +20,7 @@ namespace ScanProMovil.Data.Services
     /// </summary>
     /// <remarks>
     /// Reglas de estados (server y local usan la misma escala):
-    /// 0 Inicializado, 1 Actualizado, 2 Por recibir (sincronizada), 3 Cerrado,
-    /// 4 Procesado (server la recibio completa), 5 Transaccion Fallida (el
-    /// server permite seguir recibiendola), 6 Anulado.
+        /// 1 Iniciado, 2 Por recibir, 3 Recibido, 4 Ubicado.
     /// </remarks>
     public static class ComprasSincronizador
     {
@@ -115,9 +113,9 @@ namespace ScanProMovil.Data.Services
                 if (localesPorNumero.TryGetValue(remoto.Numero, out var local))
                 {
                     // Ya existe: se actualiza el encabezado SOLO si la orden local
-                    // no esta cerrada (3 Cerrado manual, 4 Procesado, 6 Anulado):
+                    // no esta recibida (3) ni ubicada (4):
                     // cerradas localmente nunca se destapan desde el sync.
-                    if (local.Status is 3 or 4 or 6)
+                    if (local.Status is 3 or 4)
                     {
                         // Nada que actualizar del encabezado; los items se
                         // resincronizan igual abajo (cantidades editadas alla).
@@ -180,12 +178,12 @@ namespace ScanProMovil.Data.Services
 
                     local.ItemsNumber = local.Items.Count;
 
-                    // Pedido al estilo picking: lo recibido aqui (o cerrada local 4)
+                    // Pedido al estilo picking: lo recibido aqui (estado 3)
                     // que el servidor todavia no conoce debe propagarse.
                     var totalLocal = local.Items.Sum(i => i.CantidadRecibida);
                     var totalRemoto = (remoto.Items ?? []).Sum(i => (double)i.CantidadRecibida);
                     if (totalLocal > totalRemoto ||
-                        (local.Status == 4 && remoto.Status != 4))
+                    (local.Status == 3 && remoto.Status != 3))
                     {
                         resultado.PendientesDeRecepcionRemoto.Add(local);
                     }

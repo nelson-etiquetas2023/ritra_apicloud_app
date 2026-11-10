@@ -10,7 +10,8 @@ namespace Shared.Dtos.Compras
         public DateTime FechaCreacion { get; set; }
         public string Description { get; set; } = "";
         public string Comentario { get; set; } = "";
-        public int Status { get; set; }
+        /// <summary>1 Iniciado, 2 Por recibir, 3 Recibido completo, 4 Ubicado.</summary>
+        public int Status { get; set; } = 1;
         public bool Sincro { get; set; }
         public string Tipo_Documento { get; set; } = "";
         public double Subtotal{ get; set; }
@@ -34,13 +35,11 @@ namespace Shared.Dtos.Compras
             {
                 return Status switch
                 {
-                    0 => "Inicializado",
-                    1 => "Actualizado",
+                1 => "Iniciado",
                     2 => "Por recibir",
-                    3 => "Cerrado",
-                    4 => "Procesado",
-                    5 => "Transacción Fallida",
-                    _ => "Desconocido"
+                3 => "Recibido completo",
+                4 => "Ubicado",
+                _ => "Desconocido"
                 };
             }
         }

@@ -15,7 +15,7 @@ namespace ScanProMovil.ViewModels.Compras
         [ObservableProperty]
         private bool isSincronizando;
 
-        public bool IsSincronizarEnabled => !IsSincronizando && Orden.Status != 2;
+        public bool IsSincronizarEnabled => !IsSincronizando && Orden.Status == 1;
 
         partial void OnIsSincronizandoChanged(bool value)
         {
@@ -47,9 +47,9 @@ namespace ScanProMovil.ViewModels.Compras
         [RelayCommand]
         public async Task SendPurchaseOrderAsync()
         {
-            if (Orden.Status == 2)
+            if (Orden.Status != 1)
             {
-                ResultadoSincro = "El documento ya fue sincronizado.";
+                ResultadoSincro = "El documento no está en estado Iniciado.";
                 ResultadoColor = Colors.OrangeRed;
                 return;
             }

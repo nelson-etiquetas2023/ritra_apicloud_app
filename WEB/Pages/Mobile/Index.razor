@@ -87,29 +87,21 @@
             </TemplateColumn>
             <!--status-->
             <TemplateColumn Title="Status">
-                @if (context.Status == 0)
+                @if (context.Status == 1)
                 {
-                    <Badge Color="BadgeColor.Info">Publicado-Iniciado</Badge>
-                }
-                else if (context.Status == 1)
-                {
-                    <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+                    <Badge Color="BadgeColor.Info">Iniciado</Badge>
                 }
                 else if (context.Status == 2)
                 {
-                    <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+                    <Badge Color="BadgeColor.Warning">Por recibir</Badge>
                 }
                 else if (context.Status == 3)
                 {
-                    <Badge Color="BadgeColor.Secondary">Cerrado</Badge>
+                    <Badge Color="BadgeColor.Success">Recibido</Badge>
                 }
                 else if (context.Status == 4)
                 {
-                    <Badge Color="BadgeColor.Success">Procesado</Badge>
-                }
-                else if (context.Status == 5)
-                {
-                    <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
+                    <Badge Color="BadgeColor.Secondary">Ubicado</Badge>
                 }
                 else
                 {
@@ -122,15 +114,15 @@
                 @context.FechaCreacion.ToString("dd-MM-yyyy HH:mm:ss")
             </TemplateColumn>
             <TemplateColumn Title="Inventario">
-                @if (context.Status != 4)
+                @if (context.Status != 3 && context.Status != 4)
                 {
-                    <Button class="@(context.Status == 5 ? "btn btn-warning btn-sm" : "btn btn-primary btn-sm")" @onclick="() => Procesar(context)">
-                        @(context.Status == 5 ? "Re-procesar" : "Procesar")
+                    <Button class="btn btn-primary btn-sm" @onclick="() => Procesar(context)">
+                        Procesar
                     </Button>
                 }
             </TemplateColumn>
             <TemplateColumn Title="Acciones">
-                @if (context.Status != 4 && context.Status != 5)
+                @if (context.Status != 3 && context.Status != 4)
                 {
                     <Tooltip Title="Actualizar" Placement="TooltipPlacement.Top">
                         <a href="#" style="text-decoration:none">
@@ -213,25 +205,21 @@ else
                 <span class="fw-semibold">@context.Detalles.Sum(d => d.CantidadFisica).ToString("N0")</span>
             </TemplateColumn>
             <TemplateColumn Title="Status">
-                @if (context.Status == 0)
+                @if (context.Status == 1)
                 {
-                    <Badge Color="BadgeColor.Info">Creado</Badge>
-                }
-                else if (context.Status == 1)
-                {
-                    <Badge Color="BadgeColor.Warning">Actualizado</Badge>
+                    <Badge Color="BadgeColor.Info">Iniciado</Badge>
                 }
                 else if (context.Status == 2)
                 {
-                    <Badge Color="BadgeColor.Success">Sincronizado</Badge>
+                    <Badge Color="BadgeColor.Warning">Por recibir</Badge>
+                }
+                else if (context.Status == 3)
+                {
+                    <Badge Color="BadgeColor.Success">Recibido</Badge>
                 }
                 else if (context.Status == 4)
                 {
-                    <Badge Color="BadgeColor.Success">Procesado</Badge>
-                }
-                else if (context.Status == 5)
-                {
-                    <Badge Color="BadgeColor.Danger">Transacción Fallida</Badge>
+                    <Badge Color="BadgeColor.Secondary">Ubicado</Badge>
                 }
                 else
                 {

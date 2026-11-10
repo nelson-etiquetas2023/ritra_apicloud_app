@@ -10,9 +10,7 @@ namespace ScanProMovil.Data.Entities
     /// <summary>
     /// Orden de compra local (movil). Replica el diseño de PickingOrder: los
     /// estados notifican cambios para que la UI refresque en tiempo real.
-    /// Status: 0 Inicializado, 1 Actualizado, 2 Por recibir (sincronizada),
-    /// 3 Cerrado, 4 Procesado (server la recibio completa), 5 Transaccion
-    /// Fallida (la server permite seguir recibiendola), 6 Anulado.
+    /// Status: 1 Iniciado, 2 Por recibir, 3 Recibido, 4 Ubicado.
     /// </summary>
     public class OrdenCompra : INotifyPropertyChanged
     {
@@ -37,7 +35,7 @@ namespace ScanProMovil.Data.Entities
         public string Reference { get; set; } = "";
 
         private int _status;
-        /// <summary>0 Inicializado, 1 Actualizado, 2 Por recibir, 3 Cerrado, 4 Procesado, 5 Transaccion Fallida, 6 Anulado.</summary>
+        /// <summary>1 Iniciado, 2 Por recibir, 3 Recibido, 4 Ubicado.</summary>
         public int Status
         {
             get => _status;
@@ -64,20 +62,15 @@ namespace ScanProMovil.Data.Entities
         public string StatusTexto =>
             Status switch
             {
-                0 => "Inicializado",
-                1 => "Actualizado",
+                1 => "Iniciado",
                 2 => "Por recibir",
-                3 => "Cerrado",
-                4 => "Procesado",
-                5 => "Transacción Fallida",
-                6 => "Anulado",
+                3 => "Recibido",
+                4 => "Ubicado",
                 _ => "Desconocido"
             };
 
-        // Puede recibir escaneos mientras siga Por recibir (2) o en Transaccion
-        // Fallida (5, el server la deja continuar). Cerrada (3), Procesada (4)
-        // o Anulada (6) se bloquea.
-        public bool PuedeRecibir => Status == 2 || Status == 5;
+        // Puede recibir escaneos mientras siga Por recibir (2).
+        public bool PuedeRecibir => Status == 2;
 
         //Seleccion multiple en UI (no se persiste en BD).
         private bool _isSelected;
@@ -94,8 +87,12 @@ namespace ScanProMovil.Data.Entities
         /// <summary>Unidades ya recibidas (suma de lo recibido de todas las lineas).</summary>
         public int UnidadesRecibidas => Items.Sum(i => (int)Math.Floor(Math.Min(i.CantidadRecibida, i.Cantidad)));
 
-        /// <summary>Texto tipo "2/5" para las tarjetas del listado.</summary>
-        public string ProgresoTexto => $"{UnidadesRecibidas}/{TotalUnidades}";
+        /// <summary>
+        /// Líneas completamente recibidas frente al total de líneas, para las
+        /// tarjetas del listado (por ejemplo: "0/2 líneas").
+        /// </summary>
+        public string ProgresoTexto =>
+            $"{Items.Count(i => i.RecibidoCompleto)}/{Items.Count} líneas";
 
         /// <summary>Texto tipo "3 de 5 unidades recibidas".</summary>
         public string ProgresoDetalleTexto =>

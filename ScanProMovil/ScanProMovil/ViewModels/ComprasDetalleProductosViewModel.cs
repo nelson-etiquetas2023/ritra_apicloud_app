@@ -455,6 +455,26 @@ namespace ScanProMovil.ViewModels
             ColorMensajeEscaneo = Colors.Green;
             var toastOk = Toast.Make($"{item.Product_id} recibido.", CommunityToolkit.Maui.Core.ToastDuration.Short);
             await toastOk.Show();
+
+            // Si este escaneo completó la última línea, cerrar y enviar la
+            // recepción automáticamente sin exigir pulsar otro botón.
+            await CerrarSiCompletaAsync();
+        }
+
+        private async Task CerrarSiCompletaAsync()
+        {
+            if (Orden is null || EstaBloqueado || _itemsOriginal.Count == 0 ||
+                !_itemsOriginal.All(i => i.RecibidoCompleto))
+            {
+                return;
+            }
+
+            ProductoDialog = null;
+            CantidadDialog = 1;
+            DialogoAbierto = false;
+            OnDialogoCerrado?.Invoke();
+
+            await EjecutarCierreOrdenAsync();
         }
 
         /// <summary>Punto de entrada de UI (Validar Recepción): aplica guardias y control de carga.</summary>
@@ -505,10 +525,17 @@ namespace ScanProMovil.ViewModels
             // 1) Enviar al servidor lo recibido (delta; offline falla y sigue).
             var resultado = await _comprasService.ReceiveOrderAsync(Orden.Numero);
 
-            if (resultado.StatusFinal == 4)
+            var todasLasLineasCompletas = _itemsOriginal.Count > 0 &&
+                _itemsOriginal.All(i => i.RecibidoCompleto);
+
+            // 3 es el estado oficial de Recibido. El 4 se acepta únicamente
+            // como compatibilidad temporal con una API antigua, pero si todas
+            // las cantidades están completas también se cierra localmente.
+            if (resultado.StatusFinal == 3 ||
+                (resultado.StatusFinal == 4 && todasLasLineasCompletas))
             {
-                // El servidor recibio la orden completa: cerrar localmente + UI.
-                Orden.Status = 4;
+                // El servidor recibio la orden completa: marcarla como recibida.
+                Orden.Status = 3;
                 Orden.Sincro = true;
                 EstaBloqueado = true;
                 Orden.NotificarProgresoRecepcion();
@@ -516,17 +543,6 @@ namespace ScanProMovil.ViewModels
                 OnCompletado?.Invoke();
 
                 var toast = Toast.Make("Orden recepcionada ✓", CommunityToolkit.Maui.Core.ToastDuration.Short);
-                await toast.Show();
-            }
-            else if (resultado.StatusFinal == 5)
-            {
-                // Transaccion Fallida: hay lineas con error; la orden sigue
-                // recepcionandose (el servidor lo permite).
-                Orden.Status = 5;
-                Recalcular();
-                MensajeEscaneo = $"Fallo parcial: {resultado.Message}";
-                ColorMensajeEscaneo = Colors.Orange;
-                var toast = Toast.Make($"Fallo parcial en la recepción. {resultado.Message}", CommunityToolkit.Maui.Core.ToastDuration.Long);
                 await toast.Show();
             }
             else if (resultado.Success)
